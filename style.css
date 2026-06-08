@@ -758,6 +758,7 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
 }
 [data-theme="light"] .form-inp { color-scheme: light; }
 .form-inp:focus { outline: none; border-color: var(--border2); }
+input[type="date"].form-inp { max-width: 100%; min-width: 0; font-size: 13px; }
 .form-inp::-webkit-outer-spin-button,
 .form-inp::-webkit-inner-spin-button { -webkit-appearance: none; }
 .form-auto {
