@@ -11,8 +11,8 @@ html { -webkit-text-size-adjust: 100%; }
   --bg:       #000000;
   --surface:  #121212;
   --surface2: #1c1c1e;
-  --border:   rgba(255,255,255,0.06);
-  --border2:  rgba(255,255,255,0.11);
+  --border:   rgba(255,255,255,0.18);
+  --border2:  rgba(255,255,255,0.28);
 
   --t1: #ffffff;
   --t2: rgba(255,255,255,0.70);
@@ -123,7 +123,7 @@ body {
   background: none; border: 1px solid var(--border);
   border-radius: var(--r-xs); width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: var(--t3);
+  cursor: pointer; color: var(--t3); outline: none;
   transition: color var(--fast), border-color var(--fast);
 }
 .icon-btn:active { color: var(--t1); border-color: var(--border2); }
