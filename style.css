@@ -25,13 +25,13 @@ html { -webkit-text-size-adjust: 100%; }
   --red:   #FF3355;
   --blue:  #00D0FF;
 
-  /* Neons */
-  --c-bras:    #FF4500;
-  --c-pec:     #FF0080;
-  --c-dos:     #00FF80;
-  --c-epaules: #00D0FF;
-  --c-jambes:  #CC00FF;
-  --c-run:     #00FFD4;
+  /* Neons cohérents */
+  --c-bras:    #FF375F;
+  --c-pec:     #FF9F0A;
+  --c-dos:     #0A84FF;
+  --c-epaules: #30D158;
+  --c-jambes:  #BF5AF2;
+  --c-run:     #5AC8FA;
 
   --topbar-h: 52px;
   --nav-h:    0px;
@@ -69,12 +69,12 @@ html { -webkit-text-size-adjust: 100%; }
   --green: #0E9E54;
   --red:   #D93025;
   --blue:  #1A7ED8;
-  --c-bras:    #E03800;
-  --c-pec:     #D40070;
-  --c-dos:     #00CC66;
-  --c-epaules: #009ECC;
-  --c-jambes:  #9900CC;
-  --c-run:     #00BFA8;
+  --c-bras:    #FF2D55;
+  --c-pec:     #FF9500;
+  --c-dos:     #007AFF;
+  --c-epaules: #34C759;
+  --c-jambes:  #AF52DE;
+  --c-run:     #32ADE6;
 }
 
 /* 3. BASE */
@@ -236,26 +236,26 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
   transition: background var(--mid), color var(--mid), box-shadow var(--mid);
 }
 /* Per-section accent colors — inactive icon */
-.nav-dash    .nav-pip { color: #007AFF; }
-.nav-workout .nav-pip { color: #FF6B00; }
-.nav-run     .nav-pip { color: #00BFA5; }
-.nav-nutri   .nav-pip { color: #34C759; }
-.nav-histo   .nav-pip { color: #9B59B6; }
-.nav-stats   .nav-pip { color: #FF3B30; }
-.nav-profil  .nav-pip { color: #5856D6; }
+.nav-dash    .nav-pip { color: #0A84FF; }
+.nav-workout .nav-pip { color: #FF375F; }
+.nav-run     .nav-pip { color: #5AC8FA; }
+.nav-nutri   .nav-pip { color: #30D158; }
+.nav-histo   .nav-pip { color: #BF5AF2; }
+.nav-stats   .nav-pip { color: #FF9F0A; }
+.nav-profil  .nav-pip { color: #5E5CE6; }
 
 /* Active: solid colored pip, white icon, bold label */
 .nav-item.active { color: var(--t1); font-weight: 600; }
 .nav-item.active .nav-pip { box-shadow: 0 3px 12px rgba(0,0,0,.28); }
 .nav-item.active .nav-pip svg { color: #fff; }
 
-.nav-dash.active    .nav-pip { background: #007AFF; }
-.nav-workout.active .nav-pip { background: #FF6B00; }
-.nav-run.active     .nav-pip { background: #00BFA5; }
-.nav-nutri.active   .nav-pip { background: #34C759; }
-.nav-histo.active   .nav-pip { background: #9B59B6; }
-.nav-stats.active   .nav-pip { background: #FF3B30; }
-.nav-profil.active  .nav-pip { background: #5856D6; }
+.nav-dash.active    .nav-pip { background: #0A84FF; }
+.nav-workout.active .nav-pip { background: #FF375F; }
+.nav-run.active     .nav-pip { background: #5AC8FA; }
+.nav-nutri.active   .nav-pip { background: #30D158; }
+.nav-histo.active   .nav-pip { background: #BF5AF2; }
+.nav-stats.active   .nav-pip { background: #FF9F0A; }
+.nav-profil.active  .nav-pip { background: #5E5CE6; }
 
 /* Desktop : épingler Profil en bas de la sidebar */
 @media (min-width: 768px) {

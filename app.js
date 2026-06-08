@@ -8,27 +8,27 @@
 
 const WORKOUT_PLAN = {
   bras: {
-    label: 'Bras', short: 'BR', color: '#FF4500', schedule: 1,
+    label: 'Bras', short: 'BR', color: '#FF375F', schedule: 1,
     A: ['Curl pupitre barre EZ', 'Curl haltère incliné', 'Dips', 'Extensions verticales à la poulie', 'Curl haltère debout sur banc incliné'],
     B: ['Barre front', 'Extensions des triceps à la poulie haute à la corde', 'Curl Spider', 'Curl Zottman', 'Kickback']
   },
   pec: {
-    label: 'Pectoraux', short: 'PE', color: '#FF0080', schedule: 2,
+    label: 'Pectoraux', short: 'PE', color: '#FF9F0A', schedule: 2,
     A: ['Développé couché à la Smith machine', 'Développé incliné à la machine convergente', 'Développé incliné avec haltères', 'Dips buste penché en avant', 'Écartés à la poulie vis-à-vis'],
     B: ['Développé incliné à la barre', 'Développé décliné aux haltères', 'Écartés décliné avec haltères', 'Développé couché serré avec haltères', 'Svend press']
   },
   dos: {
-    label: 'Dos', short: 'DO', color: '#00FF80', schedule: 3,
+    label: 'Dos', short: 'DO', color: '#0A84FF', schedule: 3,
     A: ['Tirage vertical poitrine', 'Tractions lestées', 'Rowing barre', 'Tirage vertical prise serrée', 'Tirage horizontal à la poulie'],
     B: ['Rowing à un bras', 'Reverse fly', 'Tractions', 'Tirage vertical', 'Tirage Horizontal à la Poulie']
   },
   epaules: {
-    label: 'Épaules', short: 'EP', color: '#00D0FF', schedule: 4,
+    label: 'Épaules', short: 'EP', color: '#30D158', schedule: 4,
     A: ['Presse à épaules inclinée', 'Élévations latérales', 'Développé militaire barre', 'Développé Arnold'],
     B: ['Oiseau assis sur un banc', 'Élévations frontales à la poulie basse', 'Tirage menton barre guidée', 'Face pull', 'Élévations latérales']
   },
   jambes: {
-    label: 'Jambes', short: 'JA', color: '#CC00FF', schedule: 5,
+    label: 'Jambes', short: 'JA', color: '#BF5AF2', schedule: 5,
     A: ['Hack squat', 'Fentes avant avec haltères', 'Squat', 'Leg extension', 'Squat à la Smith machine'],
     B: ['Hip thrust', 'Goblet squat avec haltère', 'Squat bulgare avec haltères', 'Presse à cuisses horizontale', 'Leg extension']
   }
