@@ -554,6 +554,7 @@ function renderDashboard() {
 let wkState = { muscleGroup: null, weekType: 'A', date: '', prevExercises: [] };
 
 const WK_DRAFT_KEY = 'wk-draft';
+const WK_DRAFT_TTL = 12 * 60 * 60 * 1000; // 12h
 
 function saveWkDraft() {
   if (!wkState.muscleGroup) return;
@@ -567,28 +568,29 @@ function saveWkDraft() {
       inputs[`${ei}-${si}`] = { w, r };
     }
   });
-  sessionStorage.setItem(WK_DRAFT_KEY, JSON.stringify({
+  localStorage.setItem(WK_DRAFT_KEY, JSON.stringify({
     mg, wt, date: wkState.date,
     notes: document.getElementById('wk-notes')?.value || '',
-    inputs
+    inputs, _ts: Date.now()
   }));
 }
 
 function loadWkDraft(mg, wt) {
   try {
-    const raw = sessionStorage.getItem(WK_DRAFT_KEY);
+    const raw = localStorage.getItem(WK_DRAFT_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw);
+    if (Date.now() - (d._ts || 0) > WK_DRAFT_TTL) { localStorage.removeItem(WK_DRAFT_KEY); return null; }
     return (d.mg === mg && d.wt === wt) ? d : null;
   } catch { return null; }
 }
 
-function clearWkDraft() { sessionStorage.removeItem(WK_DRAFT_KEY); }
+function clearWkDraft() { localStorage.removeItem(WK_DRAFT_KEY); }
 
 function renderWorkout() {
   const dow = new Date().getDay();
   // Restore muscle group from draft if available, otherwise use today's schedule
-  const draft = (() => { try { const r = sessionStorage.getItem(WK_DRAFT_KEY); return r ? JSON.parse(r) : null; } catch { return null; } })();
+  const draft = (() => { try { const r = localStorage.getItem(WK_DRAFT_KEY); if (!r) return null; const d = JSON.parse(r); return (Date.now() - (d._ts||0) < WK_DRAFT_TTL) ? d : null; } catch { return null; } })();
   wkState.muscleGroup = wkState.muscleGroup || draft?.mg || DAY_TO_MUSCLE[dow] || 'bras';
   wkState.weekType    = S.weekType;
   wkState.date        = todayStr();
@@ -771,7 +773,10 @@ function updateVols() {
   saveWkDraft();
 }
 
+let _savingWorkout = false;
 function saveWorkout() {
+  if (_savingWorkout) return; _savingWorkout = true;
+  setTimeout(() => { _savingWorkout = false; }, 3000);
   const mg   = wkState.muscleGroup;
   const wt   = wkState.weekType;
   const date = document.getElementById('wk-date')?.value || todayStr();
@@ -1294,13 +1299,16 @@ function setFeeling(v) {
   document.querySelectorAll('.feel-btn').forEach((b,i)=>b.classList.toggle('active',i+1===v));
 }
 
+let _savingRun = false;
 function saveRun() {
+  if (_savingRun) return; _savingRun = true;
+  setTimeout(() => { _savingRun = false; }, 3000);
   const dist = parseFloat(document.getElementById('run-dist')?.value)||0;
   const dur  = parseDur(document.getElementById('run-dur')?.value||'');
   const date = document.getElementById('run-date')?.value||todayStr();
   const notes= document.getElementById('run-notes')?.value||'';
   const feel = parseInt(document.querySelector('.feel-btn.active')?.dataset.v||'3');
-  if(dist<=0){ showToast('Entre la distance'); return; }
+  if(dist<=0){ _savingRun = false; showToast('Entre la distance'); return; }
   S.runs.push({ id:uid(), date, weekKey:getWeekKey(date), distance:dist, duration:dur, pace:dur>0?dur/dist:0, calories:Math.round(dist*CAL_PER_KM), feeling:feel, notes });
   save();
   haptic([40, 30, 80]);

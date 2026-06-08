@@ -140,6 +140,7 @@ body {
   left: 0; right: 0;
   overflow-y: auto; overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   padding: 16px 14px 10px;
   scrollbar-width: none;
 }
@@ -724,7 +725,7 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
   flex: 1; min-width: 0;
   background: none; border: none; outline: none;
   text-align: center;
-  font-size: 15px; font-weight: 400; color: var(--t1);
+  font-size: 16px; font-weight: 400; color: var(--t1);
   font-variant-numeric: tabular-nums; font-family: var(--font);
   -moz-appearance: textfield; padding: 0;
 }
@@ -758,13 +759,13 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
   width: 100%;
   background: var(--surface2); border: 1px solid var(--border);
   border-radius: var(--r-sm); padding: 12px 14px;
-  font-size: 15px; font-weight: 400; color: var(--t1);
+  font-size: 16px; font-weight: 400; color: var(--t1);
   font-family: var(--font); transition: border-color var(--fast);
   -moz-appearance: textfield; color-scheme: dark;
 }
 [data-theme="light"] .form-inp { color-scheme: light; }
 .form-inp:focus { outline: none; border-color: var(--border2); }
-input[type="date"].form-inp { max-width: 100%; min-width: 0; font-size: 13px; }
+input[type="date"].form-inp { max-width: 100%; min-width: 0; font-size: 16px; }
 .form-inp::-webkit-outer-spin-button,
 .form-inp::-webkit-inner-spin-button { -webkit-appearance: none; }
 .form-auto {
@@ -772,7 +773,7 @@ input[type="date"].form-inp { max-width: 100%; min-width: 0; font-size: 13px; }
   border-radius: var(--r-sm); padding: 12px 14px;
   font-size: 15px; font-weight: 500; color: var(--t2);
 }
-textarea.form-inp { resize: none; height: 72px; font-size: 13px; line-height: 1.6; }
+textarea.form-inp { resize: none; height: 72px; font-size: 16px; line-height: 1.6; }
 .form-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-group { margin-bottom: 12px; }
 

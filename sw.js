@@ -1,4 +1,4 @@
-const CACHE = 'sport-crm-v5';
+const CACHE = 'sport-crm-v6';
 const ASSETS = [
   './index.html',
   './style.css',
@@ -29,7 +29,7 @@ self.addEventListener('fetch', e => {
   if (isAppFile) {
     // Network-first : toujours chercher la dernière version, cache en fallback offline
     e.respondWith(
-      fetch(e.request).then(res => {
+      fetch(e.request, { cache: 'no-cache' }).then(res => {
         if (res && res.status === 200) {
           const clone = res.clone();
           caches.open(CACHE).then(c => c.put(e.request, clone));
