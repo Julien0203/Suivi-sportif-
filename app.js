@@ -551,7 +551,7 @@ function renderDashboard() {
 // 5. SÉANCE
 // ============================================================
 
-let wkState = { muscleGroup: null, weekType: 'A', date: '', prevExercises: [] };
+let wkState = { muscleGroup: null, weekType: 'A', date: '', prevExercises: [], doneSets: {} };
 
 const WK_DRAFT_KEY = 'wk-draft';
 const WK_DRAFT_TTL = 12 * 60 * 60 * 1000; // 12h
@@ -604,6 +604,7 @@ function renderWorkoutForm() {
   const last = getLastSession(mg, wt);
   const m    = WORKOUT_PLAN[mg];
   wkState.prevExercises = last ? last.exercises : [];
+  wkState.doneSets = {};
   const draft = loadWkDraft(mg, wt);
 
   document.getElementById('app').innerHTML = `
@@ -612,7 +613,6 @@ function renderWorkoutForm() {
     <!-- LEFT: Selectors + Summary -->
     <div class="workout-sidebar">
       <div class="card card-sm mb-10">
-        <div class="sect-lbl" style="margin-bottom:10px">Groupe musculaire</div>
         <div class="muscle-chips mb-10">
           ${MUSCLE_KEYS.map(k=>`
             <button class="chip ${k===mg?'active':''}"
@@ -621,56 +621,36 @@ function renderWorkoutForm() {
               ${WORKOUT_PLAN[k].label}
             </button>`).join('')}
         </div>
-        <div class="sect-lbl" style="margin-bottom:8px">Semaine</div>
-        <div class="flex gap-8 mb-10">
-          <button class="chip chip-plain ${wt==='A'?'active-a':''}" onclick="setWorkoutWeek('A')">Semaine A</button>
-          <button class="chip chip-plain ${wt==='B'?'active-b':''}" onclick="setWorkoutWeek('B')">Semaine B</button>
+        <div class="wk-meta-row">
+          <div class="flex gap-6">
+            <button class="chip chip-plain chip-sm ${wt==='A'?'active-a':''}" onclick="setWorkoutWeek('A')">A</button>
+            <button class="chip chip-plain chip-sm ${wt==='B'?'active-b':''}" onclick="setWorkoutWeek('B')">B</button>
+          </div>
+          <input type="date" class="form-inp wk-date-inline" id="wk-date" value="${wkState.date}" onchange="wkState.date=this.value">
         </div>
-        <div class="sect-lbl" style="margin-bottom:8px">Date</div>
-        <input type="date" class="form-inp" id="wk-date" value="${wkState.date}" onchange="wkState.date=this.value">
       </div>
-
-      ${last ? `
-      <button class="btn btn-ghost btn-sm mb-10" onclick="fillAllFromLast()" style="gap:5px">
-        ↩ Reprendre la dernière séance
-      </button>` : ''}
 
       <!-- Summary / Save -->
       <div class="session-bar" style="position:relative;top:auto">
         <div>
-          <div class="sect-lbl" style="margin-bottom:2px">Volume session</div>
           <div><span class="sess-vol" id="session-total">0</span> <span class="sess-unit">kg</span></div>
           ${last
             ? `<div class="sess-ref">Réf. ${fmtVol(last.totalVolume)} kg <span id="session-delta"></span></div>`
             : `<div class="sess-ref">Première séance</div>`}
         </div>
-        <button class="btn btn-primary btn-inline btn-sm" onclick="saveWorkout()">Terminer la séance</button>
+        <button class="btn btn-primary btn-inline btn-sm" onclick="saveWorkout()">Terminer</button>
       </div>
-
-      <div class="form-group mt-12">
-        <label class="form-lbl">Notes</label>
-        <textarea class="form-inp" id="wk-notes" placeholder="Ressenti, conditions..."></textarea>
-      </div>
-      <button class="btn btn-primary mt-8" onclick="saveWorkout()">Enregistrer la séance</button>
     </div>
 
     <!-- RIGHT: Exercises -->
     <div>
       ${exos.map((name, ei) => {
         const prevSets = last ? (last.exercises[ei]?.sets || []) : [];
-        const prevLine = prevSets.length ? prevSets.map(s=>`${s.weight}×${s.reps}`).join(' · ') : null;
         return `
         <div class="ex-block" id="ex-${ei}">
           <div class="ex-head">
-            <div>
-              <div class="ex-meta">Exercice ${ei+1} / ${exos.length}</div>
-              <div class="ex-name">${name}</div>
-              ${prevLine ? `<div class="ex-prev">Dernière · ${prevLine}</div>` : ''}
-            </div>
-            <div style="display:flex;gap:5px;flex-shrink:0">
-              ${last ? `<button class="copy-pill" onclick="fillFromLast(${ei})" title="Reprendre la séance précédente">↩ Réf.</button>` : ''}
-              <button class="copy-pill" onclick="copyFirstSet(${ei})">S1→tous</button>
-            </div>
+            <div class="ex-name">${name}</div>
+            <button class="copy-pill" onclick="copyFirstSet(${ei})">S1→tous</button>
           </div>
           ${Array.from({length:SETS},(_,si)=>{
             const pv = prevSets[si]||{weight:'',reps:''};
@@ -678,13 +658,14 @@ function renderWorkoutForm() {
             const wVal = dv?.w ?? pv.weight ?? '';
             const rVal = dv?.r ?? pv.reps ?? '';
             return `
-            <div class="set-row">
-              <span class="set-num">S${si+1}${pv.weight?`<span class="prev-ref">${pv.weight}×${pv.reps}</span>`:''}</span>
+            ${pv.weight ? `<div class="set-ghost"><span class="ghost-lbl">S${si+1}</span><span class="ghost-val">${pv.weight} kg × ${pv.reps}</span></div>` : ''}
+            <div class="set-row" id="set-row-${ei}-${si}">
+              <span class="set-num">S${si+1}</span>
               <div class="inp-pill">
                 <button class="adj-btn" onclick="adj(${ei},${si},'weight',-2.5)">−</button>
                 <input type="number" class="set-input" inputmode="decimal" step="0.5"
                   id="w-${ei}-${si}" value="${wVal}" placeholder="—"
-                  oninput="updateVols()" onchange="updateVols()">
+                  oninput="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}" onchange="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}">
                 <span class="set-unit-lbl">kg</span>
                 <button class="adj-btn" onclick="adj(${ei},${si},'weight',2.5)">+</button>
               </div>
@@ -693,12 +674,12 @@ function renderWorkoutForm() {
                 <button class="adj-btn" onclick="adj(${ei},${si},'reps',-1)">−</button>
                 <input type="number" class="set-input" inputmode="numeric" step="1"
                   id="r-${ei}-${si}" value="${rVal}" placeholder="—"
-                  oninput="updateVols()" onchange="updateVols()">
+                  oninput="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}" onchange="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}">
                 <span class="set-unit-lbl">rep</span>
                 <button class="adj-btn" onclick="adj(${ei},${si},'reps',1)">+</button>
               </div>
               <span class="set-vol" id="sv-${ei}-${si}">—</span>
-              <button class="set-timer-btn" onclick="startRestTimer()" title="Chrono 1m30">⏱</button>
+              <button class="set-check-btn" id="chk-${ei}-${si}" onclick="validateSet(${ei},${si})">○</button>
             </div>`;
           }).join('')}
           <div class="ex-total" id="ex-vol-${ei}">0 kg</div>
@@ -727,6 +708,33 @@ function adj(ei, si, field, step) {
   else el.value = Math.max(1, (parseInt(el.value)||0) + step);
   haptic([4]);
   updateVols();
+}
+
+function autoFillFromS1(ei) {
+  const w0 = document.getElementById(`w-${ei}-0`)?.value || '';
+  const r0 = document.getElementById(`r-${ei}-0`)?.value || '';
+  for (let si = 1; si < SETS; si++) {
+    const we = document.getElementById(`w-${ei}-${si}`);
+    const re = document.getElementById(`r-${ei}-${si}`);
+    if (we && !we.value) we.value = w0;
+    if (re && !re.value) re.value = r0;
+  }
+  updateVols();
+}
+
+function validateSet(ei, si) {
+  const key = `${ei}-${si}`;
+  wkState.doneSets[key] = !wkState.doneSets[key];
+  const row = document.getElementById(`set-row-${ei}-${si}`);
+  const btn = document.getElementById(`chk-${ei}-${si}`);
+  if (wkState.doneSets[key]) {
+    row?.classList.add('done');
+    if (btn) { btn.textContent = '✓'; btn.classList.add('checked'); }
+  } else {
+    row?.classList.remove('done');
+    if (btn) { btn.textContent = '○'; btn.classList.remove('checked'); }
+  }
+  haptic([4]);
 }
 
 function copyFirstSet(ei) {
@@ -1339,7 +1347,6 @@ function renderHistory() {
     <div class="tab-row">
       <button class="tab-btn ${histTab==='workout'?'active':''}" onclick="setHistTab('workout')">Musculation (${S.workouts.length})</button>
       <button class="tab-btn ${histTab==='run'?'active':''}" onclick="setHistTab('run')">Course (${S.runs.length})</button>
-      <button class="tab-btn tab-export" onclick="exportCSV('${histTab}')" title="Export CSV">⬇ CSV</button>
     </div>
 
     ${Object.keys(groups).length===0
@@ -1462,7 +1469,71 @@ function deleteRun(id)     { if(!confirm('Supprimer ?')) return; S.runs=S.runs.f
 // ============================================================
 
 let charts = {};
-let period = 8;
+let period = 4;
+
+function buildKiviatSVG() {
+  const N = MUSCLE_KEYS.length;
+  const W = 320, H = 280, CX = 140, CY = 140, R = 90, LEVELS = 5;
+  const dark = document.documentElement.dataset.theme !== 'light';
+  const angles = MUSCLE_KEYS.map((_, i) => (2 * Math.PI * i / N) - Math.PI / 2);
+  const colors = MUSCLE_KEYS.map(k => WORKOUT_PLAN[k].color);
+  const labels = MUSCLE_KEYS.map(k => WORKOUT_PLAN[k].label);
+  const rv = MUSCLE_KEYS.map(k => getMuscleProgression(k).recent);
+  const pv = MUSCLE_KEYS.map(k => getMuscleProgression(k).prev);
+  const maxVal = Math.max(...rv, ...pv, 1);
+
+  const px = (i, val) => CX + (val / maxVal) * R * Math.cos(angles[i]);
+  const py = (i, val) => CY + (val / maxVal) * R * Math.sin(angles[i]);
+  const gx = (i, lv)  => CX + (lv / LEVELS) * R * Math.cos(angles[i]);
+  const gy = (i, lv)  => CY + (lv / LEVELS) * R * Math.sin(angles[i]);
+
+  const gridColor  = dark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.07)';
+  const fillRecent = dark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
+  const strokeR    = dark ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.65)';
+
+  // Grid pentagons
+  const grid = Array.from({length: LEVELS}, (_, l) =>
+    `<polygon points="${MUSCLE_KEYS.map((_,i)=>`${gx(i,l+1)},${gy(i,l+1)}`).join(' ')}" fill="none" stroke="${gridColor}" stroke-width="1"/>`
+  ).join('');
+
+  // Colored axis lines
+  const axes = MUSCLE_KEYS.map((_, i) =>
+    `<line x1="${CX}" y1="${CY}" x2="${gx(i,LEVELS)}" y2="${gy(i,LEVELS)}" stroke="${colors[i]}" stroke-width="1.5" stroke-opacity=".45"/>`
+  ).join('');
+
+  // Colored sector fills (very subtle)
+  const sectors = MUSCLE_KEYS.map((_, i) => {
+    const a0 = angles[i] - Math.PI / N, a1 = angles[i] + Math.PI / N;
+    const x0 = CX + R * Math.cos(a0), y0 = CY + R * Math.sin(a0);
+    const x1 = CX + R * Math.cos(a1), y1 = CY + R * Math.sin(a1);
+    return `<polygon points="${CX},${CY} ${x0},${y0} ${x1},${y1}" fill="${colors[i]}" fill-opacity=".04"/>`;
+  }).join('');
+
+  // Polygons
+  const prevPoly   = MUSCLE_KEYS.map((_,i)=>`${px(i,pv[i])},${py(i,pv[i])}`).join(' ');
+  const recentPoly = MUSCLE_KEYS.map((_,i)=>`${px(i,rv[i])},${py(i,rv[i])}`).join(' ');
+
+  // Colored dots on recent polygon
+  const dots = MUSCLE_KEYS.map((_, i) =>
+    `<circle cx="${px(i,rv[i])}" cy="${py(i,rv[i])}" r="4.5" fill="${colors[i]}" stroke="${dark?'#0a0a0a':'#fff'}" stroke-width="1.5"/>`
+  ).join('');
+
+  // Labels — short names to avoid overflow
+  const shortLabels = { bras:'Bras', pec:'Pecto.', dos:'Dos', epaules:'Épau.', jambes:'Jambes' };
+  const lblEls = MUSCLE_KEYS.map((k, i) => {
+    const a = angles[i], lr = R + 18;
+    const x = CX + lr * Math.cos(a), y = CY + lr * Math.sin(a);
+    const anchor = Math.cos(a) > 0.1 ? 'start' : Math.cos(a) < -0.1 ? 'end' : 'middle';
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}" dominant-baseline="middle" fill="${colors[i]}" font-size="11" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">${shortLabels[k]||labels[i]}</text>`;
+  }).join('');
+
+  return `<svg viewBox="-10 -10 ${W+30} ${H+20}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+    ${sectors}${grid}${axes}
+    <polygon points="${prevPoly}" fill="rgba(140,140,140,.06)" stroke="rgba(140,140,140,.3)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <polygon points="${recentPoly}" fill="${fillRecent}" stroke="${strokeR}" stroke-width="2"/>
+    ${dots}${lblEls}
+  </svg>`;
+}
 
 function renderStats() {
   const bestVol = (() => { const wks=[...new Set(S.workouts.map(w=>w.weekKey))]; return wks.length?Math.round(Math.max(...wks.map(wk=>totalVol(wk)))):0; })();
@@ -1470,8 +1541,8 @@ function renderStats() {
 
   document.getElementById('app').innerHTML = `
     <div class="period-row">
-      <button class="period-btn ${period===4?'active':''}" onclick="setPeriod(4)">4 sem.</button>
-      <button class="period-btn ${period===8?'active':''}" onclick="setPeriod(8)">8 sem.</button>
+      <button class="period-btn ${period===2?'active':''}" onclick="setPeriod(2)">2 sem.</button>
+      <button class="period-btn ${period===4?'active':''}" onclick="setPeriod(4)">1 mois</button>
       <button class="period-btn ${period===12?'active':''}" onclick="setPeriod(12)">3 mois</button>
     </div>
 
@@ -1496,6 +1567,18 @@ function renderStats() {
         <div class="stat-num" style="font-size:22px">${avgPace}<span class="stat-unit">/km</span></div>
         <div class="stat-sub">Toutes sorties</div>
       </div>
+    </div>
+
+    <!-- KIVIAT RADAR SVG -->
+    <div class="card">
+      <div class="chart-lbl" style="margin-bottom:8px">
+        <span>Kiviat · Volume par muscle</span>
+        <div class="legend">
+          <span class="legend-lbl"><span class="legend-dot" style="background:var(--t1);opacity:.7"></span>4 sem.</span>
+          <span class="legend-lbl"><span class="legend-dot" style="background:var(--t4)"></span>préc.</span>
+        </div>
+      </div>
+      <div style="width:100%;height:260px">${buildKiviatSVG()}</div>
     </div>
 
     <!-- PROGRESSION PAR MUSCLE -->
