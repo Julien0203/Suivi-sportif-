@@ -213,10 +213,11 @@ function getWeekKey(date) {
   const day = d.getDay();
   d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
   d.setHours(0,0,0,0);
-  return d.toISOString().slice(0,10);
+  return localDateStr(d);
 }
 
-function todayStr()    { return new Date().toISOString().slice(0,10); }
+function localDateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function todayStr()    { return localDateStr(new Date()); }
 function thisWeekKey() { return getWeekKey(new Date()); }
 function prevWeekKey() { const d = new Date(); d.setDate(d.getDate()-7); return getWeekKey(d); }
 
@@ -365,7 +366,7 @@ function renderDashboard() {
   const calDots = WD_ORDER.map((d, i) => {
     const date    = new Date(monday);
     date.setDate(monday.getDate() + i);
-    const ds      = date.toISOString().slice(0, 10);
+    const ds      = localDateStr(date);
     const mk      = DAY_TO_MUSCLE[d];
     const isToday = ds === todayStr();
     const isFuture = ds > todayStr();
@@ -951,8 +952,8 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
 }
 
 function _nutriStats() {
-  const days7  = Array.from({length:7},  (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i);  return d.toISOString().slice(0,10); });
-  const days30 = Array.from({length:30}, (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-29+i); return d.toISOString().slice(0,10); });
+  const days7  = Array.from({length:7},  (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i);  return localDateStr(d); });
+  const days30 = Array.from({length:30}, (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-29+i); return localDateStr(d); });
   const get  = (date,key) => (S.nutrition||[]).filter(n=>n.date===date).reduce((s,n)=>s+(n[key]||0),0);
   const avgA = arr => { const f=arr.filter(v=>v>0); return f.length ? Math.round(f.reduce((s,v)=>s+v,0)/f.length) : 0; };
   const avg7Cal  = avgA(days7.map( d=>get(d,'calories')));
@@ -961,7 +962,7 @@ function _nutriStats() {
   let streak=0;
   for(let i=0;i<90;i++){
     const d=new Date(); d.setDate(d.getDate()-i);
-    const ds=d.toISOString().slice(0,10);
+    const ds=localDateStr(d);
     if((S.nutrition||[]).some(n=>n.date===ds)) streak++;
     else if(i>0) break;
   }
@@ -1124,7 +1125,7 @@ function buildNutriCharts() {
   Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif";
   Chart.defaults.font.size = 10;
 
-  const days7 = Array.from({length:7}, (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i); return d.toISOString().slice(0,10); });
+  const days7 = Array.from({length:7}, (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i); return localDateStr(d); });
   const dayLbls = days7.map(d=>{ const dt=new Date(d+'T12:00:00'); return `${dt.getDate()}/${dt.getMonth()+1}`; });
 
   const cc = document.getElementById('chart-cal')?.getContext('2d');
@@ -1835,6 +1836,21 @@ function showToast(msg) {
 function toggleMenu() { document.body.classList.toggle('menu-open'); }
 function closeMenu()  { document.body.classList.remove('menu-open'); }
 
+function initSwipe() {
+  const VIEWS = ['dashboard','workout','run','nutrition','history','stats','profile'];
+  let sx = 0, sy = 0, st = 0;
+  const el = document.getElementById('app');
+  el.addEventListener('touchstart', e => { sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now(); }, {passive:true});
+  el.addEventListener('touchend', e => {
+    if (document.body.classList.contains('menu-open')) return;
+    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if (Date.now()-st>400 || Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*2) return;
+    const idx=VIEWS.indexOf(S.view||'dashboard');
+    if (dx<0 && idx<VIEWS.length-1) navigate(VIEWS[idx+1]);
+    else if (dx>0 && idx>0)          navigate(VIEWS[idx-1]);
+  }, {passive:true});
+}
+
 function navigate(view) {
   S.view = view;
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
@@ -1896,6 +1912,7 @@ function registerSW() {
 function init() {
   loadState(); applyTheme(); updateWeekBadge(); initEvents();
   navigate(S.view||'dashboard'); registerSW();
+  initSwipe();
   initFirebase();
   if (syncCode && db) pullFromCloud();
 }
