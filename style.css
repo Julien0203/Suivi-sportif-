@@ -742,6 +742,12 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
   font-variant-numeric: tabular-nums;
 }
 
+@media (max-width: 480px) {
+  .set-vol       { display: none; }
+  .set-timer-btn { display: none; }
+  .adj-btn       { width: 30px; }
+}
+
 /* 16. FORM */
 .form-lbl {
   display: block; font-size: 10px; font-weight: 400;

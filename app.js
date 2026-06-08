@@ -553,9 +553,43 @@ function renderDashboard() {
 
 let wkState = { muscleGroup: null, weekType: 'A', date: '', prevExercises: [] };
 
+const WK_DRAFT_KEY = 'wk-draft';
+
+function saveWkDraft() {
+  if (!wkState.muscleGroup) return;
+  const mg = wkState.muscleGroup, wt = wkState.weekType;
+  const exos = WORKOUT_PLAN[mg][wt];
+  const inputs = {};
+  exos.forEach((_, ei) => {
+    for (let si = 0; si < SETS; si++) {
+      const w = document.getElementById(`w-${ei}-${si}`)?.value || '';
+      const r = document.getElementById(`r-${ei}-${si}`)?.value || '';
+      inputs[`${ei}-${si}`] = { w, r };
+    }
+  });
+  sessionStorage.setItem(WK_DRAFT_KEY, JSON.stringify({
+    mg, wt, date: wkState.date,
+    notes: document.getElementById('wk-notes')?.value || '',
+    inputs
+  }));
+}
+
+function loadWkDraft(mg, wt) {
+  try {
+    const raw = sessionStorage.getItem(WK_DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return (d.mg === mg && d.wt === wt) ? d : null;
+  } catch { return null; }
+}
+
+function clearWkDraft() { sessionStorage.removeItem(WK_DRAFT_KEY); }
+
 function renderWorkout() {
   const dow = new Date().getDay();
-  wkState.muscleGroup = wkState.muscleGroup || DAY_TO_MUSCLE[dow] || 'bras';
+  // Restore muscle group from draft if available, otherwise use today's schedule
+  const draft = (() => { try { const r = sessionStorage.getItem(WK_DRAFT_KEY); return r ? JSON.parse(r) : null; } catch { return null; } })();
+  wkState.muscleGroup = wkState.muscleGroup || draft?.mg || DAY_TO_MUSCLE[dow] || 'bras';
   wkState.weekType    = S.weekType;
   wkState.date        = todayStr();
   renderWorkoutForm();
@@ -568,6 +602,7 @@ function renderWorkoutForm() {
   const last = getLastSession(mg, wt);
   const m    = WORKOUT_PLAN[mg];
   wkState.prevExercises = last ? last.exercises : [];
+  const draft = loadWkDraft(mg, wt);
 
   document.getElementById('app').innerHTML = `
   <div class="workout-desktop">
@@ -637,13 +672,16 @@ function renderWorkoutForm() {
           </div>
           ${Array.from({length:SETS},(_,si)=>{
             const pv = prevSets[si]||{weight:'',reps:''};
+            const dv = draft?.inputs?.[`${ei}-${si}`];
+            const wVal = dv?.w ?? pv.weight ?? '';
+            const rVal = dv?.r ?? pv.reps ?? '';
             return `
             <div class="set-row">
               <span class="set-num">S${si+1}${pv.weight?`<span class="prev-ref">${pv.weight}×${pv.reps}</span>`:''}</span>
               <div class="inp-pill">
                 <button class="adj-btn" onclick="adj(${ei},${si},'weight',-2.5)">−</button>
                 <input type="number" class="set-input" inputmode="decimal" step="0.5"
-                  id="w-${ei}-${si}" value="${pv.weight}" placeholder="—"
+                  id="w-${ei}-${si}" value="${wVal}" placeholder="—"
                   oninput="updateVols()" onchange="updateVols()">
                 <span class="set-unit-lbl">kg</span>
                 <button class="adj-btn" onclick="adj(${ei},${si},'weight',2.5)">+</button>
@@ -652,7 +690,7 @@ function renderWorkoutForm() {
               <div class="inp-pill">
                 <button class="adj-btn" onclick="adj(${ei},${si},'reps',-1)">−</button>
                 <input type="number" class="set-input" inputmode="numeric" step="1"
-                  id="r-${ei}-${si}" value="${pv.reps}" placeholder="—"
+                  id="r-${ei}-${si}" value="${rVal}" placeholder="—"
                   oninput="updateVols()" onchange="updateVols()">
                 <span class="set-unit-lbl">rep</span>
                 <button class="adj-btn" onclick="adj(${ei},${si},'reps',1)">+</button>
@@ -670,6 +708,11 @@ function renderWorkoutForm() {
   </div>
   `;
   updateVols();
+  // Restore notes from draft
+  if (draft?.notes) {
+    const notesEl = document.getElementById('wk-notes');
+    if (notesEl) notesEl.value = draft.notes;
+  }
 }
 
 function setWorkoutMuscle(k) { wkState.muscleGroup = k; renderWorkoutForm(); }
@@ -725,6 +768,7 @@ function updateVols() {
     const d=((total-last.totalVolume)/last.totalVolume*100);
     de.innerHTML=`<span class="${d>=0?'up':'down'}">${d>=0?'↑':'↓'} ${Math.abs(d).toFixed(1)}%</span>`;
   }
+  saveWkDraft();
 }
 
 function saveWorkout() {
@@ -743,6 +787,7 @@ function saveWorkout() {
   S.weekType = wt;
   S.workouts.push({ id:uid(), date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes });
   save();
+  clearWkDraft();
   haptic([40, 30, 80]);
   showToast(`${WORKOUT_PLAN[mg].label} · ${fmtVol(totalVolume)} kg`);
   wkState.muscleGroup = null;
