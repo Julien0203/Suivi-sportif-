@@ -1832,6 +1832,9 @@ function showToast(msg) {
 // 10. NAVIGATION
 // ============================================================
 
+function toggleMenu() { document.body.classList.toggle('menu-open'); }
+function closeMenu()  { document.body.classList.remove('menu-open'); }
+
 function navigate(view) {
   S.view = view;
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
@@ -1845,7 +1848,7 @@ function navigate(view) {
 }
 
 function initEvents() {
-  document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.view)));
+  document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>{navigate(b.dataset.view);closeMenu();}));
 
   document.getElementById('btn-theme').addEventListener('click',()=>{
     const isLight = document.documentElement.dataset.theme==='light';
