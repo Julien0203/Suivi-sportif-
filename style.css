@@ -103,6 +103,11 @@ body {
 }
 .topbar-left  { display: flex; align-items: center; gap: 8px; }
 .topbar-icon  { display: none; }
+.topbar-logo {
+  font-size: 13px; font-weight: 800;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--t1);
+}
 .topbar-title {
   font-size: 13px; font-weight: 500;
   letter-spacing: .06em; text-transform: uppercase;
@@ -262,7 +267,7 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
 .prof-meta-input {
   background: none; border: none; outline: none;
   font-size: 13px; color: var(--t3);
-  width: 34px; text-align: center; padding: 0;
+  width: 42px; text-align: center; padding: 0;
 }
 .prof-meta-input::placeholder { color: var(--t4); }
 .prof-meta-unit { font-size: 13px; color: var(--t3); }
@@ -1249,3 +1254,24 @@ select.form-inp {
 #sync-btn[data-status="syncing"] svg { animation: spin-sync .9s linear infinite; transform-origin: center; }
 #sync-btn[data-status="offline"] { color: var(--red); }
 @keyframes spin-sync { to { transform: rotate(360deg); } }
+
+/* Pull-to-refresh indicator */
+#ptr-indicator {
+  position: fixed; top: calc(var(--topbar-h) + 6px);
+  left: 50%; transform: translateX(-50%) translateY(0);
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--t2); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+  padding: 6px 14px; border-radius: 20px;
+  opacity: 0; pointer-events: none;
+  z-index: 90; transition: opacity .15s;
+  white-space: nowrap;
+}
+
+/* CSV export tab */
+.tab-export {
+  flex: 0; padding: 10px 12px;
+  color: var(--t3); font-size: 10px; font-weight: 700;
+  letter-spacing: .04em;
+}
+.tab-export:hover { color: var(--t1); }

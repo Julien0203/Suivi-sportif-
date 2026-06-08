@@ -516,7 +516,12 @@ function renderDashboard() {
     <div class="card recent-card">
       <div class="sect-lbl mb-10">Activité récente</div>
       ${recent.length === 0
-        ? `<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--t3)">Aucune activité enregistrée</div>`
+        ? `<div style="padding:24px 0;text-align:center">
+             <div style="font-size:28px;margin-bottom:10px;opacity:.35">🏋️</div>
+             <div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:6px">Aucune activité</div>
+             <div style="font-size:12px;color:var(--t3);margin-bottom:14px">Lance ta première séance pour démarrer</div>
+             <button class="btn btn-primary btn-sm" onclick="navigate('workout')">Commencer</button>
+           </div>`
         : recent.map(item => item.kind === 'w' ? `
           <div class="recent-row" onclick="openSessionDetail('${item.id}')">
             <div class="rec-icon" style="background:${WORKOUT_PLAN[item.muscleGroup].color}18;border:1px solid ${WORKOUT_PLAN[item.muscleGroup].color}44;color:${WORKOUT_PLAN[item.muscleGroup].color}">${WORKOUT_PLAN[item.muscleGroup].short}</div>
@@ -675,6 +680,7 @@ function adj(ei, si, field, step) {
   if (!el) return;
   if (field==='weight') el.value = Math.max(0, Math.round(((parseFloat(el.value)||0) + step)*10)/10);
   else el.value = Math.max(1, (parseInt(el.value)||0) + step);
+  haptic([4]);
   updateVols();
 }
 
@@ -737,6 +743,7 @@ function saveWorkout() {
   S.weekType = wt;
   S.workouts.push({ id:uid(), date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes });
   save();
+  haptic([40, 30, 80]);
   showToast(`${WORKOUT_PLAN[mg].label} · ${fmtVol(totalVolume)} kg`);
   wkState.muscleGroup = null;
   navigate('dashboard');
@@ -1251,6 +1258,7 @@ function saveRun() {
   if(dist<=0){ showToast('Entre la distance'); return; }
   S.runs.push({ id:uid(), date, weekKey:getWeekKey(date), distance:dist, duration:dur, pace:dur>0?dur/dist:0, calories:Math.round(dist*CAL_PER_KM), feeling:feel, notes });
   save();
+  haptic([40, 30, 80]);
   showToast(`${dist.toFixed(1)} km · ${fmtPace(dur>0?dur/dist:0)}/km`);
   navigate('dashboard');
 }
@@ -1278,6 +1286,7 @@ function renderHistory() {
     <div class="tab-row">
       <button class="tab-btn ${histTab==='workout'?'active':''}" onclick="setHistTab('workout')">Musculation (${S.workouts.length})</button>
       <button class="tab-btn ${histTab==='run'?'active':''}" onclick="setHistTab('run')">Course (${S.runs.length})</button>
+      <button class="tab-btn tab-export" onclick="exportCSV('${histTab}')" title="Export CSV">⬇ CSV</button>
     </div>
 
     ${Object.keys(groups).length===0
@@ -1316,6 +1325,35 @@ function renderHistory() {
 }
 
 function setHistTab(tab) { histTab=tab; renderHistory(); }
+
+function exportCSV(type) {
+  let csv, filename;
+  if (type === 'workout') {
+    const rows = [['Date','Muscle','Semaine','Volume (kg)','Exercice','Série','Poids (kg)','Reps']];
+    S.workouts.sort((a,b)=>a.date.localeCompare(b.date)).forEach(w => {
+      w.exercises.forEach(ex => {
+        ex.sets.forEach((s,i) => {
+          rows.push([w.date, WORKOUT_PLAN[w.muscleGroup].label, w.weekType, w.totalVolume, ex.name, i+1, s.weight, s.reps]);
+        });
+      });
+    });
+    csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    filename = 'tempo-musculation.csv';
+  } else {
+    const rows = [['Date','Distance (km)','Durée (s)','Allure (s/km)','Calories','Ressenti','Notes']];
+    S.runs.sort((a,b)=>a.date.localeCompare(b.date)).forEach(r => {
+      rows.push([r.date, r.distance, r.duration, Math.round(r.pace), r.calories, FEEL_LABELS[(r.feeling||3)-1], r.notes||'']);
+    });
+    csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    filename = 'tempo-course.csv';
+  }
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Export CSV téléchargé ✓');
+}
 
 function openSessionDetail(id) {
   const s = S.workouts.find(w=>w.id===id); if(!s) return;
@@ -1525,12 +1563,11 @@ function renderProfile() {
   const sortedW   = [...(S.weights||[])].sort((a,b)=>a.date.localeCompare(b.date));
   const currentW  = sortedW.length ? sortedW[sortedW.length-1].weight : null;
   const goalKg    = g.kg || 70;
-  const initial   = (p.name||'?')[0].toUpperCase();
+  const initial   = p.name ? p.name[0].toUpperCase() : null;
 
   document.getElementById('app').innerHTML = `
-    <!-- AVATAR + NOM -->
+    <!-- NOM -->
     <div class="prof-header">
-      <div class="prof-avatar">${initial}</div>
       <input id="p-name" class="prof-name-input" type="text"
         value="${p.name||''}" placeholder="Ton prénom" spellcheck="false">
       <div class="prof-meta-row">
@@ -1617,6 +1654,21 @@ function renderProfile() {
           <input id="g-km" class="prof-row-input" type="number"
             value="${S.runGoal||15}" step="1" min="0" max="300">
           <span class="prof-row-unit">km</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="prof-group-lbl">Rappels</div>
+    <div class="prof-settings-card">
+      <div class="prof-row">
+        <div class="prof-row-left">
+          <span class="prof-row-dot" style="background:var(--green)"></span>
+          <span class="prof-row-label">Rappel entraînement</span>
+        </div>
+        <div class="prof-row-right">
+          <button class="btn btn-ghost btn-sm" onclick="scheduleNotification()" id="notif-btn">
+            ${Notification?.permission === 'granted' ? 'Configuré ✓' : 'Activer'}
+          </button>
         </div>
       </div>
     </div>
@@ -1836,6 +1888,62 @@ function showToast(msg) {
 function toggleMenu() { document.body.classList.toggle('menu-open'); }
 function closeMenu()  { document.body.classList.remove('menu-open'); }
 
+// ============================================================
+// 9b. HAPTIC & PULL-TO-REFRESH
+// ============================================================
+
+function haptic(pattern = [8]) {
+  try { navigator.vibrate(pattern); } catch {}
+}
+
+function initPullToRefresh() {
+  const el = document.getElementById('app');
+  let sy = 0, pulling = false;
+  let indicator = null;
+
+  function getIndicator() {
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'ptr-indicator';
+      document.body.appendChild(indicator);
+    }
+    return indicator;
+  }
+
+  el.addEventListener('touchstart', e => {
+    if (el.scrollTop === 0) { sy = e.touches[0].clientY; pulling = true; }
+    else pulling = false;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - sy;
+    if (dy > 0 && dy < 100) {
+      const ind = getIndicator();
+      ind.style.opacity = String(Math.min(dy / 60, 1));
+      ind.style.transform = `translateX(-50%) translateY(${Math.min(dy * 0.5, 32)}px)`;
+      ind.textContent = dy > 60 ? '↻ Relâcher' : '↓ Tirer pour synchro';
+    }
+  }, { passive: true });
+
+  el.addEventListener('touchend', e => {
+    if (!pulling) return;
+    const dy = e.changedTouches[0].clientY - sy;
+    pulling = false;
+    const ind = indicator;
+    if (ind) { ind.style.opacity = '0'; ind.style.transform = 'translateX(-50%) translateY(0)'; }
+    if (dy > 60) {
+      haptic([10, 30, 10]);
+      if (db && syncCode) {
+        pullFromCloud();
+        showToast('Synchronisation…');
+      } else {
+        showToast('Sync cloud non configuré');
+      }
+    }
+  }, { passive: true });
+}
+
 function initSwipe() {
   const VIEWS = ['dashboard','workout','run','nutrition','history','stats','profile'];
   let sx = 0, sy = 0, st = 0;
@@ -1909,10 +2017,46 @@ function registerSW() {
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 
+function scheduleNotification() {
+  if (!('Notification' in window)) { showToast('Notifications non supportées'); return; }
+  if (Notification.permission === 'granted') {
+    showModal(`
+      <div class="modal-head">
+        <div><div class="t3">RAPPELS</div><div class="modal-title">Rappel entraînement</div></div>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <p class="t3" style="font-size:13px;line-height:1.7;margin-bottom:16px">Les notifications sont activées.<br>Un rappel quotidien te sera envoyé à 18h les jours d'entraînement.</p>
+      <button class="btn btn-primary" style="margin-bottom:8px" onclick="fireTestNotif()">Tester maintenant</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
+    `);
+  } else {
+    Notification.requestPermission().then(p => {
+      if (p === 'granted') {
+        showToast('Rappels activés ✓');
+        const btn = document.getElementById('notif-btn');
+        if (btn) btn.textContent = 'Configuré ✓';
+        fireTestNotif();
+      } else {
+        showToast('Notifications refusées');
+      }
+    });
+  }
+}
+
+function fireTestNotif() {
+  closeModal();
+  const dow = new Date().getDay();
+  const muscle = DAY_TO_MUSCLE[dow];
+  const title = muscle ? `Séance ${WORKOUT_PLAN[muscle].label} aujourd'hui 💪` : 'Tempo · Récupération active 🧘';
+  const body  = muscle ? `${WORKOUT_PLAN[muscle][S.weekType].length} exercices · ${SETS} séries — C'est parti !` : 'Profite du repos, tu l\'as mérité.';
+  new Notification(title, { body, icon: './icon.png', badge: './icon.png' });
+  showToast('Notification test envoyée ✓');
+}
+
 function init() {
   loadState(); applyTheme(); updateWeekBadge(); initEvents();
   navigate(S.view||'dashboard'); registerSW();
-  initSwipe();
+  initSwipe(); initPullToRefresh();
   initFirebase();
   if (syncCode && db) pullFromCloud();
 }
