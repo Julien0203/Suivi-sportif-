@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Sport CRM">
+  <meta name="theme-color" content="#0f0f0f" id="meta-theme">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <title>Sport CRM</title>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-icon">⚡</span>
+      <span class="topbar-title">SPORT CRM</span>
+    </div>
+    <div class="topbar-right">
+      <button id="btn-week-toggle" class="week-badge" aria-label="Changer semaine A/B">SEM. A</button>
+      <button id="sync-btn" class="icon-btn" onclick="showSyncModal()" data-status="idle" title="Sync cloud" aria-label="Synchronisation cloud">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+      <button id="btn-theme" class="icon-btn" aria-label="Changer thème">
+        <svg id="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg id="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main id="app"></main>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="nav-item nav-dash active" data-view="dashboard">
+      <span class="nav-pip">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      </span>
+      <span>Dashboard</span>
+    </button>
+    <button class="nav-item nav-workout" data-view="workout">
+      <span class="nav-pip">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <line x1="5.5" y1="12" x2="18.5" y2="12"/>
+          <path d="M5.5 9v6M18.5 9v6"/>
+          <path d="M3 10.5v3M21 10.5v3"/>
+        </svg>
+      </span>
+      <span>Séance</span>
+    </button>
+    <button class="nav-item nav-run" data-view="run">
+      <span class="nav-pip">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 18l4-11 3 7 3-4 4 3"/>
+          <circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+          <circle cx="17" cy="13" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      </span>
+      <span>Course</span>
+    </button>
+    <button class="nav-item nav-nutri" data-view="nutrition">
+      <span class="nav-pip">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M12 21c-4.1 0-7-3.9-7-9 0-3.3 2-5 5-5 .8 0 1.6.3 2 .3s1.2-.3 2-.3c3 0 5 1.7 5 5 0 5.1-2.9 9-7 9z"/>
+          <path d="M13 3c0 1.1-1 2-2 2"/>
+        </svg>
+      </span>
+      <span>Nutri</span>
+    </button>
+    <button class="nav-item nav-histo" data-view="history">
+      <span class="nav-pip">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </span>
+      <span>Histo</span>
+    </button>
+    <button class="nav-item nav-stats" data-view="stats">
+      <span class="nav-pip">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+        </svg>
+      </span>
+      <span>Stats</span>
+    </button>
+    <button class="nav-item nav-profil nav-bottom-pin" data-view="profile">
+      <span class="nav-pip">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+      </span>
+      <span>Profil</span>
+    </button>
+  </nav>
+
+  <!-- MODAL overlay -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div id="modal-box" class="modal-box"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- ─── Firebase config — remplace les valeurs après avoir créé ton projet ─── -->
+  <script>
+    const FIREBASE_CONFIG = {
+      apiKey:            "AIzaSyADGzFWDd8qB5fFbOtM8C-mTHUxDogFwVg",
+      authDomain:        "suivi-sportif-bd770.firebaseapp.com",
+      projectId:         "suivi-sportif-bd770",
+      storageBucket:     "suivi-sportif-bd770.firebasestorage.app",
+      messagingSenderId: "603738673987",
+      appId:             "1:603738673987:web:cea4af99f7d644fac515f6"
+    };
+  </script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- ─────────────────────────────────────────────────────────────────────── -->
+  <script src="app.js?v=2"></script>
+</body>
+</html>
