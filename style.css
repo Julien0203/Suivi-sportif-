@@ -1173,6 +1173,31 @@ select.form-inp {
 .nutri-target-lbl { font-size: 13px; color: var(--t2); }
 .nutri-target-val { font-size: 14px; font-weight: 500; color: var(--t1); font-variant-numeric: tabular-nums; }
 
+/* Meal presets */
+.meal-presets-list { display: flex; flex-direction: column; gap: 2px; }
+.meal-preset-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.meal-preset-row:last-child { border-bottom: none; }
+.meal-preset-info { flex: 1; min-width: 0; }
+.meal-preset-name { font-size: 14px; font-weight: 500; color: var(--t1); }
+.meal-preset-detail { font-size: 11px; color: var(--t3); margin-top: 2px; line-height: 1.4; }
+.meal-preset-macros { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
+.preset-cal  { font-size: 12px; font-weight: 600; color: #FF9F0A; font-variant-numeric: tabular-nums; }
+.preset-dot  { font-size: 11px; color: var(--t4); }
+.preset-prot { font-size: 12px; font-weight: 600; color: var(--c-dos); font-variant-numeric: tabular-nums; }
+.btn-preset-add {
+  width: 34px; height: 34px; flex-shrink: 0;
+  border-radius: 50%; border: none;
+  background: var(--c-dos); color: #fff;
+  font-size: 20px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: opacity .15s;
+}
+.btn-preset-add:active { opacity: 0.7; }
+
 /* ============================================================
    28. DESKTOP — sidebar + grid layout
    ============================================================ */

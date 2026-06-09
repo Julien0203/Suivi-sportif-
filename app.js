@@ -912,6 +912,18 @@ let NUTRI_TARGETS = { calories: 3000, protein: 150 };
 // BMR Mifflin-St Jeor ≈ 1584 kcal · TDEE ×1.55 ≈ 2455 · Surplus +500 ≈ 2955 → 3000 kcal
 // Protéines : 2.5 g/kg × 61 ≈ 152 → 150 g
 
+const MEAL_PRESETS = [
+  {
+    name: 'Smoothie matin',
+    emoji: '🥤',
+    calories: 825,
+    protein: 47,
+    note: 'Smoothie matin',
+    detail: '50g avoine · 200g skyr · 35g beurre cacahouète · 300ml lait · banane'
+  }
+  // Ajouter d'autres repas ici
+];
+
 let nutriTab    = 'today';
 let nutriCharts = {};
 
@@ -978,6 +990,27 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
         </div>
       </div>
     </div>
+
+    ${MEAL_PRESETS.length > 0 ? `
+    <div class="card">
+      <div class="sect-lbl" style="margin-bottom:12px">Repas enregistrés</div>
+      <div class="meal-presets-list">
+        ${MEAL_PRESETS.map((p, i) => `
+          <div class="meal-preset-row">
+            <div class="meal-preset-info">
+              <div class="meal-preset-name">${p.emoji} ${p.name}</div>
+              <div class="meal-preset-detail">${p.detail}</div>
+              <div class="meal-preset-macros">
+                <span class="preset-cal">${p.calories} kcal</span>
+                <span class="preset-dot">·</span>
+                <span class="preset-prot">${p.protein}g prot.</span>
+              </div>
+            </div>
+            <button class="btn-preset-add" onclick="logNutriPreset(${i})">+</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
 
     <div class="card">
       <div class="sect-lbl" style="margin-bottom:14px">Ajouter un repas</div>
@@ -1142,6 +1175,17 @@ function _nutriWeight() {
       `).join('')}
     </div>` : `<div class="empty"><div class="empty-icon">—</div><h3>Aucune mesure</h3><p>Commence à logger ton poids pour suivre ta progression.</p></div>`}
   `;
+}
+
+function logNutriPreset(idx) {
+  const p = MEAL_PRESETS[idx];
+  if (!p) return;
+  if (!S.nutrition) S.nutrition = [];
+  S.nutrition.push({ id: uid(), date: todayStr(), calories: p.calories, protein: p.protein, note: p.note });
+  save();
+  haptic([4]);
+  showToast(`${p.emoji} ${p.name} ajouté`);
+  renderNutrition();
 }
 
 function logNutrition() {
