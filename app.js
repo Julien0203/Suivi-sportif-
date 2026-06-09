@@ -50,7 +50,7 @@ const FEEL_LABELS  = ['Nul','Dur','OK','Bien','Top'];
 // ============================================================
 
 let S = {};
-const DEFAULTS = { view: 'dashboard', theme: 'dark', weekType: 'A', workouts: [], runs: [], nutrition: [], weights: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 3000, prot: 150 }, runGoal: 15 };
+const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], nutrition: [], weights: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 3000, prot: 150 }, runGoal: 15 };
 
 function loadState() {
   try { S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('sport-crm-v2') || '{}') }; }
@@ -947,7 +947,47 @@ let NUTRI_TARGETS = { calories: 3000, protein: 150 };
 // Protéines : 2.5 g/kg × 61 ≈ 152 → 150 g
 
 const MEAL_PRESETS = [
+  // ── Féculents ──────────────────────────────────────────────────────
   {
+    category: 'Féculents',
+    name: 'Pâtes cuites 300g',
+    emoji: '🍝',
+    calories: 420,
+    protein: 12,
+    note: 'Pâtes cuites 300g',
+    detail: '~42g glucides · 12g prot · 1,5g lip. pour 300g cuit'
+  },
+  {
+    category: 'Féculents',
+    name: 'Riz basmati cuit 300g',
+    emoji: '🍚',
+    calories: 350,
+    protein: 7,
+    note: 'Riz basmati cuit 300g',
+    detail: '~76g glucides · 7g prot · 0,5g lip. pour 300g cuit'
+  },
+  // ── Protéines ──────────────────────────────────────────────────────
+  {
+    category: 'Protéines',
+    name: 'Steak',
+    emoji: '🥩',
+    calories: 170,
+    protein: 20,
+    note: 'Steak',
+    detail: '~0g glucides · 20g prot · ~10g lip. (portion ~130g)'
+  },
+  {
+    category: 'Protéines',
+    name: 'Truite (100g)',
+    emoji: '🐟',
+    calories: 130,
+    protein: 20,
+    note: 'Truite 100g',
+    detail: '~0g glucides · 20g prot · ~6g lip. pour 100g'
+  },
+  // ── Petit-déjeuner ─────────────────────────────────────────────────
+  {
+    category: 'Petit-déj',
     name: 'Smoothie matin',
     emoji: '🥤',
     calories: 825,
@@ -955,7 +995,6 @@ const MEAL_PRESETS = [
     note: 'Smoothie matin',
     detail: '50g avoine · 200g skyr · 35g beurre cacahouète · 300ml lait · banane'
   }
-  // Ajouter d'autres repas ici
 ];
 
 let nutriTab    = 'today';
@@ -1025,26 +1064,31 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
       </div>
     </div>
 
-    ${MEAL_PRESETS.length > 0 ? `
-    <div class="card">
+    ${MEAL_PRESETS.length > 0 ? (() => {
+      const cats = [...new Set(MEAL_PRESETS.map(p => p.category))];
+      return `<div class="card">
       <div class="sect-lbl" style="margin-bottom:12px">Repas enregistrés</div>
       <div class="meal-presets-list">
-        ${MEAL_PRESETS.map((p, i) => `
-          <div class="meal-preset-row">
-            <div class="meal-preset-info">
-              <div class="meal-preset-name">${p.emoji} ${p.name}</div>
-              <div class="meal-preset-detail">${p.detail}</div>
-              <div class="meal-preset-macros">
-                <span class="preset-cal">${p.calories} kcal</span>
-                <span class="preset-dot">·</span>
-                <span class="preset-prot">${p.protein}g prot.</span>
+        ${cats.map(cat => {
+          const items = MEAL_PRESETS.map((p,i)=>({...p,_i:i})).filter(p=>p.category===cat);
+          return `<div class="preset-cat-lbl">${cat}</div>
+          ${items.map(p=>`
+            <div class="meal-preset-row">
+              <div class="meal-preset-info">
+                <div class="meal-preset-name">${p.emoji} ${p.name}</div>
+                <div class="meal-preset-detail">${p.detail}</div>
+                <div class="meal-preset-macros">
+                  <span class="preset-cal">${p.calories} kcal</span>
+                  <span class="preset-dot">·</span>
+                  <span class="preset-prot">${p.protein}g prot.</span>
+                </div>
               </div>
-            </div>
-            <button class="btn-preset-add" onclick="logNutriPreset(${i})">+</button>
-          </div>
-        `).join('')}
+              <button class="btn-preset-add" onclick="logNutriPreset(${p._i})">+</button>
+            </div>`).join('')}`;
+        }).join('')}
       </div>
-    </div>` : ''}
+    </div>`;
+    })() : ''}
 
     <div class="card">
       <div class="sect-lbl" style="margin-bottom:14px">Ajouter un repas</div>
@@ -2220,7 +2264,7 @@ function initEvents() {
     document.documentElement.dataset.theme=next; S.theme=next; save();
     document.getElementById('icon-sun').style.display  = next==='dark'?'none':'block';
     document.getElementById('icon-moon').style.display = next==='dark'?'block':'none';
-    document.getElementById('meta-theme').content = next==='dark'?'#0f0f0f':'#f2f2f2';
+    document.getElementById('meta-theme').content = next==='dark'?'#0f0f0f':'#ffffff';
     if(S.view==='stats'){ destroyCharts(); renderStats(); }
   });
 
@@ -2246,7 +2290,7 @@ function applyTheme() {
   const dark=S.theme==='dark';
   document.getElementById('icon-sun').style.display  = dark?'none':'block';
   document.getElementById('icon-moon').style.display = dark?'block':'none';
-  document.getElementById('meta-theme').content = dark?'#0f0f0f':'#f2f2f2';
+  document.getElementById('meta-theme').content = dark?'#0f0f0f':'#ffffff';
 }
 
 // ============================================================
