@@ -2082,19 +2082,22 @@ function renderProfile() {
     </div>
 
     <div class="prof-group-lbl">Cloud Sync</div>
-    <div class="prof-settings-card">
-      ${currentUser ? `
-      <div class="prof-row">
-        <div class="prof-row-left" style="gap:10px">
-          ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" style="width:28px;height:28px;border-radius:50%;flex-shrink:0">` : ''}
-          <div>
-            <div style="font-size:13px;font-weight:500;color:var(--t1)">${currentUser.displayName||'Connecté'}</div>
-            <div style="font-size:11px;color:var(--t3)">${currentUser.email}</div>
-          </div>
+    ${currentUser ? `
+    <div class="prof-settings-card" style="padding:20px 18px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+        ${currentUser.photoURL
+          ? `<img src="${currentUser.photoURL}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--green);box-shadow:0 0 0 4px rgba(52,199,89,.15)">`
+          : `<div style="width:72px;height:72px;border-radius:50%;background:var(--c-dos);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;font-weight:700">${(currentUser.displayName||'?')[0].toUpperCase()}</div>`}
+        <div>
+          <div style="font-size:16px;font-weight:600;color:var(--t1)">${currentUser.displayName||'Connecté'}</div>
+          <div style="font-size:12px;color:var(--t3);margin-top:2px">${currentUser.email}</div>
+          <div style="font-size:11px;color:var(--green);margin-top:6px;font-weight:500">✓ Synchronisé</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="signOutUser()">Déco.</button>
+        <button class="btn btn-ghost btn-sm" onclick="signOutUser()" style="margin-top:4px">Se déconnecter</button>
       </div>
-      ` : `
+    </div>
+    ` : `
+    <div class="prof-settings-card">
       <div class="prof-row">
         <div class="prof-row-left">
           <span class="prof-row-dot" style="background:var(--c-dos)"></span>
@@ -2104,8 +2107,8 @@ function renderProfile() {
           <button class="btn btn-ghost btn-sm" onclick="showSyncModal()">Connecter</button>
         </div>
       </div>
-      `}
     </div>
+    `}
 
     <div class="prof-group-lbl">Rappels</div>
     <div class="prof-settings-card">
