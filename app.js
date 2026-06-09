@@ -72,19 +72,15 @@ let fbAuth      = null;
 let currentUser = null;
 let _syncTimer  = null;
 
-function initFirebase() {
+async function initFirebase() {
   try {
     if (typeof firebase === 'undefined' || typeof FIREBASE_CONFIG === 'undefined') return;
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db     = firebase.firestore();
     fbAuth = firebase.auth();
-    fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+    // Attendre que la persistance LOCAL soit active avant tout
+    await fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
-
-    // Récupère le résultat d'une redirection (iOS PWA)
-    fbAuth.getRedirectResult().then(result => {
-      if (result?.user) pullFromCloud();
-    }).catch(() => {});
 
     // Écoute les changements de connexion
     fbAuth.onAuthStateChanged(user => {
@@ -173,11 +169,20 @@ async function signInWithGoogle() {
   if (!fbAuth) { showToast('Firebase non chargé — recharge l\'app'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
-    showToast('Redirection vers Google…');
-    await fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    await fbAuth.signInWithRedirect(provider);
+    showToast('Connexion Google…');
+    const result = await fbAuth.signInWithPopup(provider);
+    if (result.user) {
+      currentUser = result.user;
+      _updateSyncBtn();
+      closeModal();
+      showToast('Connecté — ' + result.user.displayName);
+      await pullFromCloud();
+      navigate('profile');
+    }
   } catch(e) {
-    showToast('Erreur connexion: ' + (e.message || e.code));
+    if (e.code !== 'auth/popup-closed-by-user') {
+      showToast('Erreur connexion: ' + (e.message || e.code));
+    }
   }
 }
 
