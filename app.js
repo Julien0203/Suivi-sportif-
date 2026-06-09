@@ -161,14 +161,8 @@ async function pullFromCloud() {
 async function signInWithGoogle() {
   if (!fbAuth) return;
   const provider = new firebase.auth.GoogleAuthProvider();
-  try {
-    await fbAuth.signInWithPopup(provider);
-  } catch(e) {
-    // Popup bloqué (PWA iOS) → redirect
-    if (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request') {
-      fbAuth.signInWithRedirect(provider);
-    }
-  }
+  // Toujours utiliser redirect (fonctionne sur iOS PWA + tous navigateurs)
+  fbAuth.signInWithRedirect(provider);
 }
 
 async function signOutUser() {
