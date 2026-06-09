@@ -572,19 +572,31 @@ function renderDashboard() {
 // ============================================================
 
 let wkState = { muscleGroup: null, weekType: 'A', date: '', prevExercises: [], doneSets: {} };
-let wkTimer = { startTs: null, interval: null };
+let wkTimer = { startTs: null, interval: null, running: false };
 
 function startWkTimer() {
   if (!wkTimer.startTs) wkTimer.startTs = Date.now();
+  wkTimer.running = true;
   clearInterval(wkTimer.interval);
   wkTimer.interval = setInterval(_tickWkTimer, 1000);
   _tickWkTimer();
+  _updateTimerBtn();
 }
 function _tickWkTimer() {
   const el = document.getElementById('session-timer');
   if (el && wkTimer.startTs) el.textContent = formatDur(Math.floor((Date.now() - wkTimer.startTs) / 1000));
 }
-function pauseWkTimer() { clearInterval(wkTimer.interval); wkTimer.interval = null; }
+function _updateTimerBtn() {
+  const btn = document.getElementById('timer-toggle-btn');
+  if (btn) btn.textContent = wkTimer.running ? '⏸' : '▶';
+}
+function toggleWkTimer() {
+  if (wkTimer.running) { pauseWkTimer(); } else { startWkTimer(); }
+}
+function pauseWkTimer() {
+  clearInterval(wkTimer.interval); wkTimer.interval = null; wkTimer.running = false;
+  _updateTimerBtn();
+}
 function stopWkTimer()  { pauseWkTimer(); wkTimer.startTs = null; }
 
 const WK_DRAFT_KEY = 'wk-draft';
@@ -628,7 +640,6 @@ function renderWorkout() {
   wkState.muscleGroup = wkState.muscleGroup || draft?.mg || DAY_TO_MUSCLE[dow] || 'bras';
   wkState.weekType    = S.weekType;
   wkState.date        = todayStr();
-  startWkTimer();
   renderWorkoutForm();
 }
 
@@ -674,7 +685,7 @@ function renderWorkoutForm() {
             : `<div class="sess-ref">Première séance</div>`}
         </div>
         <div class="sess-timer-wrap">
-          <span class="sess-timer-icon">⏱</span>
+          <button class="timer-toggle-btn" id="timer-toggle-btn" onclick="toggleWkTimer()">${wkTimer.running ? '⏸' : '▶'}</button>
           <span class="sess-timer" id="session-timer">${wkTimer.startTs ? formatDur(Math.floor((Date.now()-wkTimer.startTs)/1000)) : '00:00'}</span>
         </div>
         <button class="btn btn-primary btn-inline btn-sm" onclick="saveWorkout()">Terminer</button>
