@@ -950,46 +950,56 @@ const MEAL_PRESETS = [
   // ── Féculents ──────────────────────────────────────────────────────
   {
     category: 'Féculents',
-    name: 'Pâtes cuites 300g',
+    name: 'Pâtes cuites',
     emoji: '🍝',
-    calories: 420,
-    protein: 12,
-    note: 'Pâtes cuites 300g',
-    detail: '~42g glucides · 12g prot · 1,5g lip. pour 300g cuit'
+    defaultG: 300,
+    perG: { cal: 1.4, prot: 0.04 },
+    note: 'Pâtes cuites',
+    detail: 'par 100g cuit : ~140 kcal · 4g prot · 28g glucides'
   },
   {
     category: 'Féculents',
-    name: 'Riz basmati cuit 300g',
+    name: 'Riz basmati cuit',
     emoji: '🍚',
-    calories: 350,
-    protein: 7,
-    note: 'Riz basmati cuit 300g',
-    detail: '~76g glucides · 7g prot · 0,5g lip. pour 300g cuit'
+    defaultG: 300,
+    perG: { cal: 1.167, prot: 0.0233 },
+    note: 'Riz basmati cuit',
+    detail: 'par 100g cuit : ~117 kcal · 2,3g prot · 25g glucides'
   },
   // ── Protéines ──────────────────────────────────────────────────────
   {
     category: 'Protéines',
     name: 'Steak',
     emoji: '🥩',
-    calories: 170,
-    protein: 20,
+    defaultG: 130,
+    perG: { cal: 1.31, prot: 0.154 },
     note: 'Steak',
-    detail: '~0g glucides · 20g prot · ~10g lip. (portion ~130g)'
+    detail: 'par 100g : ~131 kcal · 15g prot · 0g glucides'
   },
   {
     category: 'Protéines',
-    name: 'Truite (100g)',
+    name: 'Skyr',
+    emoji: '🥛',
+    defaultG: 200,
+    perG: { cal: 0.63, prot: 0.10 },
+    note: 'Skyr',
+    detail: 'par 100g : ~63 kcal · 10g prot · 4g glucides · 0,2g lip.'
+  },
+  {
+    category: 'Protéines',
+    name: 'Truite',
     emoji: '🐟',
-    calories: 130,
-    protein: 20,
-    note: 'Truite 100g',
-    detail: '~0g glucides · 20g prot · ~6g lip. pour 100g'
+    defaultG: 100,
+    perG: { cal: 1.3, prot: 0.2 },
+    note: 'Truite',
+    detail: 'par 100g : ~130 kcal · 20g prot · 0g glucides'
   },
   // ── Petit-déjeuner ─────────────────────────────────────────────────
   {
     category: 'Petit-déj',
     name: 'Smoothie matin',
     emoji: '🥤',
+    defaultG: null,
     calories: 825,
     protein: 47,
     note: 'Smoothie matin',
@@ -1072,19 +1082,29 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
         ${cats.map(cat => {
           const items = MEAL_PRESETS.map((p,i)=>({...p,_i:i})).filter(p=>p.category===cat);
           return `<div class="preset-cat-lbl">${cat}</div>
-          ${items.map(p=>`
+          ${items.map(p => {
+            const hasG = !!p.perG;
+            const initCal  = hasG ? Math.round(p.perG.cal * p.defaultG) : p.calories;
+            const initProt = hasG ? Math.round(p.perG.prot * p.defaultG * 10) / 10 : p.protein;
+            return `
             <div class="meal-preset-row">
               <div class="meal-preset-info">
                 <div class="meal-preset-name">${p.emoji} ${p.name}</div>
-                <div class="meal-preset-detail">${p.detail}</div>
-                <div class="meal-preset-macros">
-                  <span class="preset-cal">${p.calories} kcal</span>
+                ${hasG ? `<div class="preset-gram-row">
+                  <input type="number" inputmode="numeric" class="preset-gram-inp" id="preset-g-${p._i}"
+                    value="${p.defaultG}" min="1" max="2000"
+                    oninput="updatePresetCalc(${p._i})">
+                  <span class="preset-gram-unit">g</span>
+                </div>` : `<div class="meal-preset-detail">${p.detail}</div>`}
+                <div class="meal-preset-macros" id="preset-macros-${p._i}">
+                  <span class="preset-cal">${initCal} kcal</span>
                   <span class="preset-dot">·</span>
-                  <span class="preset-prot">${p.protein}g prot.</span>
+                  <span class="preset-prot">${initProt}g prot.</span>
                 </div>
               </div>
               <button class="btn-preset-add" onclick="logNutriPreset(${p._i})">+</button>
-            </div>`).join('')}`;
+            </div>`;
+          }).join('')}`;
         }).join('')}
       </div>
     </div>`;
@@ -1255,11 +1275,27 @@ function _nutriWeight() {
   `;
 }
 
+function updatePresetCalc(idx) {
+  const p = MEAL_PRESETS[idx];
+  if (!p?.perG) return;
+  const g = parseFloat(document.getElementById(`preset-g-${idx}`)?.value) || p.defaultG;
+  const cal  = Math.round(p.perG.cal * g);
+  const prot = Math.round(p.perG.prot * g * 10) / 10;
+  const el = document.getElementById(`preset-macros-${idx}`);
+  if (el) el.innerHTML = `<span class="preset-cal">${cal} kcal</span><span class="preset-dot">·</span><span class="preset-prot">${prot}g prot.</span>`;
+}
+
 function logNutriPreset(idx) {
   const p = MEAL_PRESETS[idx];
   if (!p) return;
+  let cal = p.calories, prot = p.protein;
+  if (p.perG) {
+    const g = parseFloat(document.getElementById(`preset-g-${idx}`)?.value) || p.defaultG;
+    cal  = Math.round(p.perG.cal * g);
+    prot = Math.round(p.perG.prot * g * 10) / 10;
+  }
   if (!S.nutrition) S.nutrition = [];
-  S.nutrition.push({ id: uid(), date: todayStr(), calories: p.calories, protein: p.protein, note: p.note });
+  S.nutrition.push({ id: uid(), date: todayStr(), calories: cal, protein: prot, note: p.note });
   save();
   haptic([4]);
   showToast(`${p.emoji} ${p.name} ajouté`);

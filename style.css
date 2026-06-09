@@ -1178,6 +1178,19 @@ select.form-inp {
 
 /* Meal presets */
 .meal-presets-list { display: flex; flex-direction: column; gap: 2px; }
+.preset-gram-row {
+  display: flex; align-items: center; gap: 5px; margin: 5px 0 3px;
+}
+.preset-gram-inp {
+  width: 70px; padding: 4px 8px; font-size: 14px; font-weight: 600;
+  border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--bg); color: var(--t1);
+  font-family: var(--font); text-align: center;
+  -moz-appearance: textfield;
+}
+.preset-gram-inp::-webkit-inner-spin-button,
+.preset-gram-inp::-webkit-outer-spin-button { -webkit-appearance: none; }
+.preset-gram-unit { font-size: 13px; color: var(--t3); font-weight: 500; }
 .preset-cat-lbl {
   font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
   color: var(--t3); padding: 10px 0 4px;
