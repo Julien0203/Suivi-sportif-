@@ -159,10 +159,15 @@ async function pullFromCloud() {
 }
 
 async function signInWithGoogle() {
-  if (!fbAuth) return;
+  if (!fbAuth) { showToast('Firebase non chargé — recharge l\'app'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
-  // Toujours utiliser redirect (fonctionne sur iOS PWA + tous navigateurs)
-  fbAuth.signInWithRedirect(provider);
+  try {
+    showToast('Redirection vers Google…');
+    // Sur iOS PWA, le redirect ouvre Safari — reviens ensuite sur l'app
+    await fbAuth.signInWithRedirect(provider);
+  } catch(e) {
+    showToast('Erreur connexion: ' + (e.message || e.code));
+  }
 }
 
 async function signOutUser() {
