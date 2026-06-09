@@ -1116,8 +1116,8 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
           return `<div class="preset-cat-lbl">${cat}</div>
           ${items.map(p => {
             const hasG = !!p.perG;
-            const initCal  = hasG ? Math.round(p.perG.cal * p.defaultG) : p.calories;
-            const initProt = hasG ? Math.round(p.perG.prot * p.defaultG * 10) / 10 : p.protein;
+            const initCal  = hasG ? Math.ceil(p.perG.cal * p.defaultG) : p.calories;
+            const initProt = hasG ? Math.ceil(p.perG.prot * p.defaultG) : p.protein;
             return `
             <div class="meal-preset-row">
               <div class="meal-preset-info">
@@ -1311,8 +1311,8 @@ function updatePresetCalc(idx) {
   const p = MEAL_PRESETS[idx];
   if (!p?.perG) return;
   const g = parseFloat(document.getElementById(`preset-g-${idx}`)?.value) || p.defaultG;
-  const cal  = Math.round(p.perG.cal * g);
-  const prot = Math.round(p.perG.prot * g * 10) / 10;
+  const cal  = Math.ceil(p.perG.cal * g);
+  const prot = Math.ceil(p.perG.prot * g);
   const el = document.getElementById(`preset-macros-${idx}`);
   if (el) el.innerHTML = `<span class="preset-cal">${cal} kcal</span><span class="preset-dot">·</span><span class="preset-prot">${prot}g prot.</span>`;
 }
@@ -1323,8 +1323,8 @@ function logNutriPreset(idx) {
   let cal = p.calories, prot = p.protein;
   if (p.perG) {
     const g = parseFloat(document.getElementById(`preset-g-${idx}`)?.value) || p.defaultG;
-    cal  = Math.round(p.perG.cal * g);
-    prot = Math.round(p.perG.prot * g * 10) / 10;
+    cal  = Math.ceil(p.perG.cal * g);
+    prot = Math.ceil(p.perG.prot * g);
   }
   if (!S.nutrition) S.nutrition = [];
   S.nutrition.push({ id: uid(), date: todayStr(), calories: cal, protein: prot, note: p.note });
