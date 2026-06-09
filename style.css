@@ -1045,8 +1045,8 @@ select.form-inp {
   padding: 5px 4px;
   transition: background var(--mid);
 }
-.set-row.done .inp-pill { opacity: .5; pointer-events: none; }
-.set-row.done .adj-btn  { pointer-events: none; }
+.set-row.done .inp-pill { opacity: .75; }
+.set-row.done .set-input { color: #34C759; }
 
 /* Set check button */
 .set-check-btn {
