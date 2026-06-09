@@ -1037,12 +1037,10 @@ select.form-inp {
 
 /* Set done — glass effect */
 .set-row.done {
-  background: rgba(52,199,89,.09);
-  border-bottom-color: rgba(52,199,89,.18) !important;
-  border-radius: 10px;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  padding: 5px 4px;
+  background: rgba(52,199,89,.08);
+  border-bottom-color: rgba(52,199,89,.15) !important;
+  border-radius: 8px;
+  padding: 2px 2px;
   transition: background var(--mid);
 }
 .set-row.done .inp-pill { opacity: .75; }
