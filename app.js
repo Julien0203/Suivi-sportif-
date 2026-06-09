@@ -572,6 +572,20 @@ function renderDashboard() {
 // ============================================================
 
 let wkState = { muscleGroup: null, weekType: 'A', date: '', prevExercises: [], doneSets: {} };
+let wkTimer = { startTs: null, interval: null };
+
+function startWkTimer() {
+  if (!wkTimer.startTs) wkTimer.startTs = Date.now();
+  clearInterval(wkTimer.interval);
+  wkTimer.interval = setInterval(_tickWkTimer, 1000);
+  _tickWkTimer();
+}
+function _tickWkTimer() {
+  const el = document.getElementById('session-timer');
+  if (el && wkTimer.startTs) el.textContent = formatDur(Math.floor((Date.now() - wkTimer.startTs) / 1000));
+}
+function pauseWkTimer() { clearInterval(wkTimer.interval); wkTimer.interval = null; }
+function stopWkTimer()  { pauseWkTimer(); wkTimer.startTs = null; }
 
 const WK_DRAFT_KEY = 'wk-draft';
 const WK_DRAFT_TTL = 12 * 60 * 60 * 1000; // 12h
@@ -614,6 +628,7 @@ function renderWorkout() {
   wkState.muscleGroup = wkState.muscleGroup || draft?.mg || DAY_TO_MUSCLE[dow] || 'bras';
   wkState.weekType    = S.weekType;
   wkState.date        = todayStr();
+  startWkTimer();
   renderWorkoutForm();
 }
 
@@ -657,6 +672,10 @@ function renderWorkoutForm() {
           ${last
             ? `<div class="sess-ref">Réf. ${fmtVol(last.totalVolume)} kg <span id="session-delta"></span></div>`
             : `<div class="sess-ref">Première séance</div>`}
+        </div>
+        <div class="sess-timer-wrap">
+          <span class="sess-timer-icon">⏱</span>
+          <span class="sess-timer" id="session-timer">${wkTimer.startTs ? formatDur(Math.floor((Date.now()-wkTimer.startTs)/1000)) : '00:00'}</span>
         </div>
         <button class="btn btn-primary btn-inline btn-sm" onclick="saveWorkout()">Terminer</button>
       </div>
@@ -736,8 +755,8 @@ function autoFillFromS1(ei) {
   for (let si = 1; si < SETS; si++) {
     const we = document.getElementById(`w-${ei}-${si}`);
     const re = document.getElementById(`r-${ei}-${si}`);
-    if (we && !we.value) we.value = w0;
-    if (re && !re.value) re.value = r0;
+    if (we) we.value = w0;
+    if (re) re.value = r0;
   }
   updateVols();
 }
@@ -831,12 +850,14 @@ function saveWorkout() {
     }))
   }));
   const totalVolume = calcSessionVol(exercises);
+  const duration = wkTimer.startTs ? Math.floor((Date.now() - wkTimer.startTs) / 1000) : 0;
+  stopWkTimer();
   S.weekType = wt;
-  S.workouts.push({ id:uid(), date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes });
+  S.workouts.push({ id:uid(), date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes, duration });
   save();
   clearWkDraft();
   haptic([40, 30, 80]);
-  showToast(`${WORKOUT_PLAN[mg].label} · ${fmtVol(totalVolume)} kg`);
+  showToast(`${WORKOUT_PLAN[mg].label} · ${fmtVol(totalVolume)} kg · ${formatDur(duration)}`);
   wkState.muscleGroup = null;
   navigate('dashboard');
 }
@@ -2284,6 +2305,7 @@ function navigate(view) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
   if(view!=='stats')      destroyCharts();
   if(view!=='nutrition')  destroyNutriCharts();
+  if(view!=='workout')    pauseWkTimer();
   ({ dashboard:renderDashboard, workout:renderWorkout, run:renderRun, history:renderHistory, stats:renderStats, nutrition:renderNutrition, profile:renderProfile })[view]?.();
   const app = document.getElementById('app');
   app.scrollTop = 0;

@@ -708,6 +708,9 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
 .sess-ref  { font-size: 11px; color: var(--t3); margin-top: 2px; font-weight: 400; }
 .sess-ref .up   { color: var(--green); font-weight: 500; }
 .sess-ref .down { color: var(--red);   font-weight: 500; }
+.sess-timer-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.sess-timer-icon { font-size: 13px; }
+.sess-timer { font-size: 20px; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--t1); letter-spacing: .02em; }
 
 /* Exercise blocks */
 .ex-block {
