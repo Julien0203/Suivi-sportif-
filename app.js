@@ -50,7 +50,7 @@ const FEEL_LABELS  = ['Nul','Dur','OK','Bien','Top'];
 // ============================================================
 
 let S = {};
-const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], nutrition: [], weights: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 3000, prot: 150 }, runGoal: 15 };
+const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], nutrition: [], weights: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 3000, prot: 150 }, runGoal: 15, journal: {} };
 
 function loadState() {
   try { S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('sport-crm-v2') || '{}') }; }
@@ -78,6 +78,7 @@ function initFirebase() {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db     = firebase.firestore();
     fbAuth = firebase.auth();
+    fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
     db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
 
     // Récupère le résultat d'une redirection (iOS PWA)
@@ -173,7 +174,7 @@ async function signInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
     showToast('Redirection vers Google…');
-    // Sur iOS PWA, le redirect ouvre Safari — reviens ensuite sur l'app
+    await fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     await fbAuth.signInWithRedirect(provider);
   } catch(e) {
     showToast('Erreur connexion: ' + (e.message || e.code));
@@ -270,6 +271,84 @@ function weeksFor(n) {
 function weekLbl(wk) { const d=new Date(wk+'T12:00:00'); return `${d.getDate()} ${MONTHS_FR[d.getMonth()]}`; }
 
 // ============================================================
+// 3b. STREAKS, JOURNAL & NOTIFICATIONS
+// ============================================================
+
+function calcStreak(dates) {
+  if (!dates.length) return 0;
+  const unique = [...new Set(dates)].sort().reverse();
+  const today  = todayStr();
+  const yest   = (() => { const d = new Date(); d.setDate(d.getDate()-1); return localDateStr(d); })();
+  if (unique[0] !== today && unique[0] !== yest) return 0;
+  let streak = 0, expected = unique[0];
+  for (const d of unique) {
+    if (d === expected) {
+      streak++;
+      const dt = new Date(expected + 'T12:00'); dt.setDate(dt.getDate() - 1);
+      expected = localDateStr(dt);
+    } else if (d < expected) break;
+  }
+  return streak;
+}
+
+function getStreaks() {
+  const wkDates  = (S.workouts || []).map(w => w.date);
+  const nutDates = (S.nutrition || []).map(n => n.date);
+  const runDates = (S.runs || []).map(r => r.date);
+  const allDates = [...new Set([...wkDates, ...nutDates, ...runDates])];
+  return {
+    workout:   calcStreak(wkDates),
+    nutrition: calcStreak(nutDates),
+    overall:   calcStreak(allDates)
+  };
+}
+
+function saveDayNote() {
+  const text = document.getElementById('day-note')?.value ?? '';
+  if (!S.journal) S.journal = {};
+  S.journal[todayStr()] = text;
+  save();
+}
+
+// ── Notifications ────────────────────────────────────────────
+const NOTIF_MORNING = [
+  { title: '💪 C\'est l\'heure de s\'entraîner !',   body: 'Une séance aujourd\'hui te rapproche de ton objectif.' },
+  { title: '🌅 Bonne journée, champion !',            body: 'N\'oublie pas ta nutrition et ta séance du jour.' },
+  { title: '🔥 Le feu ne s\'éteint pas !',            body: 'Pense à ta séance et tes protéines aujourd\'hui.' },
+];
+const NOTIF_EVENING = [
+  { title: '🌙 Bilan de la journée ?',                body: 'Pense à logger ta séance et ta nutrition !' },
+  { title: '✅ Tu as tout fait aujourd\'hui ?',        body: 'Séance + nutrition = combo gagnant. Bien joué !' },
+  { title: '💤 Bonne récupération ce soir !',         body: 'Le corps se renforce pendant le repos. Continue !' },
+];
+
+function initNotifs() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().then(p => { if (p === 'granted') checkAndNotify(); });
+  } else if (Notification.permission === 'granted') {
+    checkAndNotify();
+  }
+}
+
+function checkAndNotify() {
+  const h     = new Date().getHours();
+  const today = todayStr();
+  const last  = JSON.parse(localStorage.getItem('notif_track') || '{}');
+  const rnd   = arr => arr[Math.floor(Math.random() * arr.length)];
+  if (h >= 8 && h < 11 && last.morning !== today) {
+    const n = rnd(NOTIF_MORNING);
+    new Notification(n.title, { body: n.body, icon: './icon.png', badge: './icon.png' });
+    localStorage.setItem('notif_track', JSON.stringify({ ...last, morning: today }));
+  }
+  if (h >= 18 && h < 22 && last.evening !== today) {
+    const n = rnd(NOTIF_EVENING);
+    new Notification(n.title, { body: n.body, icon: './icon.png', badge: './icon.png' });
+    localStorage.setItem('notif_track', JSON.stringify({ ...last, evening: today }));
+  }
+}
+
+// ============================================================
 // 3b. PROGRESSION & RECORDS
 // ============================================================
 
@@ -341,8 +420,8 @@ function renderDashboard() {
 
   // Nutrition
   const todayNutri = (S.nutrition || []).filter(n => n.date === todayStr());
-  const todayCal   = todayNutri.reduce((s, n) => s + n.calories, 0);
-  const todayProt  = todayNutri.reduce((s, n) => s + n.protein, 0);
+  const todayCal   = Math.ceil(todayNutri.reduce((s, n) => s + n.calories, 0));
+  const todayProt  = Math.ceil(todayNutri.reduce((s, n) => s + n.protein, 0));
   const calPct     = Math.min(todayCal / NUTRI_TARGETS.calories * 100, 100);
   const protPct    = Math.min(todayProt / NUTRI_TARGETS.protein * 100, 100);
 
@@ -532,7 +611,25 @@ function renderDashboard() {
         : `<div style="font-size:12px;color:var(--t3);padding:16px 0">Aucun poids<br>enregistré</div>`}
     </div>
 
-    <!-- ⑧ ACTIVITÉ RÉCENTE -->
+    <!-- ⑧ STREAKS -->
+    ${(() => {
+      const st = getStreaks();
+      if (!st.overall) return '';
+      const items = [
+        st.workout   ? `<div class="streak-item"><span class="streak-fire">🔥</span><span class="streak-num">${st.workout}</span><span class="streak-lbl">séances</span></div>` : '',
+        st.nutrition ? `<div class="streak-item"><span class="streak-fire">🥗</span><span class="streak-num">${st.nutrition}</span><span class="streak-lbl">nutrition</span></div>` : '',
+        st.overall > 1 ? `<div class="streak-item"><span class="streak-fire">⚡</span><span class="streak-num">${st.overall}</span><span class="streak-lbl">jours actifs</span></div>` : '',
+      ].filter(Boolean).join('');
+      return `<div class="card streak-card"><div class="sect-lbl mb-10">Séries en cours</div><div class="streak-row">${items}</div></div>`;
+    })()}
+
+    <!-- ⑨ NOTE DU JOUR -->
+    <div class="card note-card">
+      <div class="sect-lbl mb-10">Note du jour</div>
+      <textarea class="note-inp" id="day-note" placeholder="Ressenti, objectifs, remarques…" oninput="saveDayNote()">${(S.journal || {})[todayStr()] || ''}</textarea>
+    </div>
+
+    <!-- ⑩ ACTIVITÉ RÉCENTE -->
     <div class="card recent-card">
       <div class="sect-lbl mb-10">Activité récente</div>
       ${recent.length === 0
@@ -1050,8 +1147,8 @@ function destroyNutriCharts() {
 function renderNutrition() {
   const today    = todayStr();
   const entries  = (S.nutrition || []).filter(n => n.date === today);
-  const todayCal  = entries.reduce((s, n) => s + (n.calories || 0), 0);
-  const todayProt = entries.reduce((s, n) => s + (n.protein  || 0), 0);
+  const todayCal  = Math.ceil(entries.reduce((s, n) => s + (n.calories || 0), 0));
+  const todayProt = Math.ceil(entries.reduce((s, n) => s + (n.protein  || 0), 0));
   const calPct  = Math.min((todayCal  / NUTRI_TARGETS.calories) * 100, 100);
   const protPct = Math.min((todayProt / NUTRI_TARGETS.protein)  * 100, 100);
 
@@ -2411,6 +2508,7 @@ function init() {
   navigate(S.view||'dashboard'); registerSW();
   initSwipe(); initPullToRefresh();
   initFirebase(); // onAuthStateChanged gère le pull automatique
+  initNotifs();
 }
 
 init();

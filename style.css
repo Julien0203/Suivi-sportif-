@@ -572,9 +572,33 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
   .today-card,
   .week-cal-card,
   .bk-card,
-  .recent-card { grid-column: 1 / -1; }
+  .recent-card  { grid-column: 1 / -1; }
+  .streak-card  { grid-column: 1 / -1; }
+  .note-card    { grid-column: 1 / -1; }
   .dash-half    { grid-column: span 1; min-width: 0; }
 }
+
+/* STREAKS */
+.streak-row { display: flex; gap: 12px; }
+.streak-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 12px 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.streak-fire { font-size: 22px; }
+.streak-num  { font-size: 24px; font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; }
+.streak-lbl  { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--t3); font-weight: 500; }
+
+/* NOTE DU JOUR */
+.note-inp {
+  width: 100%; min-height: 80px; resize: vertical;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 12px 14px;
+  font-size: 15px; color: var(--t1); font-family: var(--font);
+  line-height: 1.6; box-sizing: border-box;
+}
+.note-inp:focus { outline: none; border-color: var(--border2); }
 
 /* DONUT */
 .donut-wrap {
