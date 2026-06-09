@@ -64,31 +64,58 @@ function save() {
 }
 
 // ============================================================
-// 2b. FIREBASE CLOUD SYNC
+// 2b. FIREBASE CLOUD SYNC — Google Auth
 // ============================================================
 
-let db = null;
-let syncCode = localStorage.getItem('sport-crm-synckey') || null;
-let _syncTimer = null;
+let db          = null;
+let fbAuth      = null;
+let currentUser = null;
+let _syncTimer  = null;
 
 function initFirebase() {
   try {
-    if (typeof firebase === 'undefined' || typeof FIREBASE_CONFIG === 'undefined' || FIREBASE_CONFIG.apiKey === 'REMPLACER') return;
+    if (typeof firebase === 'undefined' || typeof FIREBASE_CONFIG === 'undefined') return;
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
+    db     = firebase.firestore();
+    fbAuth = firebase.auth();
     db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
+    // Récupère le résultat d'une redirection (iOS PWA)
+    fbAuth.getRedirectResult().then(result => {
+      if (result?.user) pullFromCloud();
+    }).catch(() => {});
+
+    // Écoute les changements de connexion
+    fbAuth.onAuthStateChanged(user => {
+      currentUser = user;
+      _updateSyncBtn();
+      if (user) pullFromCloud();
+    });
   } catch(e) { console.warn('[Sync] Firebase init:', e); }
 }
 
 function _syncRef() {
-  return (db && syncCode) ? db.collection('sport_crm').doc(syncCode) : null;
+  return (db && currentUser) ? db.collection('users').doc(currentUser.uid) : null;
+}
+
+function _updateSyncBtn() {
+  const btn = document.getElementById('sync-btn');
+  if (!btn) return;
+  if (currentUser?.photoURL) {
+    btn.innerHTML = `<img src="${currentUser.photoURL}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;display:block">`;
+    btn.title = currentUser.displayName || currentUser.email;
+    btn.dataset.status = 'signed-in';
+  } else {
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
+    btn.title = 'Connexion cloud';
+    btn.dataset.status = 'idle';
+  }
 }
 
 function _setSyncIcon(status) {
   const btn = document.getElementById('sync-btn');
-  if (!btn) return;
+  if (!btn || currentUser?.photoURL) return;
   btn.dataset.status = status;
-  btn.title = { idle: 'Sync cloud', syncing: 'Sync…', synced: 'Synchronisé ✓', offline: 'Hors ligne' }[status] || '';
 }
 
 function schedulePush() {
@@ -124,13 +151,33 @@ async function pullFromCloud() {
       navigate(S.view || 'dashboard');
       showToast('Données synchronisées ✓');
     } else {
+      // Aucune donnée cloud → pousse les données locales
       await pushToCloud();
+      showToast('Données sauvegardées dans le cloud ☁');
     }
   } catch(e) { _setSyncIcon('offline'); showToast('Hors ligne — données locales utilisées'); }
 }
 
-function _generateSyncCode() {
-  return 'xxxx-xxxx-xxxx'.replace(/x/g, () => Math.random().toString(36)[2]);
+async function signInWithGoogle() {
+  if (!fbAuth) return;
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    await fbAuth.signInWithPopup(provider);
+  } catch(e) {
+    // Popup bloqué (PWA iOS) → redirect
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request') {
+      fbAuth.signInWithRedirect(provider);
+    }
+  }
+}
+
+async function signOutUser() {
+  if (!fbAuth) return;
+  await fbAuth.signOut();
+  currentUser = null;
+  _updateSyncBtn();
+  closeModal();
+  showToast('Déconnecté');
 }
 
 function showSyncModal() {
@@ -142,64 +189,28 @@ function showSyncModal() {
       </div>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
-    ${!syncCode ? `
-      <p class="t3" style="font-size:13px;line-height:1.7;margin-bottom:16px">
-        Crée un code personnel pour sauvegarder tes données dans le cloud et les retrouver sur n'importe quel appareil.
-      </p>
-      <button class="btn btn-primary" style="margin-bottom:16px" onclick="createSyncCode()">Créer mon code de sync</button>
-      <div class="divider"></div>
-      <div class="t3" style="font-size:12px;margin:14px 0 8px">Tu as déjà un code ?</div>
-      <input id="sync-code-input" class="form-inp" placeholder="xxxx-xxxx-xxxx" style="margin-bottom:8px">
-      <button class="btn btn-ghost" onclick="linkSyncCode()">Lier ce code</button>
-    ` : `
-      <div class="prof-settings-card" style="margin-bottom:14px">
-        <div class="prof-row">
-          <span class="prof-row-label">Code de sync</span>
-          <span style="font-family:monospace;font-size:13px;letter-spacing:.06em;color:var(--t1)">${syncCode}</span>
+    ${currentUser ? `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding:14px;background:var(--surface2);border-radius:14px">
+        ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" style="width:44px;height:44px;border-radius:50%;flex-shrink:0">` : ''}
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--t1)">${currentUser.displayName || 'Utilisateur'}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">${currentUser.email}</div>
         </div>
       </div>
-      <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="copySyncCode()">Copier le code</button>
-      <p class="t3" style="font-size:11px;line-height:1.7">
-        Entre ce code sur un autre appareil pour retrouver toutes tes données.
-      </p>
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:8px;width:100%" onclick="pullFromCloud();closeModal()">⬇ Récupérer depuis le cloud</button>
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:8px;width:100%" onclick="pushToCloud();closeModal()">⬆ Forcer la sauvegarde</button>
       <div class="divider mt-12"></div>
-      <button class="btn btn-ghost btn-sm" style="margin-top:14px" onclick="forcePull()">Récupérer depuis le cloud</button>
-      <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="unlinkSync()">Délier ce code</button>
+      <button class="btn btn-danger btn-sm" style="margin-top:14px;width:100%" onclick="signOutUser()">Se déconnecter</button>
+    ` : `
+      <p class="t3" style="font-size:13px;line-height:1.7;margin-bottom:20px">
+        Connecte-toi avec Google pour sauvegarder tes données dans le cloud et les retrouver sur n'importe quel appareil — même si tu réinstalles l'app.
+      </p>
+      <button class="btn btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continuer avec Google
+      </button>
     `}
   `);
-}
-
-function createSyncCode() {
-  syncCode = _generateSyncCode();
-  localStorage.setItem('sport-crm-synckey', syncCode);
-  closeModal(); showSyncModal();
-  pushToCloud();
-  showToast('Code créé — données sauvegardées dans le cloud ☁');
-}
-
-function linkSyncCode() {
-  const val = document.getElementById('sync-code-input')?.value.trim().toLowerCase();
-  if (!val) { showToast('Entre un code valide'); return; }
-  syncCode = val;
-  localStorage.setItem('sport-crm-synckey', syncCode);
-  closeModal();
-  pullFromCloud();
-}
-
-function forcePull() {
-  closeModal();
-  pullFromCloud();
-}
-
-function copySyncCode() {
-  navigator.clipboard?.writeText(syncCode).then(() => { showToast('Code copié ✓'); closeModal(); });
-}
-
-function unlinkSync() {
-  syncCode = null;
-  localStorage.removeItem('sport-crm-synckey');
-  closeModal(); _setSyncIcon('idle');
-  showToast('Code de sync supprimé');
 }
 
 // ============================================================
@@ -2251,8 +2262,7 @@ function init() {
   loadState(); applyTheme(); updateWeekBadge(); initEvents();
   navigate(S.view||'dashboard'); registerSW();
   initSwipe(); initPullToRefresh();
-  initFirebase();
-  if (syncCode && db) pullFromCloud();
+  initFirebase(); // onAuthStateChanged gère le pull automatique
 }
 
 init();
