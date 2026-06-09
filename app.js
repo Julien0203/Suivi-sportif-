@@ -756,6 +756,20 @@ function updateVols() {
       const w=parseFloat(document.getElementById(`w-${ei}-${si}`)?.value)||0;
       const r=parseInt(document.getElementById(`r-${ei}-${si}`)?.value)||0;
       const v=w*r; ev+=v;
+      // Auto-validate: vert si kg ET reps remplis, reset sinon
+      const key=`${ei}-${si}`;
+      const row=document.getElementById(`set-row-${ei}-${si}`);
+      const btn=document.getElementById(`chk-${ei}-${si}`);
+      const filled = w>0 && r>0;
+      if(filled && !wkState.doneSets[key]){
+        wkState.doneSets[key]=true;
+        row?.classList.add('done');
+        if(btn){btn.textContent='✓';btn.classList.add('checked');}
+      } else if(!filled && wkState.doneSets[key]){
+        wkState.doneSets[key]=false;
+        row?.classList.remove('done');
+        if(btn){btn.textContent='○';btn.classList.remove('checked');}
+      }
       const el=document.getElementById(`sv-${ei}-${si}`);
       if(el){
         if(v>0){
