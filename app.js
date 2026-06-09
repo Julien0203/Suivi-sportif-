@@ -158,6 +158,16 @@ async function pullFromCloud() {
   } catch(e) { _setSyncIcon('offline'); showToast('Hors ligne — données locales utilisées'); }
 }
 
+function refreshApp() {
+  if (currentUser) {
+    // Connecté → pull cloud + reload
+    pullFromCloud();
+  } else {
+    // Non connecté → simple reload
+    window.location.reload(true);
+  }
+}
+
 async function signInWithGoogle() {
   if (!fbAuth) { showToast('Firebase non chargé — recharge l\'app'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
@@ -1860,6 +1870,32 @@ function renderProfile() {
           <span class="prof-row-unit">km</span>
         </div>
       </div>
+    </div>
+
+    <div class="prof-group-lbl">Cloud Sync</div>
+    <div class="prof-settings-card">
+      ${currentUser ? `
+      <div class="prof-row">
+        <div class="prof-row-left" style="gap:10px">
+          ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" style="width:28px;height:28px;border-radius:50%;flex-shrink:0">` : ''}
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--t1)">${currentUser.displayName||'Connecté'}</div>
+            <div style="font-size:11px;color:var(--t3)">${currentUser.email}</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="signOutUser()">Déco.</button>
+      </div>
+      ` : `
+      <div class="prof-row">
+        <div class="prof-row-left">
+          <span class="prof-row-dot" style="background:var(--c-dos)"></span>
+          <span class="prof-row-label">Sauvegarder dans le cloud</span>
+        </div>
+        <div class="prof-row-right">
+          <button class="btn btn-ghost btn-sm" onclick="showSyncModal()">Connecter</button>
+        </div>
+      </div>
+      `}
     </div>
 
     <div class="prof-group-lbl">Rappels</div>
