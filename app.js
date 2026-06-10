@@ -1103,6 +1103,15 @@ const MEAL_PRESETS = [
   // ── Protéines ──────────────────────────────────────────────────────
   {
     category: 'Protéines',
+    name: 'Porc (filet cuit)',
+    emoji: '🥩',
+    defaultG: 150,
+    perG: { cal: 1.53, prot: 0.26 },
+    note: 'Filet de porc cuit',
+    detail: 'par 100g cuit : ~153 kcal · 26g prot · 0g glucides · 5g lip.'
+  },
+  {
+    category: 'Protéines',
     name: 'Steak',
     emoji: '🥩',
     defaultG: 130,
