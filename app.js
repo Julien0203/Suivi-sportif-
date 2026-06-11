@@ -1143,10 +1143,10 @@ const MEAL_PRESETS = [
     name: 'Smoothie matin',
     emoji: '🥤',
     defaultG: null,
-    calories: 825,
-    protein: 47,
+    calories: 883,
+    protein: 49,
     note: 'Smoothie matin',
-    detail: '50g avoine · 200g skyr · 35g beurre cacahouète · 300ml lait · banane'
+    detail: '50g avoine · 200g skyr · 35g beurre cacahouète · 300ml lait · banane · 10 amandes'
   }
 ];
 
