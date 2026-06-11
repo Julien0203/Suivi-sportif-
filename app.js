@@ -24,7 +24,7 @@ const WORKOUT_PLAN = {
   },
   epaules: {
     label: 'Épaules', short: 'EP', color: '#30D158', schedule: 4,
-    A: ['Presse à épaules inclinée', 'Élévations latérales', 'Développé militaire barre', 'Développé Arnold'],
+    A: ['Presse à épaules inclinée', 'Élévations latérales', 'Développé militaire barre', 'Développé Arnold', 'Développé militaire haltères'],
     B: ['Oiseau assis sur un banc', 'Élévations frontales à la poulie basse', 'Tirage menton barre guidée', 'Face pull', 'Élévations latérales']
   },
   jambes: {
