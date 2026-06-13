@@ -1130,6 +1130,15 @@ const MEAL_PRESETS = [
   },
   {
     category: 'Viandes',
+    name: 'Jambon blanc',
+    emoji: '🍖',
+    defaultG: 80,
+    perG: { cal: 1.07, prot: 0.184 },
+    note: 'Jambon blanc cuit',
+    detail: 'par 100g : ~107 kcal · 18,4g prot · 0,5g glucides · 3,5g lip. (2 tranches ≈ 80g)'
+  },
+  {
+    category: 'Viandes',
     name: 'Porc (filet cuit)',
     emoji: '🥩',
     defaultG: 150,
@@ -1146,7 +1155,34 @@ const MEAL_PRESETS = [
     note: 'Steak',
     detail: 'par 100g : ~131 kcal · 15g prot · 0g glucides'
   },
+  {
+    category: 'Viandes',
+    name: 'Viande hachée 5% MG',
+    emoji: '🥩',
+    defaultG: 150,
+    perG: { cal: 1.21, prot: 0.198 },
+    note: 'Bœuf haché 5% MG (cru)',
+    detail: 'par 100g cru : ~121 kcal · 19,8g prot · 0g glucides · 5g lip.'
+  },
   // ── Poissons & mer ─────────────────────────────────────────────────
+  {
+    category: 'Poissons & mer',
+    name: 'Crevettes cuites',
+    emoji: '🦐',
+    defaultG: 100,
+    perG: { cal: 0.99, prot: 0.209 },
+    note: 'Crevettes cuites',
+    detail: 'par 100g : ~99 kcal · 20,9g prot · 0g glucides · 1,7g lip.'
+  },
+  {
+    category: 'Poissons & mer',
+    name: 'Saumon (filet cuit)',
+    emoji: '🐟',
+    defaultG: 150,
+    perG: { cal: 2.06, prot: 0.204 },
+    note: 'Saumon filet cuit',
+    detail: 'par 100g cuit : ~206 kcal · 20,4g prot · 0g glucides · 13,4g lip.'
+  },
   {
     category: 'Poissons & mer',
     name: 'Sushis au saumon',
@@ -1155,6 +1191,15 @@ const MEAL_PRESETS = [
     perG: { cal: 1.50, prot: 0.09 },
     note: 'Sushis au saumon',
     detail: 'par 100g : ~150 kcal · 9g prot · 22g glucides · 3,5g lip. (≈6 pièces = 220g)'
+  },
+  {
+    category: 'Poissons & mer',
+    name: 'Thon en boîte (naturel)',
+    emoji: '🥫',
+    defaultG: 120,
+    perG: { cal: 1.16, prot: 0.255 },
+    note: 'Thon au naturel égoutté',
+    detail: 'par 100g égoutté : ~116 kcal · 25,5g prot · 0g glucides · 1g lip.'
   },
   {
     category: 'Poissons & mer',
@@ -1174,6 +1219,36 @@ const MEAL_PRESETS = [
     perG: { cal: 0.63, prot: 0.10 },
     note: 'Skyr',
     detail: 'par 100g : ~63 kcal · 10g prot · 4g glucides · 0,2g lip.'
+  },
+  // ── Œufs ───────────────────────────────────────────────────────────
+  {
+    category: 'Œufs',
+    name: 'Œuf entier',
+    emoji: '🥚',
+    defaultG: 120,
+    perG: { cal: 1.43, prot: 0.126 },
+    note: 'Œuf entier cuit',
+    detail: 'par 100g : ~143 kcal · 12,6g prot · 0,7g glucides · 9,5g lip. (1 œuf ≈ 60g)'
+  },
+  // ── Légumes ────────────────────────────────────────────────────────
+  {
+    category: 'Légumes',
+    name: 'Brocoli cuit',
+    emoji: '🥦',
+    defaultG: 200,
+    perG: { cal: 0.35, prot: 0.037 },
+    note: 'Brocoli cuit à la vapeur',
+    detail: 'par 100g cuit : ~35 kcal · 3,7g prot · 4,5g glucides · 0,5g lip.'
+  },
+  // ── Fruits ─────────────────────────────────────────────────────────
+  {
+    category: 'Fruits',
+    name: 'Banane',
+    emoji: '🍌',
+    defaultG: 120,
+    perG: { cal: 0.89, prot: 0.011 },
+    note: 'Banane',
+    detail: 'par 100g : ~89 kcal · 1,1g prot · 23g glucides · 0,3g lip. (1 banane ≈ 120g)'
   },
   // ── Petit-déjeuner ─────────────────────────────────────────────────
   {
@@ -1257,7 +1332,7 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
 
     ${MEAL_PRESETS.length > 0 ? (() => {
       const cats = [...new Set(MEAL_PRESETS.map(p => p.category))];
-      const CAT_EMOJI = { 'Féculents':'🌾', 'Viandes':'🥩', 'Poissons & mer':'🐟', 'Laitiers':'🥛', 'Petit-déj':'☀️' };
+      const CAT_EMOJI = { 'Féculents':'🌾', 'Viandes':'🥩', 'Poissons & mer':'🐟', 'Laitiers':'🥛', 'Œufs':'🥚', 'Légumes':'🥦', 'Fruits':'🍌', 'Petit-déj':'☀️' };
       return `<div class="card">
       <div class="sect-lbl" style="margin-bottom:12px">Repas enregistrés</div>
       <div class="meal-presets-list">
