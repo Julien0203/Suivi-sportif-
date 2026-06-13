@@ -29,7 +29,7 @@ const WORKOUT_PLAN = {
   },
   jambes: {
     label: 'Jambes', short: 'JA', color: '#BF5AF2', schedule: 5,
-    A: ['Hack squat', 'Fentes avant avec haltères', 'Squat', 'Leg extension', 'Squat à la Smith machine'],
+    A: ['Seated leg curl', 'Leg extension', 'Leg press', 'Adductor machine', 'Squat barre guidée'],
     B: ['Hip thrust', 'Goblet squat avec haltère', 'Squat bulgare avec haltères', 'Presse à cuisses horizontale', 'Leg extension']
   }
 };
