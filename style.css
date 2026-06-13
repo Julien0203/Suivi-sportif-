@@ -751,6 +751,7 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
   box-shadow: var(--card-shadow);
 }
 .ex-name { font-size: 15px; font-weight: 500; color: var(--t1); line-height: 1.4; flex: 1; }
+.pr-badge { font-size: 13px; margin-left: 6px; }
 .ex-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .copy-pill {
   font-size: 10px; font-weight: 500; color: var(--t3); letter-spacing: .04em; text-transform: uppercase;
@@ -1192,9 +1193,12 @@ select.form-inp {
   height: 7px; background: var(--surface2);
   border-radius: 4px; overflow: hidden;
 }
-.nutri-fill { height: 100%; border-radius: 4px; transition: width .6s var(--ease); }
-.nutri-cal  { background: #FF6B35; box-shadow: 0 0 10px #FF6B3555; }
-.nutri-prot { background: var(--blue); box-shadow: 0 0 10px rgba(0,208,255,.3); }
+.nutri-fill  { height: 100%; border-radius: 4px; transition: width .6s var(--ease); }
+.nutri-cal   { background: #FF6B35; box-shadow: 0 0 10px #FF6B3555; }
+.nutri-prot  { background: var(--blue); box-shadow: 0 0 10px rgba(0,208,255,.3); }
+.nutri-carbs { background: #F59E0B; box-shadow: 0 0 10px rgba(245,158,11,.3); }
+.nutri-fat   { background: #EF4444; box-shadow: 0 0 10px rgba(239,68,68,.3); }
+.nutri-water { background: #06B6D4; box-shadow: 0 0 10px rgba(6,182,212,.3); }
 
 .nutri-entry {
   display: flex; align-items: center; gap: 10px;

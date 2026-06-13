@@ -50,13 +50,13 @@ const FEEL_LABELS  = ['Nul','Dur','OK','Bien','Top'];
 // ============================================================
 
 let S = {};
-const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], nutrition: [], weights: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 3000, prot: 150 }, runGoal: 15, journal: {} };
+const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], rides: [], nutrition: [], weights: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 3000, prot: 150, carbs: 300, fat: 70, water: 2500 }, runGoal: 15, journal: {}, prs: {}, hydration: {} };
 
 function loadState() {
   try { S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('sport-crm-v2') || '{}') }; }
   catch { S = { ...DEFAULTS }; }
   RUN_GOAL_KM  = S.runGoal || 15;
-  NUTRI_TARGETS = { calories: S.nutGoal?.cal || 3000, protein: S.nutGoal?.prot || 150 };
+  NUTRI_TARGETS = { calories: S.nutGoal?.cal || 3000, protein: S.nutGoal?.prot || 150, carbs: S.nutGoal?.carbs || 300, fat: S.nutGoal?.fat || 70, water: S.nutGoal?.water || 2500 };
 }
 function save() {
   localStorage.setItem('sport-crm-v2', JSON.stringify(S));
@@ -143,7 +143,7 @@ async function pullFromCloud() {
       S = { ...DEFAULTS, ...remote, view, theme };
       localStorage.setItem('sport-crm-v2', JSON.stringify(S));
       RUN_GOAL_KM   = S.runGoal || 15;
-      NUTRI_TARGETS = { calories: S.nutGoal?.cal || 3000, protein: S.nutGoal?.prot || 150 };
+      NUTRI_TARGETS = { calories: S.nutGoal?.cal || 3000, protein: S.nutGoal?.prot || 150, carbs: S.nutGoal?.carbs || 300, fat: S.nutGoal?.fat || 70, water: S.nutGoal?.water || 2500 };
       _setSyncIcon('synced');
       navigate(S.view || 'dashboard');
       showToast('Données synchronisées ✓');
@@ -801,7 +801,7 @@ function renderWorkoutForm() {
         return `
         <div class="ex-block" id="ex-${ei}">
           <div class="ex-head">
-            <div class="ex-name">${name}</div>
+            <div class="ex-name">${name}${(S.prs||{})[name]?.date===todayStr()?'<span class="pr-badge">🏆</span>':''}</div>
             <button class="copy-pill" onclick="copyFirstSet(${ei})">S1→tous</button>
           </div>
           ${Array.from({length:SETS},(_,si)=>{
@@ -967,9 +967,28 @@ function saveWorkout() {
   stopWkTimer();
   S.weekType = wt;
   S.workouts.push({ id:uid(), date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes, duration });
+
+  // Détection PRs
+  if (!S.prs) S.prs = {};
+  const newPRs = [];
+  exercises.forEach(ex => {
+    ex.sets.forEach(set => {
+      if (!set.weight || !set.reps) return;
+      const score = set.weight * set.reps;
+      const prev = S.prs[ex.name];
+      if (!prev || score > (prev.weight * prev.reps)) {
+        S.prs[ex.name] = { weight: set.weight, reps: set.reps, date };
+        newPRs.push(`${ex.name} — ${set.weight}kg × ${set.reps}`);
+      }
+    });
+  });
+
   save();
   clearWkDraft();
   haptic([40, 30, 80]);
+  if (newPRs.length) {
+    setTimeout(() => showToast(`🏆 PR : ${newPRs[0]}`), 600);
+  }
   showToast(`${WORKOUT_PLAN[mg].label} · ${fmtVol(totalVolume)} kg · ${formatDur(duration)}`);
   wkState.muscleGroup = null;
   navigate('dashboard');
@@ -1075,7 +1094,7 @@ function formatTimerTime(s) {
 // 5c. NUTRITION & POIDS
 // ============================================================
 
-let NUTRI_TARGETS = { calories: 3000, protein: 150 };
+let NUTRI_TARGETS = { calories: 3000, protein: 150, carbs: 300, fat: 70, water: 2500 };
 // Calculé pour 61 kg · 1m75 · ~25 ans · activité modérée-élevée · prise de masse
 // BMR Mifflin-St Jeor ≈ 1584 kcal · TDEE ×1.55 ≈ 2455 · Surplus +500 ≈ 2955 → 3000 kcal
 // Protéines : 2.5 g/kg × 61 ≈ 152 → 150 g
@@ -1087,7 +1106,7 @@ const MEAL_PRESETS = [
     name: 'Patates cuites',
     emoji: '🥔',
     defaultG: 300,
-    perG: { cal: 0.75, prot: 0.017 },
+    perG: { cal: 0.75, prot: 0.017, carbs: 0.17, fat: 0.001 },
     note: 'Patates cuites à l\'eau',
     detail: 'par 100g cuit : ~75 kcal · 1,7g prot · 17g glucides · 0,1g lip.'
   },
@@ -1096,7 +1115,7 @@ const MEAL_PRESETS = [
     name: 'Pâtes cuites',
     emoji: '🍝',
     defaultG: 300,
-    perG: { cal: 1.4, prot: 0.04 },
+    perG: { cal: 1.4, prot: 0.04, carbs: 0.28, fat: 0.01 },
     note: 'Pâtes cuites',
     detail: 'par 100g cuit : ~140 kcal · 4g prot · 28g glucides'
   },
@@ -1105,7 +1124,7 @@ const MEAL_PRESETS = [
     name: 'Riz basmati cuit',
     emoji: '🍚',
     defaultG: 300,
-    perG: { cal: 1.167, prot: 0.0233 },
+    perG: { cal: 1.167, prot: 0.0233, carbs: 0.25, fat: 0.003 },
     note: 'Riz basmati cuit',
     detail: 'par 100g cuit : ~117 kcal · 2,3g prot · 25g glucides'
   },
@@ -1115,7 +1134,7 @@ const MEAL_PRESETS = [
     name: 'Blanc de poulet cuit',
     emoji: '🍗',
     defaultG: 150,
-    perG: { cal: 1.65, prot: 0.31 },
+    perG: { cal: 1.65, prot: 0.31, carbs: 0, fat: 0.036 },
     note: 'Blanc de poulet cuit',
     detail: 'par 100g cuit : ~165 kcal · 31g prot · 0g glucides · 3,6g lip.'
   },
@@ -1124,7 +1143,7 @@ const MEAL_PRESETS = [
     name: 'Chevreuil rôti',
     emoji: '🦌',
     defaultG: 150,
-    perG: { cal: 1.22, prot: 0.268 },
+    perG: { cal: 1.22, prot: 0.268, carbs: 0, fat: 0.021 },
     note: 'Chevreuil rôti',
     detail: 'par 100g cuit : ~122 kcal · 26,8g prot · 0g glucides · 2,1g lip.'
   },
@@ -1133,7 +1152,7 @@ const MEAL_PRESETS = [
     name: 'Jambon blanc',
     emoji: '🍖',
     defaultG: 80,
-    perG: { cal: 1.07, prot: 0.184 },
+    perG: { cal: 1.07, prot: 0.184, carbs: 0.005, fat: 0.035 },
     note: 'Jambon blanc cuit',
     detail: 'par 100g : ~107 kcal · 18,4g prot · 0,5g glucides · 3,5g lip. (2 tranches ≈ 80g)'
   },
@@ -1142,7 +1161,7 @@ const MEAL_PRESETS = [
     name: 'Porc (filet cuit)',
     emoji: '🥩',
     defaultG: 150,
-    perG: { cal: 1.53, prot: 0.26 },
+    perG: { cal: 1.53, prot: 0.26, carbs: 0, fat: 0.05 },
     note: 'Filet de porc cuit',
     detail: 'par 100g cuit : ~153 kcal · 26g prot · 0g glucides · 5g lip.'
   },
@@ -1151,7 +1170,7 @@ const MEAL_PRESETS = [
     name: 'Steak',
     emoji: '🥩',
     defaultG: 130,
-    perG: { cal: 1.31, prot: 0.154 },
+    perG: { cal: 1.31, prot: 0.154, carbs: 0, fat: 0.08 },
     note: 'Steak',
     detail: 'par 100g : ~131 kcal · 15g prot · 0g glucides'
   },
@@ -1160,7 +1179,7 @@ const MEAL_PRESETS = [
     name: 'Viande hachée 5% MG',
     emoji: '🥩',
     defaultG: 150,
-    perG: { cal: 1.21, prot: 0.198 },
+    perG: { cal: 1.21, prot: 0.198, carbs: 0, fat: 0.05 },
     note: 'Bœuf haché 5% MG (cru)',
     detail: 'par 100g cru : ~121 kcal · 19,8g prot · 0g glucides · 5g lip.'
   },
@@ -1170,7 +1189,7 @@ const MEAL_PRESETS = [
     name: 'Crevettes cuites',
     emoji: '🦐',
     defaultG: 100,
-    perG: { cal: 0.99, prot: 0.209 },
+    perG: { cal: 0.99, prot: 0.209, carbs: 0, fat: 0.017 },
     note: 'Crevettes cuites',
     detail: 'par 100g : ~99 kcal · 20,9g prot · 0g glucides · 1,7g lip.'
   },
@@ -1179,7 +1198,7 @@ const MEAL_PRESETS = [
     name: 'Saumon (filet cuit)',
     emoji: '🐟',
     defaultG: 150,
-    perG: { cal: 2.06, prot: 0.204 },
+    perG: { cal: 2.06, prot: 0.204, carbs: 0, fat: 0.134 },
     note: 'Saumon filet cuit',
     detail: 'par 100g cuit : ~206 kcal · 20,4g prot · 0g glucides · 13,4g lip.'
   },
@@ -1188,7 +1207,7 @@ const MEAL_PRESETS = [
     name: 'Sushis au saumon',
     emoji: '🍣',
     defaultG: 220,
-    perG: { cal: 1.50, prot: 0.09 },
+    perG: { cal: 1.50, prot: 0.09, carbs: 0.22, fat: 0.035 },
     note: 'Sushis au saumon',
     detail: 'par 100g : ~150 kcal · 9g prot · 22g glucides · 3,5g lip. (≈6 pièces = 220g)'
   },
@@ -1197,7 +1216,7 @@ const MEAL_PRESETS = [
     name: 'Thon en boîte (naturel)',
     emoji: '🥫',
     defaultG: 120,
-    perG: { cal: 1.16, prot: 0.255 },
+    perG: { cal: 1.16, prot: 0.255, carbs: 0, fat: 0.01 },
     note: 'Thon au naturel égoutté',
     detail: 'par 100g égoutté : ~116 kcal · 25,5g prot · 0g glucides · 1g lip.'
   },
@@ -1206,7 +1225,7 @@ const MEAL_PRESETS = [
     name: 'Truite',
     emoji: '🐟',
     defaultG: 100,
-    perG: { cal: 1.3, prot: 0.2 },
+    perG: { cal: 1.3, prot: 0.2, carbs: 0, fat: 0.06 },
     note: 'Truite',
     detail: 'par 100g : ~130 kcal · 20g prot · 0g glucides'
   },
@@ -1216,7 +1235,7 @@ const MEAL_PRESETS = [
     name: 'Skyr',
     emoji: '🥛',
     defaultG: 200,
-    perG: { cal: 0.63, prot: 0.10 },
+    perG: { cal: 0.63, prot: 0.10, carbs: 0.04, fat: 0.002 },
     note: 'Skyr',
     detail: 'par 100g : ~63 kcal · 10g prot · 4g glucides · 0,2g lip.'
   },
@@ -1226,7 +1245,7 @@ const MEAL_PRESETS = [
     name: 'Œuf entier',
     emoji: '🥚',
     defaultG: 120,
-    perG: { cal: 1.43, prot: 0.126 },
+    perG: { cal: 1.43, prot: 0.126, carbs: 0.007, fat: 0.095 },
     note: 'Œuf entier cuit',
     detail: 'par 100g : ~143 kcal · 12,6g prot · 0,7g glucides · 9,5g lip. (1 œuf ≈ 60g)'
   },
@@ -1236,7 +1255,7 @@ const MEAL_PRESETS = [
     name: 'Brocoli cuit',
     emoji: '🥦',
     defaultG: 200,
-    perG: { cal: 0.35, prot: 0.037 },
+    perG: { cal: 0.35, prot: 0.037, carbs: 0.045, fat: 0.005 },
     note: 'Brocoli cuit à la vapeur',
     detail: 'par 100g cuit : ~35 kcal · 3,7g prot · 4,5g glucides · 0,5g lip.'
   },
@@ -1246,7 +1265,7 @@ const MEAL_PRESETS = [
     name: 'Banane',
     emoji: '🍌',
     defaultG: 120,
-    perG: { cal: 0.89, prot: 0.011 },
+    perG: { cal: 0.89, prot: 0.011, carbs: 0.23, fat: 0.003 },
     note: 'Banane',
     detail: 'par 100g : ~89 kcal · 1,1g prot · 23g glucides · 0,3g lip. (1 banane ≈ 120g)'
   },
@@ -1258,6 +1277,8 @@ const MEAL_PRESETS = [
     defaultG: null,
     calories: 957,
     protein: 57,
+    carbs: 100,
+    fat: 45,
     note: 'Smoothie matin',
     detail: '50g avoine · 250g skyr · 50g beurre cacahuète · 300ml lait · banane · 15 amandes'
   }
@@ -1276,8 +1297,16 @@ function renderNutrition() {
   const entries  = (S.nutrition || []).filter(n => n.date === today);
   const todayCal  = Math.ceil(entries.reduce((s, n) => s + (n.calories || 0), 0));
   const todayProt = Math.ceil(entries.reduce((s, n) => s + (n.protein  || 0), 0));
-  const calPct  = Math.min((todayCal  / NUTRI_TARGETS.calories) * 100, 100);
+  const todayCarbs = Math.round(entries.reduce((s, n) => s + (n.carbs || 0), 0));
+  const todayFat   = Math.round(entries.reduce((s, n) => s + (n.fat   || 0), 0));
+  const burned     = calcCaloriesBurned(today);
+  const effectiveCal = NUTRI_TARGETS.calories + burned;
+  const calPct  = Math.min((todayCal  / effectiveCal)          * 100, 100);
   const protPct = Math.min((todayProt / NUTRI_TARGETS.protein)  * 100, 100);
+  const carbsPct = Math.min((todayCarbs / NUTRI_TARGETS.carbs)  * 100, 100);
+  const fatPct   = Math.min((todayFat   / NUTRI_TARGETS.fat)    * 100, 100);
+  const waterMl  = (S.hydration || {})[today] || 0;
+  const waterPct = Math.min((waterMl / NUTRI_TARGETS.water) * 100, 100);
 
   document.getElementById('app').innerHTML = `
     <div class="tab-row">
@@ -1285,7 +1314,7 @@ function renderNutrition() {
       <button class="tab-btn ${nutriTab==='stats' ?'active':''}" onclick="setNutriTab('stats')">Stats</button>
       <button class="tab-btn ${nutriTab==='weight'?'active':''}" onclick="setNutriTab('weight')">Poids</button>
     </div>
-    ${nutriTab === 'today'  ? _nutriToday(todayCal, todayProt, calPct, protPct, entries) : ''}
+    ${nutriTab === 'today'  ? _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct, carbsPct, fatPct, effectiveCal, burned, waterMl, waterPct, entries) : ''}
     ${nutriTab === 'stats'  ? _nutriStats() : ''}
     ${nutriTab === 'weight' ? _nutriWeight() : ''}
     <div class="spacer"></div>
@@ -1293,32 +1322,32 @@ function renderNutrition() {
   requestAnimationFrame(buildNutriCharts);
 }
 
-function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
+function _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct, carbsPct, fatPct, effectiveCal, burned, waterMl, waterPct, entries) {
   return `
     <div class="card">
       <div class="sect-row" style="margin-bottom:16px">
         <span class="sect-lbl">Objectif · Prise de masse</span>
-        <span class="t3" style="font-size:10px">61 kg · 1m75</span>
+        ${burned > 0 ? `<span class="t3" style="font-size:10px;color:var(--green)">+${burned} kcal sport</span>` : '<span class="t3" style="font-size:10px">61 kg · 1m75</span>'}
       </div>
 
-      <div style="margin-bottom:16px">
+      <div style="margin-bottom:14px">
         <div class="flex-between" style="margin-bottom:7px">
           <span style="font-size:22px;font-weight:300;color:var(--t1);font-variant-numeric:tabular-nums">
             ${todayCal.toLocaleString('fr-FR')} <span style="font-size:13px;color:var(--t3)">kcal</span>
           </span>
-          <span style="font-size:11px;color:var(--t3)">/ ${NUTRI_TARGETS.calories.toLocaleString('fr-FR')}</span>
+          <span style="font-size:11px;color:var(--t3)">/ ${effectiveCal.toLocaleString('fr-FR')}</span>
         </div>
         <div class="nutri-track"><div class="nutri-fill nutri-cal" style="width:${calPct}%"></div></div>
         <div class="flex-between" style="margin-top:5px">
           <span class="sect-lbl">Calories</span>
-          <span style="font-size:10px;color:${calPct>=100?'var(--green)':'var(--t3)'}">${calPct>=100?'Objectif ✓':Math.max(0,NUTRI_TARGETS.calories-todayCal)+' restantes'}</span>
+          <span style="font-size:10px;color:${calPct>=100?'var(--green)':'var(--t3)'}">${calPct>=100?'Objectif ✓':Math.max(0,effectiveCal-todayCal)+' restantes'}</span>
         </div>
       </div>
 
-      <div>
+      <div style="margin-bottom:14px">
         <div class="flex-between" style="margin-bottom:7px">
-          <span style="font-size:22px;font-weight:300;color:var(--t1);font-variant-numeric:tabular-nums">
-            ${todayProt} <span style="font-size:13px;color:var(--t3)">g</span>
+          <span style="font-size:18px;font-weight:300;color:var(--t1);font-variant-numeric:tabular-nums">
+            ${todayProt} <span style="font-size:12px;color:var(--t3)">g</span>
           </span>
           <span style="font-size:11px;color:var(--t3)">/ ${NUTRI_TARGETS.protein}g protéines</span>
         </div>
@@ -1327,6 +1356,48 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
           <span class="sect-lbl">Protéines</span>
           <span style="font-size:10px;color:${protPct>=100?'var(--green)':'var(--t3)'}">${protPct>=100?'Objectif ✓':Math.max(0,NUTRI_TARGETS.protein-todayProt)+'g restantes'}</span>
         </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div class="flex-between" style="margin-bottom:7px">
+          <span style="font-size:18px;font-weight:300;color:var(--t1);font-variant-numeric:tabular-nums">
+            ${todayCarbs} <span style="font-size:12px;color:var(--t3)">g</span>
+          </span>
+          <span style="font-size:11px;color:var(--t3)">/ ${NUTRI_TARGETS.carbs}g glucides</span>
+        </div>
+        <div class="nutri-track"><div class="nutri-fill nutri-carbs" style="width:${carbsPct}%"></div></div>
+        <div class="flex-between" style="margin-top:5px">
+          <span class="sect-lbl">Glucides</span>
+          <span style="font-size:10px;color:${carbsPct>=100?'var(--green)':'var(--t3)'}">${carbsPct>=100?'Objectif ✓':Math.max(0,NUTRI_TARGETS.carbs-todayCarbs)+'g restants'}</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex-between" style="margin-bottom:7px">
+          <span style="font-size:18px;font-weight:300;color:var(--t1);font-variant-numeric:tabular-nums">
+            ${todayFat} <span style="font-size:12px;color:var(--t3)">g</span>
+          </span>
+          <span style="font-size:11px;color:var(--t3)">/ ${NUTRI_TARGETS.fat}g lipides</span>
+        </div>
+        <div class="nutri-track"><div class="nutri-fill nutri-fat" style="width:${fatPct}%"></div></div>
+        <div class="flex-between" style="margin-top:5px">
+          <span class="sect-lbl">Lipides</span>
+          <span style="font-size:10px;color:${fatPct>=100?'var(--green)':'var(--t3)'}">${fatPct>=100?'Objectif ✓':Math.max(0,NUTRI_TARGETS.fat-todayFat)+'g restants'}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- HYDRATATION -->
+    <div class="card">
+      <div class="sect-row" style="margin-bottom:12px">
+        <span class="sect-lbl">💧 Hydratation</span>
+        <span class="t3" style="font-size:10px">${(waterMl/1000).toFixed(1)} / ${(NUTRI_TARGETS.water/1000).toFixed(1)} L</span>
+      </div>
+      <div class="nutri-track" style="margin-bottom:12px"><div class="nutri-fill nutri-water" style="width:${waterPct}%"></div></div>
+      <div class="flex-between">
+        <button class="btn btn-ghost btn-sm" onclick="addWater(-250)" style="flex:1;margin-right:8px">−250 ml</button>
+        <span style="font-size:15px;font-weight:600;color:var(--t1);flex:0;padding:0 12px">${waterMl} ml</span>
+        <button class="btn btn-primary btn-sm" onclick="addWater(250)" style="flex:1;margin-left:8px">+250 ml</button>
       </div>
     </div>
 
@@ -1348,8 +1419,10 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
           <div class="preset-cat-items" id="pcat-${catId}" style="display:${isFirst?'block':'none'}">
             ${items.map(p => {
               const hasG = !!p.perG;
-              const initCal  = hasG ? Math.ceil(p.perG.cal * p.defaultG) : p.calories;
-              const initProt = hasG ? Math.ceil(p.perG.prot * p.defaultG) : p.protein;
+              const initCal   = hasG ? Math.ceil(p.perG.cal * p.defaultG) : p.calories;
+              const initProt  = hasG ? Math.ceil(p.perG.prot * p.defaultG) : p.protein;
+              const initCarbs = hasG ? Math.round((p.perG.carbs||0) * p.defaultG) : (p.carbs||0);
+              const initFat   = hasG ? Math.round((p.perG.fat||0) * p.defaultG)   : (p.fat||0);
               return `
               <div class="meal-preset-row">
                 <div class="meal-preset-info">
@@ -1364,6 +1437,8 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
                     <span class="preset-cal">${initCal} kcal</span>
                     <span class="preset-dot">·</span>
                     <span class="preset-prot">${initProt}g prot.</span>
+                    ${initCarbs>0?`<span class="preset-dot">·</span><span class="preset-carbs">${initCarbs}g gluc.</span>`:''}
+                    ${initFat>0?`<span class="preset-dot">·</span><span class="preset-fat">${initFat}g lip.</span>`:''}
                   </div>
                 </div>
                 <button class="btn-preset-add" onclick="logNutriPreset(${p._i})">+</button>
@@ -1386,6 +1461,14 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
           <label class="form-lbl">Protéines (g)</label>
           <input type="number" class="form-inp" inputmode="decimal" step="0.5" id="n-prot" placeholder="30">
         </div>
+        <div class="form-group">
+          <label class="form-lbl">Glucides (g)</label>
+          <input type="number" class="form-inp" inputmode="numeric" id="n-carbs" placeholder="60">
+        </div>
+        <div class="form-group">
+          <label class="form-lbl">Lipides (g)</label>
+          <input type="number" class="form-inp" inputmode="numeric" id="n-fat" placeholder="10">
+        </div>
       </div>
       <div class="form-group">
         <label class="form-lbl">Repas / Note</label>
@@ -1402,7 +1485,7 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
           <div class="nutri-entry-info">
             <div style="font-size:13px;color:var(--t1)">${e.note||'Repas'}</div>
             <div style="font-size:11px;color:var(--t3);margin-top:2px">
-              ${e.protein>0?`<span style="color:var(--blue)">${e.protein}g prot.</span> · `:''}${e.calories} kcal
+              ${e.protein>0?`<span style="color:var(--blue)">${e.protein}g prot.</span> · `:''}${e.calories} kcal${e.carbs>0?` · ${e.carbs}g gluc.`:''}${e.fat>0?` · ${e.fat}g lip.`:''}
             </div>
           </div>
           <button class="copy-pill" onclick="deleteNutrition('${e.id}')" style="color:var(--red)">×</button>
@@ -1553,23 +1636,35 @@ function updatePresetCalc(idx) {
   const p = MEAL_PRESETS[idx];
   if (!p?.perG) return;
   const g = parseFloat(document.getElementById(`preset-g-${idx}`)?.value) || p.defaultG;
-  const cal  = Math.ceil(p.perG.cal * g);
-  const prot = Math.ceil(p.perG.prot * g);
+  const cal   = Math.ceil(p.perG.cal * g);
+  const prot  = Math.ceil(p.perG.prot * g);
+  const carbs = Math.round((p.perG.carbs || 0) * g);
+  const fat   = Math.round((p.perG.fat || 0) * g);
   const el = document.getElementById(`preset-macros-${idx}`);
-  if (el) el.innerHTML = `<span class="preset-cal">${cal} kcal</span><span class="preset-dot">·</span><span class="preset-prot">${prot}g prot.</span>`;
+  if (el) el.innerHTML = `<span class="preset-cal">${cal} kcal</span><span class="preset-dot">·</span><span class="preset-prot">${prot}g prot.</span>${carbs>0?`<span class="preset-dot">·</span><span class="preset-carbs">${carbs}g gluc.</span>`:''}${fat>0?`<span class="preset-dot">·</span><span class="preset-fat">${fat}g lip.</span>`:''}`;
+}
+
+function addWater(ml) {
+  const d = todayStr();
+  if (!S.hydration) S.hydration = {};
+  S.hydration[d] = Math.max(0, (S.hydration[d] || 0) + ml);
+  save();
+  renderNutrition();
 }
 
 function logNutriPreset(idx) {
   const p = MEAL_PRESETS[idx];
   if (!p) return;
-  let cal = p.calories, prot = p.protein;
+  let cal = p.calories, prot = p.protein, carbs = p.carbs || 0, fat = p.fat || 0;
   if (p.perG) {
     const g = parseFloat(document.getElementById(`preset-g-${idx}`)?.value) || p.defaultG;
-    cal  = Math.ceil(p.perG.cal * g);
-    prot = Math.ceil(p.perG.prot * g);
+    cal   = Math.ceil(p.perG.cal * g);
+    prot  = Math.ceil(p.perG.prot * g);
+    carbs = Math.round((p.perG.carbs || 0) * g);
+    fat   = Math.round((p.perG.fat || 0) * g);
   }
   if (!S.nutrition) S.nutrition = [];
-  S.nutrition.push({ id: uid(), date: todayStr(), calories: cal, protein: prot, note: p.note });
+  S.nutrition.push({ id: uid(), date: todayStr(), calories: cal, protein: prot, carbs, fat, note: p.note });
   save();
   haptic([4]);
   showToast(`${p.emoji} ${p.name} ajouté`);
@@ -1577,12 +1672,14 @@ function logNutriPreset(idx) {
 }
 
 function logNutrition() {
-  const cal  = parseInt(document.getElementById('n-cal')?.value)   || 0;
-  const prot = parseFloat(document.getElementById('n-prot')?.value) || 0;
-  const note = document.getElementById('n-note')?.value || '';
+  const cal   = parseInt(document.getElementById('n-cal')?.value)   || 0;
+  const prot  = parseFloat(document.getElementById('n-prot')?.value) || 0;
+  const carbs = parseInt(document.getElementById('n-carbs')?.value) || 0;
+  const fat   = parseInt(document.getElementById('n-fat')?.value)   || 0;
+  const note  = document.getElementById('n-note')?.value || '';
   if (!cal && !prot) { showToast('Entre calories ou protéines'); return; }
   if (!S.nutrition) S.nutrition = [];
-  S.nutrition.push({ id: uid(), date: todayStr(), calories: cal, protein: prot, note });
+  S.nutrition.push({ id: uid(), date: todayStr(), calories: cal, protein: prot, carbs, fat, note });
   save();
   showToast('Repas ajouté');
   renderNutrition();
@@ -1611,6 +1708,13 @@ function deleteWeight(id) {
 }
 
 function setNutriTab(tab) { nutriTab = tab; renderNutrition(); }
+
+function calcCaloriesBurned(date) {
+  const runCal  = (S.runs  ||[]).filter(r=>r.date===date).reduce((s,r)=>s+(r.calories||Math.round((r.distance||0)*CAL_PER_KM)),0);
+  const rideCal = (S.rides ||[]).filter(r=>r.date===date).reduce((s,r)=>s+(r.calories||Math.round((r.km||0)*40)),0);
+  const wkCal   = (S.workouts||[]).filter(w=>w.date===date).reduce((s,w)=>s+Math.round(((w.duration||2700)/60)*5),0);
+  return runCal + rideCal + wkCal;
+}
 
 function buildNutriCharts() {
   if (typeof Chart === 'undefined') return;
@@ -1673,11 +1777,26 @@ function buildNutriCharts() {
 }
 
 // ============================================================
-// 6. COURSE
+// 6. COURSE & VÉLO
 // ============================================================
+
+let runTab = 'run';
 
 function renderRun() {
   document.getElementById('app').innerHTML = `
+    <div class="tab-row">
+      <button class="tab-btn ${runTab==='run'?'active':''}" onclick="setRunTab('run')">🏃 Course</button>
+      <button class="tab-btn ${runTab==='ride'?'active':''}" onclick="setRunTab('ride')">🚴 Vélo</button>
+    </div>
+    ${runTab === 'run' ? _runForm() : _rideForm()}
+    <div class="spacer"></div>
+  `;
+}
+
+function setRunTab(tab) { runTab = tab; renderRun(); }
+
+function _runForm() {
+  return `
     <div class="card">
       <div class="sect-lbl" style="margin-bottom:14px">Logger une course</div>
 
@@ -1688,7 +1807,7 @@ function renderRun() {
 
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-lbl">Distance</label>
+          <label class="form-lbl">Distance (km)</label>
           <input type="number" class="form-inp" inputmode="decimal" step="0.1"
             id="run-dist" placeholder="5.0" oninput="calcRun()">
         </div>
@@ -1710,6 +1829,11 @@ function renderRun() {
       </div>
 
       <div class="form-group">
+        <label class="form-lbl">Dénivelé + (m)</label>
+        <input type="number" class="form-inp" inputmode="numeric" id="run-elev" placeholder="0">
+      </div>
+
+      <div class="form-group">
         <label class="form-lbl">Ressenti</label>
         <div class="feel-row">
           ${FEEL_LABELS.map((lbl,i)=>`
@@ -1724,7 +1848,62 @@ function renderRun() {
 
       <button class="btn btn-primary mt-8" onclick="saveRun()">Enregistrer la course</button>
     </div>
-    <div class="spacer"></div>
+  `;
+}
+
+function _rideForm() {
+  return `
+    <div class="card">
+      <div class="sect-lbl" style="margin-bottom:14px">Logger une sortie vélo</div>
+
+      <div class="form-group" style="text-align:center">
+        <label class="form-lbl">Date</label>
+        <input type="date" class="form-inp" id="ride-date" value="${todayStr()}">
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-lbl">Distance (km)</label>
+          <input type="number" class="form-inp" inputmode="decimal" step="0.1"
+            id="ride-dist" placeholder="20.0" oninput="calcRide()">
+        </div>
+        <div class="form-group">
+          <label class="form-lbl">Durée (mm:ss)</label>
+          <input type="text" class="form-inp" id="ride-dur" placeholder="60:00" oninput="calcRide()">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-lbl">Vitesse moy.</label>
+          <div class="form-auto" id="ride-speed">-- km/h</div>
+        </div>
+        <div class="form-group">
+          <label class="form-lbl">Calories (estimé)</label>
+          <div class="form-auto" id="ride-cal">— kcal</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-lbl">Dénivelé + (m)</label>
+        <input type="number" class="form-inp" inputmode="numeric" id="ride-elev" placeholder="0">
+      </div>
+
+      <div class="form-group">
+        <label class="form-lbl">Ressenti</label>
+        <div class="feel-row">
+          ${FEEL_LABELS.map((lbl,i)=>`
+            <button class="feel-btn ${i===2?'active':''}" data-v="${i+1}" onclick="setFeeling(${i+1})">${lbl}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-lbl">Notes</label>
+        <textarea class="form-inp" id="ride-notes" placeholder="Parcours, météo..."></textarea>
+      </div>
+
+      <button class="btn btn-primary mt-8" onclick="saveRide()">Enregistrer la sortie</button>
+    </div>
   `;
 }
 
@@ -1733,6 +1912,14 @@ function calcRun() {
   const dur  = parseDur(document.getElementById('run-dur')?.value||'');
   document.getElementById('run-pace').textContent = dist>0&&dur>0 ? fmtPace(dur/dist)+' /km' : '--:--';
   document.getElementById('run-cal').textContent  = dist>0 ? `~${Math.round(dist*CAL_PER_KM)} kcal` : '— kcal';
+}
+
+function calcRide() {
+  const dist = parseFloat(document.getElementById('ride-dist')?.value)||0;
+  const dur  = parseDur(document.getElementById('ride-dur')?.value||'');
+  const speed = dist>0&&dur>0 ? (dist/(dur/3600)).toFixed(1)+' km/h' : '-- km/h';
+  document.getElementById('ride-speed').textContent = speed;
+  document.getElementById('ride-cal').textContent   = dist>0 ? `~${Math.round(dist*40)} kcal` : '— kcal';
 }
 
 function setFeeling(v) {
@@ -1748,11 +1935,31 @@ function saveRun() {
   const date = document.getElementById('run-date')?.value||todayStr();
   const notes= document.getElementById('run-notes')?.value||'';
   const feel = parseInt(document.querySelector('.feel-btn.active')?.dataset.v||'3');
+  const elev = parseInt(document.getElementById('run-elev')?.value)||0;
   if(dist<=0){ _savingRun = false; showToast('Entre la distance'); return; }
-  S.runs.push({ id:uid(), date, weekKey:getWeekKey(date), distance:dist, duration:dur, pace:dur>0?dur/dist:0, calories:Math.round(dist*CAL_PER_KM), feeling:feel, notes });
+  S.runs.push({ id:uid(), date, weekKey:getWeekKey(date), distance:dist, duration:dur, pace:dur>0?dur/dist:0, calories:Math.round(dist*CAL_PER_KM), feeling:feel, notes, elev });
   save();
   haptic([40, 30, 80]);
   showToast(`${dist.toFixed(1)} km · ${fmtPace(dur>0?dur/dist:0)}/km`);
+  navigate('dashboard');
+}
+
+let _savingRide = false;
+function saveRide() {
+  if (_savingRide) return; _savingRide = true;
+  setTimeout(() => { _savingRide = false; }, 3000);
+  const km   = parseFloat(document.getElementById('ride-dist')?.value)||0;
+  const dur  = parseDur(document.getElementById('ride-dur')?.value||'');
+  const date = document.getElementById('ride-date')?.value||todayStr();
+  const notes= document.getElementById('ride-notes')?.value||'';
+  const feel = parseInt(document.querySelector('.feel-btn.active')?.dataset.v||'3');
+  const elev = parseInt(document.getElementById('ride-elev')?.value)||0;
+  if(km<=0){ _savingRide = false; showToast('Entre la distance'); return; }
+  if (!S.rides) S.rides = [];
+  S.rides.push({ id:uid(), date, weekKey:getWeekKey(date), km, duration:dur, speed:dur>0?(km/(dur/3600)):0, calories:Math.round(km*40), feeling:feel, notes, elev });
+  save();
+  haptic([40, 30, 80]);
+  showToast(`🚴 ${km.toFixed(1)} km · ${Math.round(km*40)} kcal`);
   navigate('dashboard');
 }
 
@@ -1765,7 +1972,9 @@ let histTab = 'workout';
 function renderHistory() {
   const items = histTab==='workout'
     ? [...S.workouts].sort((a,b)=>b.date.localeCompare(a.date))
-    : [...S.runs].sort((a,b)=>b.date.localeCompare(a.date));
+    : histTab==='run'
+      ? [...S.runs].sort((a,b)=>b.date.localeCompare(a.date))
+      : [...(S.rides||[])].sort((a,b)=>b.date.localeCompare(a.date));
 
   const groups = {};
   items.forEach(item=>{
@@ -1777,8 +1986,9 @@ function renderHistory() {
 
   document.getElementById('app').innerHTML = `
     <div class="tab-row">
-      <button class="tab-btn ${histTab==='workout'?'active':''}" onclick="setHistTab('workout')">Musculation (${S.workouts.length})</button>
+      <button class="tab-btn ${histTab==='workout'?'active':''}" onclick="setHistTab('workout')">Muscu (${S.workouts.length})</button>
       <button class="tab-btn ${histTab==='run'?'active':''}" onclick="setHistTab('run')">Course (${S.runs.length})</button>
+      <button class="tab-btn ${histTab==='ride'?'active':''}" onclick="setHistTab('ride')">Vélo (${(S.rides||[]).length})</button>
     </div>
 
     ${Object.keys(groups).length===0
@@ -1797,12 +2007,25 @@ function renderHistory() {
             </div>
             <span class="hist-chev">›</span>
           </div>
-        ` : `
+        ` : histTab==='run' ? `
           <div class="hist-item" onclick="openRunDetail('${item.id}')">
             <div class="hist-icon" style="background:#00FFD4">KM</div>
             <div class="hist-info">
-              <div class="hist-title">${item.distance.toFixed(1)} km</div>
+              <div class="hist-title">${item.distance.toFixed(1)} km${item.elev>0?` · ↑${item.elev}m`:''}</div>
               <div class="hist-sub">${formatDate(item.date)} · ${fmtPace(item.pace)}/km · ${FEEL_LABELS[(item.feeling||3)-1]}</div>
+            </div>
+            <div class="hist-right">
+              <div class="hist-vol">${formatDur(item.duration)}</div>
+              <div class="hist-date2">${item.calories} kcal</div>
+            </div>
+            <span class="hist-chev">›</span>
+          </div>
+        ` : `
+          <div class="hist-item" onclick="openRideDetail('${item.id}')">
+            <div class="hist-icon" style="background:#A78BFA">🚴</div>
+            <div class="hist-info">
+              <div class="hist-title">${item.km.toFixed(1)} km${item.elev>0?` · ↑${item.elev}m`:''}</div>
+              <div class="hist-sub">${formatDate(item.date)} · ${item.speed>0?item.speed.toFixed(1)+' km/h':''} · ${FEEL_LABELS[(item.feeling||3)-1]}</div>
             </div>
             <div class="hist-right">
               <div class="hist-vol">${formatDur(item.duration)}</div>
@@ -1817,6 +2040,30 @@ function renderHistory() {
 }
 
 function setHistTab(tab) { histTab=tab; renderHistory(); }
+
+function openRideDetail(id) {
+  const r = (S.rides||[]).find(x=>x.id===id); if(!r) return;
+  showModal(`
+    <div class="modal-head">
+      <div>
+        <div class="t3" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">🚴 Vélo</div>
+        <div class="modal-title">${r.km.toFixed(2)} km</div>
+        <div class="t3" style="font-size:12px;margin-top:2px">${formatDate(r.date)}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="stats-grid mt-12">
+      <div class="stat-box"><div class="stat-lbl">Durée</div><div class="stat-num" style="font-size:22px">${formatDur(r.duration)}</div></div>
+      <div class="stat-box"><div class="stat-lbl">Vitesse</div><div class="stat-num" style="font-size:20px">${r.speed>0?r.speed.toFixed(1):'--'}<span class="stat-unit"> km/h</span></div></div>
+      <div class="stat-box"><div class="stat-lbl">Calories</div><div class="stat-num">${r.calories}<span class="stat-unit"> kcal</span></div></div>
+      ${r.elev>0?`<div class="stat-box"><div class="stat-lbl">Dénivelé+</div><div class="stat-num">${r.elev}<span class="stat-unit"> m</span></div></div>`:`<div class="stat-box"><div class="stat-lbl">Ressenti</div><div class="stat-num" style="font-size:20px">${FEEL_LABELS[(r.feeling||3)-1]}</div></div>`}
+    </div>
+    ${r.notes?`<div class="t3 mt-12" style="font-size:12px;padding:10px;background:var(--surface2);border-radius:var(--r-xs);border:1px solid var(--border)">${r.notes}</div>`:''}
+    <button class="btn btn-danger btn-sm mt-12" onclick="deleteRide('${id}')">Supprimer cette sortie</button>
+  `);
+}
+
+function deleteRide(id) { if(!confirm('Supprimer ?')) return; S.rides=(S.rides||[]).filter(r=>r.id!==id); save(); closeModal(); renderHistory(); }
 
 function exportCSV(type) {
   let csv, filename;
@@ -1886,7 +2133,7 @@ function openRunDetail(id) {
       <div class="stat-box"><div class="stat-lbl">Durée</div><div class="stat-num" style="font-size:22px">${formatDur(r.duration)}</div></div>
       <div class="stat-box"><div class="stat-lbl">Allure</div><div class="stat-num" style="font-size:20px">${fmtPace(r.pace)}<span class="stat-unit">/km</span></div></div>
       <div class="stat-box"><div class="stat-lbl">Calories</div><div class="stat-num">${r.calories}<span class="stat-unit"> kcal</span></div></div>
-      <div class="stat-box"><div class="stat-lbl">Ressenti</div><div class="stat-num" style="font-size:20px">${FEEL_LABELS[(r.feeling||3)-1]}</div></div>
+      ${r.elev>0?`<div class="stat-box"><div class="stat-lbl">Dénivelé+</div><div class="stat-num">${r.elev}<span class="stat-unit"> m</span></div></div>`:`<div class="stat-box"><div class="stat-lbl">Ressenti</div><div class="stat-num" style="font-size:20px">${FEEL_LABELS[(r.feeling||3)-1]}</div></div>`}
     </div>
     ${r.notes?`<div class="t3 mt-12" style="font-size:12px;padding:10px;background:var(--surface2);border-radius:var(--r-xs);border:1px solid var(--border)">${r.notes}</div>`:''}
     <button class="btn btn-danger btn-sm mt-12" onclick="deleteRun('${id}')">Supprimer cette course</button>
@@ -2209,6 +2456,42 @@ function renderProfile() {
           <span class="prof-row-unit">g</span>
         </div>
       </div>
+      <div class="prof-row-divider"></div>
+      <div class="prof-row">
+        <div class="prof-row-left">
+          <span class="prof-row-dot" style="background:#F59E0B"></span>
+          <span class="prof-row-label">Glucides / jour</span>
+        </div>
+        <div class="prof-row-right">
+          <input id="g-carbs" class="prof-row-input" type="number"
+            value="${nut.carbs||300}" step="10" min="0" max="800">
+          <span class="prof-row-unit">g</span>
+        </div>
+      </div>
+      <div class="prof-row-divider"></div>
+      <div class="prof-row">
+        <div class="prof-row-left">
+          <span class="prof-row-dot" style="background:#EF4444"></span>
+          <span class="prof-row-label">Lipides / jour</span>
+        </div>
+        <div class="prof-row-right">
+          <input id="g-fat" class="prof-row-input" type="number"
+            value="${nut.fat||70}" step="5" min="0" max="300">
+          <span class="prof-row-unit">g</span>
+        </div>
+      </div>
+      <div class="prof-row-divider"></div>
+      <div class="prof-row">
+        <div class="prof-row-left">
+          <span class="prof-row-dot" style="background:#06B6D4"></span>
+          <span class="prof-row-label">Eau / jour</span>
+        </div>
+        <div class="prof-row-right">
+          <input id="g-water" class="prof-row-input" type="number"
+            value="${nut.water||2500}" step="250" min="500" max="5000">
+          <span class="prof-row-unit">ml</span>
+        </div>
+      </div>
     </div>
 
     <div class="prof-group-lbl">Course</div>
@@ -2390,10 +2673,16 @@ function saveProfile() {
     startKg: isNaN(newStart) ? null : newStart,
     date:    document.getElementById('g-date')?.value || null,
   };
-  S.nutGoal = { cal: parseInt(document.getElementById('g-cal')?.value) || 3000, prot: parseInt(document.getElementById('g-prot')?.value) || 150 };
+  S.nutGoal = {
+    cal:   parseInt(document.getElementById('g-cal')?.value)   || 3000,
+    prot:  parseInt(document.getElementById('g-prot')?.value)  || 150,
+    carbs: parseInt(document.getElementById('g-carbs')?.value) || 300,
+    fat:   parseInt(document.getElementById('g-fat')?.value)   || 70,
+    water: parseInt(document.getElementById('g-water')?.value) || 2500,
+  };
   S.runGoal = parseInt(document.getElementById('g-km')?.value) || 15;
   RUN_GOAL_KM  = S.runGoal;
-  NUTRI_TARGETS = { calories: S.nutGoal.cal, protein: S.nutGoal.prot };
+  NUTRI_TARGETS = { calories: S.nutGoal.cal, protein: S.nutGoal.prot, carbs: S.nutGoal.carbs, fat: S.nutGoal.fat, water: S.nutGoal.water };
   save();
   showToast('Enregistré ✓');
   buildWeightChart();
