@@ -1084,6 +1084,15 @@ const MEAL_PRESETS = [
   // ── Féculents ──────────────────────────────────────────────────────
   {
     category: 'Féculents',
+    name: 'Patates cuites',
+    emoji: '🥔',
+    defaultG: 300,
+    perG: { cal: 0.75, prot: 0.017 },
+    note: 'Patates cuites à l\'eau',
+    detail: 'par 100g cuit : ~75 kcal · 1,7g prot · 17g glucides · 0,1g lip.'
+  },
+  {
+    category: 'Féculents',
     name: 'Pâtes cuites',
     emoji: '🍝',
     defaultG: 300,
@@ -1109,6 +1118,15 @@ const MEAL_PRESETS = [
     perG: { cal: 1.65, prot: 0.31 },
     note: 'Blanc de poulet cuit',
     detail: 'par 100g cuit : ~165 kcal · 31g prot · 0g glucides · 3,6g lip.'
+  },
+  {
+    category: 'Protéines',
+    name: 'Chevreuil rôti',
+    emoji: '🦌',
+    defaultG: 150,
+    perG: { cal: 1.22, prot: 0.268 },
+    note: 'Chevreuil rôti',
+    detail: 'par 100g cuit : ~122 kcal · 26,8g prot · 0g glucides · 2,1g lip.'
   },
   {
     category: 'Protéines',
@@ -1145,6 +1163,15 @@ const MEAL_PRESETS = [
     perG: { cal: 1.3, prot: 0.2 },
     note: 'Truite',
     detail: 'par 100g : ~130 kcal · 20g prot · 0g glucides'
+  },
+  {
+    category: 'Protéines',
+    name: 'Sushis au saumon',
+    emoji: '🍣',
+    defaultG: 220,
+    perG: { cal: 1.50, prot: 0.09 },
+    note: 'Sushis au saumon',
+    detail: 'par 100g : ~150 kcal · 9g prot · 22g glucides · 3,5g lip. (≈6 pièces = 220g)'
   },
   // ── Petit-déjeuner ─────────────────────────────────────────────────
   {
