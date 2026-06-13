@@ -1257,35 +1257,44 @@ function _nutriToday(todayCal, todayProt, calPct, protPct, entries) {
 
     ${MEAL_PRESETS.length > 0 ? (() => {
       const cats = [...new Set(MEAL_PRESETS.map(p => p.category))];
+      const CAT_EMOJI = { 'Féculents':'🌾', 'Viandes':'🥩', 'Poissons & mer':'🐟', 'Laitiers':'🥛', 'Petit-déj':'☀️' };
       return `<div class="card">
       <div class="sect-lbl" style="margin-bottom:12px">Repas enregistrés</div>
       <div class="meal-presets-list">
-        ${cats.map(cat => {
+        ${cats.map((cat, ci) => {
+          const catId = cat.replace(/[^a-zA-Z0-9]/g, '_');
+          const isFirst = ci === 0;
           const items = MEAL_PRESETS.map((p,i)=>({...p,_i:i})).filter(p=>p.category===cat);
-          return `<div class="preset-cat-lbl">${cat}</div>
-          ${items.map(p => {
-            const hasG = !!p.perG;
-            const initCal  = hasG ? Math.ceil(p.perG.cal * p.defaultG) : p.calories;
-            const initProt = hasG ? Math.ceil(p.perG.prot * p.defaultG) : p.protein;
-            return `
-            <div class="meal-preset-row">
-              <div class="meal-preset-info">
-                <div class="meal-preset-name">${p.emoji} ${p.name}</div>
-                ${hasG ? `<div class="preset-gram-row">
-                  <input type="number" inputmode="numeric" class="preset-gram-inp" id="preset-g-${p._i}"
-                    value="${p.defaultG}" min="1" max="2000"
-                    oninput="updatePresetCalc(${p._i})">
-                  <span class="preset-gram-unit">g</span>
-                </div>` : `<div class="meal-preset-detail">${p.detail}</div>`}
-                <div class="meal-preset-macros" id="preset-macros-${p._i}">
-                  <span class="preset-cal">${initCal} kcal</span>
-                  <span class="preset-dot">·</span>
-                  <span class="preset-prot">${initProt}g prot.</span>
+          return `
+          <div class="preset-cat-header" onclick="togglePresetCat('${catId}')">
+            <span class="preset-cat-header-left">${CAT_EMOJI[cat]||''} ${cat} <span style="color:var(--t3);font-weight:400;font-size:11px">${items.length}</span></span>
+            <svg id="parrow-${catId}" class="preset-cat-arrow${isFirst?' open':''}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="preset-cat-items" id="pcat-${catId}" style="display:${isFirst?'block':'none'}">
+            ${items.map(p => {
+              const hasG = !!p.perG;
+              const initCal  = hasG ? Math.ceil(p.perG.cal * p.defaultG) : p.calories;
+              const initProt = hasG ? Math.ceil(p.perG.prot * p.defaultG) : p.protein;
+              return `
+              <div class="meal-preset-row">
+                <div class="meal-preset-info">
+                  <div class="meal-preset-name">${p.emoji} ${p.name}</div>
+                  ${hasG ? `<div class="preset-gram-row">
+                    <input type="number" inputmode="numeric" class="preset-gram-inp" id="preset-g-${p._i}"
+                      value="${p.defaultG}" min="1" max="2000"
+                      oninput="updatePresetCalc(${p._i})">
+                    <span class="preset-gram-unit">g</span>
+                  </div>` : `<div class="meal-preset-detail">${p.detail}</div>`}
+                  <div class="meal-preset-macros" id="preset-macros-${p._i}">
+                    <span class="preset-cal">${initCal} kcal</span>
+                    <span class="preset-dot">·</span>
+                    <span class="preset-prot">${initProt}g prot.</span>
+                  </div>
                 </div>
-              </div>
-              <button class="btn-preset-add" onclick="logNutriPreset(${p._i})">+</button>
-            </div>`;
-          }).join('')}`;
+                <button class="btn-preset-add" onclick="logNutriPreset(${p._i})">+</button>
+              </div>`;
+            }).join('')}
+          </div>`;
         }).join('')}
       </div>
     </div>`;
@@ -1454,6 +1463,15 @@ function _nutriWeight() {
       `).join('')}
     </div>` : `<div class="empty"><div class="empty-icon">—</div><h3>Aucune mesure</h3><p>Commence à logger ton poids pour suivre ta progression.</p></div>`}
   `;
+}
+
+function togglePresetCat(catId) {
+  const items = document.getElementById('pcat-' + catId);
+  const arrow  = document.getElementById('parrow-' + catId);
+  if (!items) return;
+  const open = items.style.display !== 'none';
+  items.style.display = open ? 'none' : 'block';
+  arrow?.classList.toggle('open', !open);
 }
 
 function updatePresetCalc(idx) {

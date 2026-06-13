@@ -1225,10 +1225,17 @@ select.form-inp {
 .preset-gram-inp::-webkit-inner-spin-button,
 .preset-gram-inp::-webkit-outer-spin-button { -webkit-appearance: none; }
 .preset-gram-unit { font-size: 13px; color: var(--t3); font-weight: 500; }
-.preset-cat-lbl {
-  font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--t3); padding: 10px 0 4px;
+.preset-cat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px; margin: 4px 0 2px;
+  background: var(--surface2); border-radius: var(--r-sm);
+  cursor: pointer; user-select: none;
+  border: 1px solid var(--border);
 }
+.preset-cat-header-left { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--t1); }
+.preset-cat-arrow { color: var(--t3); transition: transform .2s; flex-shrink: 0; }
+.preset-cat-arrow.open { transform: rotate(180deg); }
+.preset-cat-items { padding: 0 2px; }
 .meal-preset-row {
   display: flex; align-items: center; gap: 12px;
   padding: 10px 0;
