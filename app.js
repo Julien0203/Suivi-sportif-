@@ -536,7 +536,7 @@ function renderDashboard() {
         </svg>
         <div class="donut-center">
           <div class="donut-val" style="font-size:18px">${km.toFixed(1)}<span class="donut-den"> km</span></div>
-          <div class="donut-sublbl">${runs.length}/${RUN_SESSIONS} sorties</div>
+          <div class="donut-sublbl">/ ${RUN_GOAL_KM} km</div>
         </div>
       </div>
       <div class="donut-foot">Objectif ${RUN_GOAL_KM} km</div>
