@@ -1559,7 +1559,7 @@ function renderRun() {
     <div class="card">
       <div class="sect-lbl" style="margin-bottom:14px">Logger une course</div>
 
-      <div class="form-group">
+      <div class="form-group" style="text-align:center">
         <label class="form-lbl">Date</label>
         <input type="date" class="form-inp" id="run-date" value="${todayStr()}">
       </div>
