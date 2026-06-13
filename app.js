@@ -1109,9 +1109,9 @@ const MEAL_PRESETS = [
     note: 'Riz basmati cuit',
     detail: 'par 100g cuit : ~117 kcal · 2,3g prot · 25g glucides'
   },
-  // ── Protéines ──────────────────────────────────────────────────────
+  // ── Viandes ────────────────────────────────────────────────────────
   {
-    category: 'Protéines',
+    category: 'Viandes',
     name: 'Blanc de poulet cuit',
     emoji: '🍗',
     defaultG: 150,
@@ -1120,7 +1120,7 @@ const MEAL_PRESETS = [
     detail: 'par 100g cuit : ~165 kcal · 31g prot · 0g glucides · 3,6g lip.'
   },
   {
-    category: 'Protéines',
+    category: 'Viandes',
     name: 'Chevreuil rôti',
     emoji: '🦌',
     defaultG: 150,
@@ -1129,7 +1129,7 @@ const MEAL_PRESETS = [
     detail: 'par 100g cuit : ~122 kcal · 26,8g prot · 0g glucides · 2,1g lip.'
   },
   {
-    category: 'Protéines',
+    category: 'Viandes',
     name: 'Porc (filet cuit)',
     emoji: '🥩',
     defaultG: 150,
@@ -1138,7 +1138,7 @@ const MEAL_PRESETS = [
     detail: 'par 100g cuit : ~153 kcal · 26g prot · 0g glucides · 5g lip.'
   },
   {
-    category: 'Protéines',
+    category: 'Viandes',
     name: 'Steak',
     emoji: '🥩',
     defaultG: 130,
@@ -1146,17 +1146,18 @@ const MEAL_PRESETS = [
     note: 'Steak',
     detail: 'par 100g : ~131 kcal · 15g prot · 0g glucides'
   },
+  // ── Poissons & mer ─────────────────────────────────────────────────
   {
-    category: 'Protéines',
-    name: 'Skyr',
-    emoji: '🥛',
-    defaultG: 200,
-    perG: { cal: 0.63, prot: 0.10 },
-    note: 'Skyr',
-    detail: 'par 100g : ~63 kcal · 10g prot · 4g glucides · 0,2g lip.'
+    category: 'Poissons & mer',
+    name: 'Sushis au saumon',
+    emoji: '🍣',
+    defaultG: 220,
+    perG: { cal: 1.50, prot: 0.09 },
+    note: 'Sushis au saumon',
+    detail: 'par 100g : ~150 kcal · 9g prot · 22g glucides · 3,5g lip. (≈6 pièces = 220g)'
   },
   {
-    category: 'Protéines',
+    category: 'Poissons & mer',
     name: 'Truite',
     emoji: '🐟',
     defaultG: 100,
@@ -1164,14 +1165,15 @@ const MEAL_PRESETS = [
     note: 'Truite',
     detail: 'par 100g : ~130 kcal · 20g prot · 0g glucides'
   },
+  // ── Laitiers ───────────────────────────────────────────────────────
   {
-    category: 'Protéines',
-    name: 'Sushis au saumon',
-    emoji: '🍣',
-    defaultG: 220,
-    perG: { cal: 1.50, prot: 0.09 },
-    note: 'Sushis au saumon',
-    detail: 'par 100g : ~150 kcal · 9g prot · 22g glucides · 3,5g lip. (≈6 pièces = 220g)'
+    category: 'Laitiers',
+    name: 'Skyr',
+    emoji: '🥛',
+    defaultG: 200,
+    perG: { cal: 0.63, prot: 0.10 },
+    note: 'Skyr',
+    detail: 'par 100g : ~63 kcal · 10g prot · 4g glucides · 0,2g lip.'
   },
   // ── Petit-déjeuner ─────────────────────────────────────────────────
   {
