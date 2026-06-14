@@ -1167,6 +1167,24 @@ const MEAL_PRESETS = [
   },
   {
     category: 'Viandes',
+    name: 'Saucisse de Toulouse (cuite)',
+    emoji: '🌭',
+    defaultG: 120,
+    perG: { cal: 2.80, prot: 0.14, carbs: 0, fat: 0.25 },
+    note: 'Saucisse de Toulouse cuite',
+    detail: 'par 100g cuit : ~280 kcal · 14g prot · 0g glucides · 25g lip.'
+  },
+  {
+    category: 'Viandes',
+    name: 'Travers de porc (cuit)',
+    emoji: '🥩',
+    defaultG: 200,
+    perG: { cal: 2.90, prot: 0.17, carbs: 0, fat: 0.24 },
+    note: 'Travers de porc cuit',
+    detail: 'par 100g cuit : ~290 kcal · 17g prot · 0g glucides · 24g lip.'
+  },
+  {
+    category: 'Viandes',
     name: 'Steak',
     emoji: '🥩',
     defaultG: 130,
