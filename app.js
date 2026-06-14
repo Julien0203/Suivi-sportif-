@@ -447,8 +447,8 @@ function renderDashboard() {
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     });
     const line = cs.join(' L ');
-    return `<path d="M ${line}" fill="none" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M ${line} L ${w},${h} L 0,${h} Z" fill="var(--blue)" opacity=".1"/>`;
+    return `<path d="M ${line}" fill="none" stroke="#00FF80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M ${line} L ${w},${h} L 0,${h} Z" fill="#00FF80" opacity=".1"/>`;
   }
 
   // SVG ring helper
@@ -609,7 +609,7 @@ function renderDashboard() {
     </div>
 
     <!-- ⑦ POIDS -->
-    <div class="card dash-half dash-poids" onclick="navigate('nutrition')" style="cursor:pointer;border-top:2px solid var(--blue)">
+    <div class="card dash-half dash-poids" onclick="navigate('nutrition')" style="cursor:pointer;border-top:2px solid #00FF80">
       <div class="sect-row" style="margin-bottom:6px">
         <span class="sect-lbl">Poids</span>
         ${lastW ? `<span class="t3" style="font-size:10px">${lastW.date === todayStr() ? 'Auj.' : formatDate(lastW.date)}</span>` : ''}
