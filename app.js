@@ -422,6 +422,8 @@ function renderDashboard() {
   const todayDone = muscle
     ? workoutsThisWeek().some(w => w.date === todayStr() && w.muscleGroup === muscle)
     : false;
+  const volDone  = wtdone >= 5;
+  const runDone  = km >= RUN_GOAL_KM;
 
   // Nutrition
   const todayNutri = (S.nutrition || []).filter(n => n.date === todayStr());
@@ -450,11 +452,13 @@ function renderDashboard() {
   }
 
   // SVG ring helper
-  function ring(pct, color, r = 36, sw = 7) {
+  function ring(pct, color, r = 36, sw = 7, glow = false) {
     const c = 2 * Math.PI * r;
-    return `<circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="${sw}"/>
+    const fid = glow ? `gf${r}` : '';
+    const defs = glow ? `<defs><filter id="${fid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>` : '';
+    return `${defs}<circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="${sw}"/>
       <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
-        stroke-linecap="round"
+        stroke-linecap="round"${glow ? ` filter="url(#${fid})"` : ''}
         stroke-dasharray="${(c * Math.min(pct, 1)).toFixed(1)} ${c.toFixed(1)}"
         transform="rotate(-90 50 50)"/>`;
   }
@@ -494,7 +498,7 @@ function renderDashboard() {
   <div class="dash-grid">
 
     <!-- ① HERO TODAY -->
-    <div class="today-card" style="border-top-color:${accentColor};--today-color:${accentColor}">
+    <div class="today-card" style="border-top-color:${todayDone?'#00FF80':accentColor};--today-color:${accentColor}${todayDone?`;box-shadow:0 0 0 1px #00FF8030,0 0 40px #00FF8018,var(--card-shadow)`:''}">${todayDone?`<div style="position:absolute;top:0;left:0;right:0;bottom:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#00FF8008 0%,transparent 60%)"></div>`:''}
       <div class="today-meta">
         <span class="today-day">${DAYS_FULL[dow]} — Sem. ${S.weekType}</span>
         ${delta !== null
@@ -513,14 +517,15 @@ function renderDashboard() {
     </div>
 
     <!-- ② VOLUME DONUT -->
-    <div class="card dash-half dash-vol" style="border-top:2px solid ${accentColor}">
-      <div class="sect-lbl">Volume</div>
+    <div class="card dash-half dash-vol" style="border-top:2px solid ${volDone?'#00FF80':accentColor}${volDone?`;box-shadow:0 0 0 1px #00FF8028,0 0 32px #00FF8015,var(--card-shadow)`:''};position:relative;overflow:hidden">
+      ${volDone?`<div style="position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,#00FF8010 0%,transparent 70%)"></div>`:''}
+      <div class="sect-lbl" style="${volDone?'color:#00FF80':''}">${volDone?'✓ ':'' }Volume</div>
       <div class="donut-wrap">
         <svg viewBox="0 0 100 100" class="donut-svg">
-          ${ring(wtdone / 5, accentColor)}
+          ${ring(wtdone / 5, volDone ? '#00FF80' : accentColor, 36, 7, volDone)}
         </svg>
         <div class="donut-center">
-          <div class="donut-val">${wtdone}<span class="donut-den">/5</span></div>
+          <div class="donut-val" style="${volDone?'color:#00FF80':''}">${wtdone}<span class="donut-den">/5</span></div>
           <div class="donut-sublbl">séances</div>
         </div>
       </div>
@@ -528,18 +533,19 @@ function renderDashboard() {
     </div>
 
     <!-- ③ COURSE DONUT -->
-    <div class="card dash-half dash-run" style="--card-accent:var(--c-run)">
-      <div class="sect-lbl">Course</div>
+    <div class="card dash-half dash-run" style="--card-accent:var(--c-run)${runDone?`;box-shadow:0 0 0 1px #5AC8FA28,0 0 32px #5AC8FA15,var(--card-shadow)`:''};position:relative;overflow:hidden">
+      ${runDone?`<div style="position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,#5AC8FA10 0%,transparent 70%)"></div>`:''}
+      <div class="sect-lbl" style="${runDone?'color:var(--c-run)':''}">${runDone?'✓ ':'' }Course</div>
       <div class="donut-wrap">
         <svg viewBox="0 0 100 100" class="donut-svg">
-          ${ring(km / RUN_GOAL_KM, 'var(--c-run)')}
+          ${ring(km / RUN_GOAL_KM, 'var(--c-run)', 36, 7, runDone)}
         </svg>
         <div class="donut-center">
-          <div class="donut-val" style="font-size:18px">${km.toFixed(1)}<span class="donut-den"> km</span></div>
+          <div class="donut-val" style="font-size:18px${runDone?';color:var(--c-run)':''}">${km.toFixed(1)}<span class="donut-den"> km</span></div>
           <div class="donut-sublbl">/ ${RUN_GOAL_KM} km</div>
         </div>
       </div>
-      <div class="donut-foot">Objectif ${RUN_GOAL_KM} km</div>
+      <div class="donut-foot">${runDone ? '🎯 Objectif atteint !' : `Objectif ${RUN_GOAL_KM} km`}</div>
     </div>
 
     <!-- ④ CALENDRIER SEMAINE -->
@@ -573,14 +579,14 @@ function renderDashboard() {
         const pct = (vol / maxMV) * 100;
         const done = workoutsThisWeek().some(w => w.muscleGroup === k);
         return `
-        <div class="bk-row">
-          <div class="bk-dot" style="background:${m.color}"></div>
-          <span class="bk-name">${m.label}</span>
+        <div class="bk-row${done ? ' bk-row-done' : ''}" style="${done ? `background:${m.color}08;border-radius:8px;padding:2px 4px;margin:0 -4px` : ''}">
+          <div class="bk-dot" style="background:${m.color};${done ? `box-shadow:0 0 8px ${m.color}99` : ''}"></div>
+          <span class="bk-name" style="${done ? `color:${m.color};font-weight:600` : ''}">${m.label}</span>
           <div class="bk-track">
-            <div class="bk-fill" style="width:${pct.toFixed(1)}%;background:linear-gradient(90deg,${m.color}18,${m.color}44);border-right:2px solid ${vol > 0 ? m.color : 'transparent'}"></div>
+            <div class="bk-fill" style="width:${pct.toFixed(1)}%;${done ? `background:linear-gradient(90deg,${m.color}55,${m.color}CC);border-right:2px solid ${m.color};box-shadow:0 0 8px ${m.color}66` : `background:linear-gradient(90deg,${m.color}18,${m.color}44);border-right:2px solid ${vol > 0 ? m.color : 'transparent'}`}"></div>
           </div>
-          <span class="bk-vol">${vol > 0 ? fmtVol(vol) + ' kg' : '—'}</span>
-          <span class="bk-check">${done ? `<span style="color:${m.color}">✓</span>` : '<span style="color:var(--t4)">·</span>'}</span>
+          <span class="bk-vol" style="${done ? `color:${m.color}` : ''}">${vol > 0 ? fmtVol(vol) + ' kg' : '—'}</span>
+          <span class="bk-check">${done ? `<span style="color:${m.color};text-shadow:0 0 8px ${m.color}">✓</span>` : '<span style="color:var(--t4)">·</span>'}</span>
         </div>`;
       }).join('')}
     </div>
