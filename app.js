@@ -1253,6 +1253,15 @@ const MEAL_PRESETS = [
     note: 'Truite',
     detail: 'par 100g : ~130 kcal · 20g prot · 0g glucides'
   },
+  {
+    category: 'Poissons & mer',
+    name: 'Poulpe cuit',
+    emoji: '🐙',
+    defaultG: 150,
+    perG: { cal: 0.82, prot: 0.148, carbs: 0.022, fat: 0.01 },
+    note: 'Poulpe cuit',
+    detail: 'par 100g : ~82 kcal · 14,8g prot · 2,2g glucides · 1g lip.'
+  },
   // ── Laitiers ───────────────────────────────────────────────────────
   {
     category: 'Laitiers',
@@ -1282,6 +1291,15 @@ const MEAL_PRESETS = [
     perG: { cal: 0.35, prot: 0.037, carbs: 0.045, fat: 0.005 },
     note: 'Brocoli cuit à la vapeur',
     detail: 'par 100g cuit : ~35 kcal · 3,7g prot · 4,5g glucides · 0,5g lip.'
+  },
+  {
+    category: 'Légumes',
+    name: 'Haricots rouges',
+    emoji: '🫘',
+    defaultG: 150,
+    perG: { cal: 1.27, prot: 0.086, carbs: 0.227, fat: 0.005 },
+    note: 'Haricots rouges cuits',
+    detail: 'par 100g cuit : ~127 kcal · 8,6g prot · 22,7g glucides · 0,5g lip.'
   },
   // ── Fruits ─────────────────────────────────────────────────────────
   {
