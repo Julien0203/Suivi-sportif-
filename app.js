@@ -15,7 +15,7 @@ const WORKOUT_PLAN = {
   pec: {
     label: 'Pectoraux', short: 'PE', color: '#FF9F0A', schedule: 2,
     A: ['Développé couché à la Smith machine', 'Développé incliné à la machine convergente', 'Développé incliné avec haltères', 'Dips buste penché en avant', 'Écartés à la poulie vis-à-vis'],
-    B: ['Développé incliné à la barre', 'Développé décliné aux haltères', 'Super horizontal bench press', 'Vertical chest press', 'Svend press']
+    B: ['Développé incliné à la barre', 'Développé décliné aux haltères', 'Super horizontal bench press', 'Vertical chest press', 'Développé couché haltères']
   },
   dos: {
     label: 'Dos', short: 'DO', color: '#0A84FF', schedule: 3,
