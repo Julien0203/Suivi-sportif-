@@ -494,21 +494,36 @@ function renderDashboard() {
     ...S.runs.map(r => ({ ...r, kind: 'r' }))
   ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
 
-  document.getElementById('app').innerHTML = `
-  <div class="dash-grid">
+  const waterMl  = (S.hydration||{})[todayStr()]||0;
+  const waterPct = Math.min(waterMl / NUTRI_TARGETS.water, 1);
+  const waterDone = waterPct >= 1;
 
-    <!-- ① HERO TODAY -->
-    <div class="today-card" style="border-top-color:${todayDone?'#00FF80':accentColor};--today-color:${accentColor}${todayDone?`;box-shadow:0 0 0 1px #00FF8030,0 0 40px #00FF8018,var(--card-shadow)`:''}">${todayDone?`<div style="position:absolute;top:0;left:0;right:0;bottom:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#00FF8008 0%,transparent 60%)"></div>`:''}
-      <div class="today-meta">
-        <span class="today-day">${DAYS_FULL[dow]} — Sem. ${S.weekType}</span>
+  document.getElementById('app').innerHTML = `
+  <div class="dash-v2">
+
+    <!-- ① HERO + SEMAINE INTÉGRÉE -->
+    <div class="hero-v2" style="border-top:2px solid ${todayDone?'#00FF80':accentColor}${todayDone?`;box-shadow:0 0 0 1px #00FF8030,0 0 40px #00FF8018,var(--card-shadow)`:''}">${todayDone?`<div style="position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#00FF8008 0%,transparent 60%);z-index:0"></div>`:''}
+      <div class="hero-head">
+        <div>
+          <div class="hero-date">${DAYS_FULL[dow]} — Sem. ${S.weekType}</div>
+          <div class="hero-muscle" style="${todayDone?'color:#00FF80':muscle?`color:${accentColor}`:''}">${muscle ? WORKOUT_PLAN[muscle].label : 'Repos'}</div>
+          <div class="hero-exos">${muscle
+            ? `${WORKOUT_PLAN[muscle][S.weekType].length} exercices · ${SETS} séries`
+            : 'L · Bras · M · Pec · M · Dos · J · Épau. · V · Jam.'}</div>
+        </div>
         ${delta !== null
           ? `<span class="delta-pill ${delta >= 0 ? 'delta-up' : 'delta-down'}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%</span>`
           : `<span class="delta-pill delta-neu">1re sem.</span>`}
       </div>
-      <div class="today-muscle">${muscle ? WORKOUT_PLAN[muscle].label : 'Repos'}</div>
-      <div class="today-week-tag">${muscle
-        ? `${WORKOUT_PLAN[muscle][S.weekType].length} exercices · ${SETS} séries`
-        : 'L · Bras &nbsp;·&nbsp; M · Pec &nbsp;·&nbsp; M · Dos &nbsp;·&nbsp; J · Épau. &nbsp;·&nbsp; V · Jam.'}</div>
+      <div class="hero-cal">
+        ${calDots.map(({ i, ds, mk, isToday, isFuture, isDone, col }) => {
+          const cls = isDone ? 'hw-done' : (mk && !isFuture ? 'hw-missed' : !mk ? 'hw-rest' : 'hw-plan');
+          return `<div class="hw-day${isToday?' hw-today':''}">
+            <div class="hw-dot ${cls}" style="${isDone?`background:${col};box-shadow:0 0 10px ${col}66`:''}">${isDone&&mk?`<span class="hw-txt">${WORKOUT_PLAN[mk].short}</span>`:''}${isDone&&!mk?`<span class="hw-txt">KM</span>`:''}</div>
+            <div class="hw-lbl">${WD_LBL[i]}</div>
+          </div>`;
+        }).join('')}
+      </div>
       ${muscle && !todayDone
         ? `<button class="today-cta" style="background:${accentColor};color:#000;box-shadow:0 6px 24px ${accentColor}44" onclick="navigate('workout')">Commencer la séance</button>`
         : muscle
@@ -516,113 +531,95 @@ function renderDashboard() {
           : `<div class="today-rest">Week-end · récupération</div>`}
     </div>
 
-    <!-- ② VOLUME DONUT -->
-    <div class="card dash-half dash-vol" style="border-top:2px solid ${volDone?'#00FF80':accentColor}${volDone?`;box-shadow:0 0 0 1px #00FF8028,0 0 32px #00FF8015,var(--card-shadow)`:''};position:relative;overflow:hidden">
-      ${volDone?`<div style="position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,#00FF8010 0%,transparent 70%)"></div>`:''}
-      <div class="sect-lbl" style="${volDone?'color:#00FF80':''}">${volDone?'✓ ':'' }Volume</div>
-      <div class="donut-wrap">
-        <svg viewBox="0 0 100 100" class="donut-svg">
-          ${ring(wtdone / 5, volDone ? '#00FF80' : accentColor, 36, 7, volDone)}
-        </svg>
-        <div class="donut-center">
-          <div class="donut-val" style="${volDone?'color:#00FF80':''}">${wtdone}<span class="donut-den">/5</span></div>
-          <div class="donut-sublbl">séances</div>
+    <!-- ② KPI STRIP -->
+    <div class="kpi-strip">
+      ${[
+        { lbl: volDone?'✓ Séances':'Séances', val: wtdone, den: '/5', color: volDone?'#00FF80':accentColor, pct: wtdone/5, glow: volDone, nav: 'workout' },
+        { lbl: runDone?'✓ Course':'Course', val: km.toFixed(1), den: ' km', color: 'var(--c-run)', pct: Math.min(km/RUN_GOAL_KM,1), glow: runDone, nav: 'run' },
+        { lbl: waterDone?'✓ Eau':'Eau', val: (waterMl/1000).toFixed(1), den: ' L', color: waterDone?'#00FF80':'#06B6D4', pct: waterPct, glow: waterDone, nav: 'nutrition' },
+      ].map(k=>`
+        <div class="kpi-card" onclick="navigate('${k.nav}')">
+          <div class="kpi-ring-wrap">
+            <svg viewBox="0 0 100 100" style="width:62px;height:62px">${ring(k.pct, k.color, 36, 8, k.glow)}</svg>
+            <div class="kpi-center"><span class="kpi-val">${k.val}</span><span class="kpi-den">${k.den}</span></div>
+          </div>
+          <div class="kpi-lbl" style="${(k.glow)?`color:${k.color}`:''}">${k.lbl}</div>
         </div>
-      </div>
-      <div class="donut-foot">${fmtVol(tv)} kg${delta !== null ? ' · ' + (delta >= 0 ? '+' : '') + delta.toFixed(1) + '%' : ''}</div>
+      `).join('')}
     </div>
 
-    <!-- ③ COURSE DONUT -->
-    <div class="card dash-half dash-run" style="--card-accent:var(--c-run)${runDone?`;box-shadow:0 0 0 1px #5AC8FA28,0 0 32px #5AC8FA15,var(--card-shadow)`:''};position:relative;overflow:hidden">
-      ${runDone?`<div style="position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,#5AC8FA10 0%,transparent 70%)"></div>`:''}
-      <div class="sect-lbl" style="${runDone?'color:var(--c-run)':''}">${runDone?'✓ ':'' }Course</div>
-      <div class="donut-wrap">
-        <svg viewBox="0 0 100 100" class="donut-svg">
-          ${ring(km / RUN_GOAL_KM, 'var(--c-run)', 36, 7, runDone)}
-        </svg>
-        <div class="donut-center">
-          <div class="donut-val" style="font-size:18px${runDone?';color:var(--c-run)':''}">${km.toFixed(1)}<span class="donut-den"> km</span></div>
-          <div class="donut-sublbl">/ ${RUN_GOAL_KM} km</div>
-        </div>
+    <!-- ③ NUTRITION + POIDS -->
+    <div class="macros-card" onclick="navigate('nutrition')" style="cursor:pointer">
+      <div class="macros-head">
+        <span class="sect-lbl">Nutrition du jour</span>
+        ${lastW ? `<div class="poids-chip">
+          <span style="font-size:15px;font-weight:600;color:#00FF80">${lastW.weight}<span style="font-size:11px;font-weight:400;color:var(--t3)"> kg</span></span>
+          ${last7W.length>=2?`<svg viewBox="0 0 80 22" style="width:54px;height:18px;overflow:visible;flex-shrink:0">${sparkSVG(last7W,80,18)}</svg>`:''}
+        </div>` : ''}
       </div>
-      <div class="donut-foot">${runDone ? '🎯 Objectif atteint !' : `Objectif ${RUN_GOAL_KM} km`}</div>
+      ${[
+        {lbl:'Kcal', val:todayCal, max:NUTRI_TARGETS.calories, unit:'', color:'#FF6B35', tgt:`/ ${NUTRI_TARGETS.calories}`},
+        {lbl:'Prot.', val:todayProt, max:NUTRI_TARGETS.protein, unit:'g', color:'#00D0FF', tgt:`/ ${NUTRI_TARGETS.protein}g`},
+      ].map(({lbl,val,max,unit,color,tgt})=>{
+        const p = Math.min(val/max*100,100).toFixed(1);
+        return `<div class="macro-row">
+          <span class="macro-lbl">${lbl}</span>
+          <div class="macro-track"><div class="macro-fill" style="width:${p}%;background:${color};box-shadow:0 0 6px ${color}55"></div></div>
+          <span class="macro-num">${val}${unit} <span class="macro-tgt">${tgt}</span></span>
+        </div>`;
+      }).join('')}
     </div>
 
-    <!-- ④ CALENDRIER SEMAINE -->
-    <div class="card week-cal-card">
-      <div class="sect-lbl mb-10">Cette semaine</div>
-      <div class="week-cal">
-        ${calDots.map(({ i, ds, mk, isToday, isFuture, isDone, col }) => {
-          const dotClass = isDone ? 'wc-done' : (mk && !isFuture ? 'wc-missed' : !mk ? 'wc-rest' : 'wc-plan');
-          return `
-          <div class="wc-day${isToday ? ' wc-today' : ''}">
-            <div class="wc-lbl">${WD_LBL[i]}</div>
-            <div class="wc-dot ${dotClass}" style="${isDone ? `background:${col};box-shadow:0 0 12px ${col}55` : ''}">
-              ${isDone && mk ? `<span class="wc-text">${WORKOUT_PLAN[mk].short}</span>` : ''}
-              ${isDone && !mk ? `<span class="wc-text">KM</span>` : ''}
+    <!-- ④ MUSCLES SEMAINE (colonnes verticales) -->
+    <div class="card muscles-v2">
+      <div class="sect-row" style="margin-bottom:14px">
+        <span class="sect-lbl">Muscles · semaine</span>
+        <span style="font-size:11px;color:var(--t3)">${wtdone}/5 séances</span>
+      </div>
+      <div class="mcols">
+        ${MUSCLE_KEYS.map(k => {
+          const m = WORKOUT_PLAN[k];
+          const vol = thisVM[k];
+          const pct = (vol / maxMV) * 100;
+          const done = workoutsThisWeek().some(w => w.muscleGroup === k);
+          return `<div class="mcol" onclick="navigate('workout')">
+            <div class="mcol-vol" style="color:${done?m.color:'var(--t4)'}">${vol>0?fmtVol(vol):'—'}</div>
+            <div class="mcol-track">
+              <div class="mcol-fill" style="height:${pct.toFixed(1)}%;background:${done?m.color:m.color+'55'};${done?`box-shadow:0 0 12px ${m.color}99`:''}"></div>
             </div>
-            <div class="wc-num">${new Date(ds + 'T12:00:00').getDate()}</div>
+            <div class="mcol-dot" style="background:${m.color};${done?`box-shadow:0 0 8px ${m.color}`:'opacity:.3'}"></div>
+            <div class="mcol-name" style="${done?`color:${m.color};font-weight:600`:'color:var(--t3)'}">${m.short}</div>
+            <div class="mcol-ck" style="color:${m.color}">${done?'✓':''}</div>
           </div>`;
         }).join('')}
       </div>
     </div>
 
-    <!-- ⑤ MUSCLE BREAKDOWN -->
-    <div class="card bk-card">
-      <div class="sect-row" style="margin-bottom:14px">
-        <span class="sect-lbl">Groupes musculaires</span>
-        <span class="t3" style="font-size:11px">${wtdone}/5 séances</span>
+    <!-- ⑤ NOTE + RÉCENT -->
+    <div class="dash-bottom">
+      <div class="card" style="flex:1;min-width:0">
+        <div class="sect-lbl" style="margin-bottom:8px">Note du jour</div>
+        <textarea class="note-inp" id="day-note" placeholder="Ressenti, objectifs…" oninput="saveDayNote()">${(S.journal||{})[todayStr()]||''}</textarea>
       </div>
-      ${MUSCLE_KEYS.map(k => {
-        const m   = WORKOUT_PLAN[k];
-        const vol = thisVM[k];
-        const pct = (vol / maxMV) * 100;
-        const done = workoutsThisWeek().some(w => w.muscleGroup === k);
-        return `
-        <div class="bk-row${done ? ' bk-row-done' : ''}" style="${done ? `background:${m.color}08;border-radius:8px;padding:2px 4px;margin:0 -4px` : ''}">
-          <div class="bk-dot" style="background:${m.color};${done ? `box-shadow:0 0 8px ${m.color}99` : ''}"></div>
-          <span class="bk-name" style="${done ? `color:${m.color};font-weight:600` : ''}">${m.label}</span>
-          <div class="bk-track">
-            <div class="bk-fill" style="width:${pct.toFixed(1)}%;${done ? `background:linear-gradient(90deg,${m.color}55,${m.color}CC);border-right:2px solid ${m.color};box-shadow:0 0 8px ${m.color}66` : `background:linear-gradient(90deg,${m.color}18,${m.color}44);border-right:2px solid ${vol > 0 ? m.color : 'transparent'}`}"></div>
-          </div>
-          <span class="bk-vol" style="${done ? `color:${m.color}` : ''}">${vol > 0 ? fmtVol(vol) + ' kg' : '—'}</span>
-          <span class="bk-check">${done ? `<span style="color:${m.color};text-shadow:0 0 8px ${m.color}">✓</span>` : '<span style="color:var(--t4)">·</span>'}</span>
-        </div>`;
-      }).join('')}
-    </div>
-
-    <!-- ⑥ NUTRITION -->
-    <div class="card dash-half dash-nutri" onclick="navigate('nutrition')" style="cursor:pointer;border-top:2px solid #FF6B35">
-      <div class="sect-lbl" style="margin-bottom:12px">Nutrition</div>
-      <div class="nut-rings">
-        <svg viewBox="0 0 100 100" class="donut-svg" style="width:90px;height:90px;flex-shrink:0">
-          ${ring(calPct / 100, '#FF6B35', 38, 7)}
-          ${ring(protPct / 100, 'var(--blue)', 26, 6)}
-          <text x="50" y="47" text-anchor="middle" font-size="14" font-weight="500" fill="var(--t1)" font-family="system-ui,sans-serif">${Math.round(calPct)}%</text>
-          <text x="50" y="61" text-anchor="middle" font-size="8" fill="var(--t3)" font-family="system-ui,sans-serif">kcal</text>
-        </svg>
-        <div class="nut-legend">
-          <div class="nut-row"><span class="nut-dot" style="background:#FF6B35"></span><div><div class="nut-val">${todayCal} kcal</div><div class="nut-target">/ ${NUTRI_TARGETS.calories}</div></div></div>
-          <div class="nut-row"><span class="nut-dot" style="background:var(--blue)"></span><div><div class="nut-val">${todayProt}g</div><div class="nut-target">/ ${NUTRI_TARGETS.protein}g prot.</div></div></div>
-        </div>
+      <div class="card act-card" style="flex:1;min-width:0">
+        <div class="sect-lbl" style="margin-bottom:10px">Récent</div>
+        ${recent.length===0
+          ? `<div style="padding:16px 0;text-align:center;color:var(--t3);font-size:12px">Aucune activité</div>`
+          : recent.map(item => item.kind==='w'?`
+          <div class="act-row" onclick="openSessionDetail('${item.id}')">
+            <div class="act-icon" style="background:${WORKOUT_PLAN[item.muscleGroup].color}22;color:${WORKOUT_PLAN[item.muscleGroup].color}">${WORKOUT_PLAN[item.muscleGroup].short}</div>
+            <div class="act-body"><div class="act-ttl">${WORKOUT_PLAN[item.muscleGroup].label}</div><div class="act-sub">${formatDate(item.date)}</div></div>
+            <span class="act-val">${fmtVol(item.totalVolume)} kg</span>
+          </div>` : `
+          <div class="act-row" onclick="openRunDetail('${item.id}')">
+            <div class="act-icon" style="background:rgba(0,208,255,.1);color:var(--c-run)">KM</div>
+            <div class="act-body"><div class="act-ttl">${item.distance.toFixed(1)} km</div><div class="act-sub">${formatDate(item.date)} · ${fmtPace(item.pace)}/km</div></div>
+            <span class="act-val">${formatDur(item.duration)}</span>
+          </div>`).join('')}
       </div>
     </div>
 
-    <!-- ⑦ POIDS -->
-    <div class="card dash-half dash-poids" onclick="navigate('nutrition')" style="cursor:pointer;border-top:2px solid #00FF80">
-      <div class="sect-row" style="margin-bottom:6px">
-        <span class="sect-lbl">Poids</span>
-        ${lastW ? `<span class="t3" style="font-size:10px">${lastW.date === todayStr() ? 'Auj.' : formatDate(lastW.date)}</span>` : ''}
-      </div>
-      ${lastW
-        ? `<div class="weight-big">${lastW.weight}<span class="weight-unit"> kg</span></div>
-           ${last7W.length >= 2
-             ? `<svg class="sparkline-svg" viewBox="0 0 110 36" preserveAspectRatio="none">${sparkSVG(last7W)}</svg>`
-             : `<div style="font-size:11px;color:var(--t3);margin-top:8px">Continue d'enregistrer</div>`}`
-        : `<div style="font-size:12px;color:var(--t3);padding:16px 0">Aucun poids<br>enregistré</div>`}
-    </div>
-
-    <!-- ⑧ STREAKS -->
+    <!-- ⑥ STREAKS -->
     ${(() => {
       const st = getStreaks();
       if (!st.overall) return '';
@@ -631,44 +628,8 @@ function renderDashboard() {
         st.nutrition ? `<div class="streak-item"><span class="streak-fire">🥗</span><span class="streak-num">${st.nutrition}</span><span class="streak-lbl">nutrition</span></div>` : '',
         st.overall > 1 ? `<div class="streak-item"><span class="streak-fire">⚡</span><span class="streak-num">${st.overall}</span><span class="streak-lbl">jours actifs</span></div>` : '',
       ].filter(Boolean).join('');
-      return `<div class="card streak-card"><div class="sect-lbl mb-10">Séries en cours</div><div class="streak-row">${items}</div></div>`;
+      return items ? `<div class="card streak-card"><div class="sect-lbl mb-10">Séries en cours</div><div class="streak-row">${items}</div></div>` : '';
     })()}
-
-    <!-- ⑨ NOTE DU JOUR -->
-    <div class="card note-card">
-      <div class="sect-lbl mb-10">Note du jour</div>
-      <textarea class="note-inp" id="day-note" placeholder="Ressenti, objectifs, remarques…" oninput="saveDayNote()">${(S.journal || {})[todayStr()] || ''}</textarea>
-    </div>
-
-    <!-- ⑩ ACTIVITÉ RÉCENTE -->
-    <div class="card recent-card">
-      <div class="sect-lbl mb-10">Activité récente</div>
-      ${recent.length === 0
-        ? `<div style="padding:24px 0;text-align:center">
-             <div style="font-size:28px;margin-bottom:10px;opacity:.35">🏋️</div>
-             <div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:6px">Aucune activité</div>
-             <div style="font-size:12px;color:var(--t3);margin-bottom:14px">Lance ta première séance pour démarrer</div>
-             <button class="btn btn-primary btn-sm" onclick="navigate('workout')">Commencer</button>
-           </div>`
-        : recent.map(item => item.kind === 'w' ? `
-          <div class="recent-row" onclick="openSessionDetail('${item.id}')">
-            <div class="rec-icon" style="background:${WORKOUT_PLAN[item.muscleGroup].color}18;border:1px solid ${WORKOUT_PLAN[item.muscleGroup].color}44;color:${WORKOUT_PLAN[item.muscleGroup].color}">${WORKOUT_PLAN[item.muscleGroup].short}</div>
-            <div class="flex-1">
-              <div class="rec-title">${WORKOUT_PLAN[item.muscleGroup].label}</div>
-              <div class="rec-sub">${formatDate(item.date)} · Sem. ${item.weekType}</div>
-            </div>
-            <span class="rec-val">${fmtVol(item.totalVolume)} kg</span>
-          </div>` : `
-          <div class="recent-row" onclick="openRunDetail('${item.id}')">
-            <div class="rec-icon" style="background:rgba(0,255,212,.08);border:1px solid rgba(0,255,212,.3);color:var(--c-run)">KM</div>
-            <div class="flex-1">
-              <div class="rec-title">${item.distance.toFixed(1)} km</div>
-              <div class="rec-sub">${formatDate(item.date)} · ${fmtPace(item.pace)}/km</div>
-            </div>
-            <span class="rec-val">${formatDur(item.duration)}</span>
-          </div>`
-        ).join('')}
-    </div>
 
   </div>
   <div class="spacer"></div>
