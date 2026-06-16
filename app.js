@@ -1603,6 +1603,11 @@ function _nutriStats() {
         <div class="chart-wrap chart-wrap-sm"><canvas id="chart-prot"></canvas></div>
       </div>
     </div>
+
+    <div class="card">
+      <div class="chart-lbl"><span>Hydratation · 30 jours</span><span style="font-size:11px;color:var(--t3)">% objectif ${NUTRI_TARGETS.water/1000}L</span></div>
+      <div class="chart-wrap" style="height:140px"><canvas id="chart-water"></canvas></div>
+    </div>
   `;
 }
 
@@ -1793,6 +1798,31 @@ function buildNutriCharts() {
       options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
         scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
           y:{grid:{color:grid}, suggestedMax:NUTRI_TARGETS.protein+20, ticks:{callback:v=>v+'g'}} }
+      }
+    });
+  }
+
+  const hwc = document.getElementById('chart-water')?.getContext('2d');
+  if (hwc) {
+    const days30 = Array.from({length:30}, (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-29+i); return localDateStr(d); });
+    const hwLbls = days30.map(d=>{ const dt=new Date(d+'T12:00:00'); return `${dt.getDate()}/${dt.getMonth()+1}`; });
+    const hwData = days30.map(d => {
+      const ml = (S.hydration||{})[d] || 0;
+      return ml > 0 ? Math.round((ml / NUTRI_TARGETS.water) * 100) : null;
+    });
+    const hwColors = hwData.map(v => v === null ? 'transparent' : v >= 100 ? '#00FF8099' : v >= 70 ? '#06B6D499' : '#FF6B3599');
+    const hwBorders = hwData.map(v => v === null ? 'transparent' : v >= 100 ? '#00FF80' : v >= 70 ? '#06B6D4' : '#FF6B35');
+    nutriCharts.water = new Chart(hwc, {
+      type: 'bar',
+      data: { labels: hwLbls, datasets: [{ data: hwData, backgroundColor: hwColors, borderColor: hwBorders, borderWidth: 0, borderRadius: 3 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, annotation: {} },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+          y: { grid: { color: grid }, min: 0, max: 120, ticks: { callback: v => v + '%', stepSize: 25 },
+            afterDataLimits(ax) { ax.max = 120; } }
+        }
       }
     });
   }
