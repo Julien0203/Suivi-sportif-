@@ -2393,6 +2393,14 @@ function renderStats() {
         <div class="chart-wrap chart-wrap-sm"><canvas id="chart-run"></canvas></div>
       </div>
     </div>
+
+    <div class="card">
+      <div class="chart-lbl">
+        <span>Hydratation · 30 jours</span>
+        <span style="font-size:11px;color:var(--t3)">Objectif ${(NUTRI_TARGETS.water/1000).toFixed(1)} L/j</span>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-water-daily"></canvas></div>
+    </div>
     <div class="spacer"></div>
   `;
   requestAnimationFrame(buildCharts);
@@ -2779,6 +2787,34 @@ function buildCharts() {
       scales:{x:{grid:{display:false},ticks:{maxRotation:0}}, y:{suggestedMax:RUN_GOAL_KM+2,grid:{color:grid},ticks:{callback:v=>v+' km'}}}
     }
   });
+
+  const wdc = document.getElementById('chart-water-daily')?.getContext('2d');
+  if(wdc) {
+    const days30 = Array.from({length:30}, (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-29+i); return localDateStr(d); });
+    const wdLbls = days30.map(d=>{ const dt=new Date(d+'T12:00:00'); return `${dt.getDate()}/${dt.getMonth()+1}`; });
+    const wdData = days30.map(d => { const ml=(S.hydration||{})[d]||0; return ml>0 ? +(ml/1000).toFixed(2) : null; });
+    const goalL  = NUTRI_TARGETS.water / 1000;
+    charts.waterDaily = new Chart(wdc, {
+      type: 'line',
+      data: { labels: wdLbls, datasets: [
+        { label: 'Eau (L)', data: wdData,
+          borderColor: '#06B6D4', backgroundColor: 'rgba(6,182,212,.08)',
+          fill: true, tension: .35, pointRadius: 3,
+          pointBackgroundColor: wdData.map(v => v === null ? 'transparent' : v >= goalL ? '#00FF80' : '#06B6D4'),
+          pointBorderColor: 'transparent', spanGaps: false },
+        { label: 'Objectif', data: days30.map(() => goalL),
+          borderColor: '#06B6D430', borderDash: [4, 4], borderWidth: 1.5,
+          pointRadius: 0, fill: false, tension: 0 }
+      ]},
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+          y: { grid: { color: grid }, min: 0, ticks: { callback: v => v + ' L' } }
+        }
+      }
+    });
+  }
 }
 
 // ============================================================
