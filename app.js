@@ -2792,26 +2792,26 @@ function buildCharts() {
   if(wdc) {
     const days30 = Array.from({length:30}, (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-29+i); return localDateStr(d); });
     const wdLbls = days30.map(d=>{ const dt=new Date(d+'T12:00:00'); return `${dt.getDate()}/${dt.getMonth()+1}`; });
-    const wdRaw  = days30.map(d => (S.hydration||{})[d]||0);
-    const wdData = wdRaw.map(ml => +(ml/1000).toFixed(2));
+    const wdData = days30.map(d => { const ml=(S.hydration||{})[d]||0; return ml>0 ? +(ml/1000).toFixed(2) : null; });
     const goalL  = NUTRI_TARGETS.water / 1000;
+    const darkMode = document.documentElement.getAttribute('data-theme') !== 'light';
     charts.waterDaily = new Chart(wdc, {
-      type: 'bar',
+      type: 'line',
       data: { labels: wdLbls, datasets: [
         { label: 'Eau (L)', data: wdData,
-          backgroundColor: wdData.map(v => v >= goalL ? '#00FF8099' : v > 0 ? '#06B6D499' : '#06B6D420'),
-          borderColor:     wdData.map(v => v >= goalL ? '#00FF80'   : v > 0 ? '#06B6D4'   : 'transparent'),
-          borderWidth: 1, borderRadius: 4 },
+          borderColor: '#00FF80', borderWidth: 2,
+          backgroundColor: darkMode ? 'rgba(0,255,128,.08)' : 'rgba(0,255,128,.12)',
+          fill: true, tension: .35, spanGaps: true,
+          pointRadius: 4, pointBackgroundColor: '#00FF80', pointBorderColor: 'transparent' },
         { label: 'Objectif', data: days30.map(() => goalL),
-          type: 'line',
-          borderColor: '#06B6D450', borderDash: [4,4], borderWidth: 1.5,
-          pointRadius: 0, fill: false, tension: 0, order: 0 }
+          borderColor: '#00FF8040', borderDash: [4,4], borderWidth: 1.5,
+          pointRadius: 0, fill: false, tension: 0 }
       ]},
       options: { responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
-          y: { grid: { color: grid }, min: 0, ticks: { callback: v => v + ' L' } }
+          x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10, color: darkMode?'#888':'#999' } },
+          y: { grid: { color: grid }, min: 0, ticks: { callback: v => v + ' L', color: darkMode?'#888':'#999' } }
         }
       }
     });
