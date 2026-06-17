@@ -2792,19 +2792,20 @@ function buildCharts() {
   if(wdc) {
     const days30 = Array.from({length:30}, (_,i)=>{ const d=new Date(); d.setDate(d.getDate()-29+i); return localDateStr(d); });
     const wdLbls = days30.map(d=>{ const dt=new Date(d+'T12:00:00'); return `${dt.getDate()}/${dt.getMonth()+1}`; });
-    const wdData = days30.map(d => { const ml=(S.hydration||{})[d]||0; return ml>0 ? +(ml/1000).toFixed(2) : null; });
+    const wdRaw  = days30.map(d => (S.hydration||{})[d]||0);
+    const wdData = wdRaw.map(ml => +(ml/1000).toFixed(2));
     const goalL  = NUTRI_TARGETS.water / 1000;
     charts.waterDaily = new Chart(wdc, {
-      type: 'line',
+      type: 'bar',
       data: { labels: wdLbls, datasets: [
         { label: 'Eau (L)', data: wdData,
-          borderColor: '#06B6D4', backgroundColor: 'rgba(6,182,212,.08)',
-          fill: true, tension: .35, pointRadius: 3,
-          pointBackgroundColor: wdData.map(v => v === null ? 'transparent' : v >= goalL ? '#00FF80' : '#06B6D4'),
-          pointBorderColor: 'transparent', spanGaps: false },
+          backgroundColor: wdData.map(v => v >= goalL ? '#00FF8099' : v > 0 ? '#06B6D499' : '#06B6D420'),
+          borderColor:     wdData.map(v => v >= goalL ? '#00FF80'   : v > 0 ? '#06B6D4'   : 'transparent'),
+          borderWidth: 1, borderRadius: 4 },
         { label: 'Objectif', data: days30.map(() => goalL),
-          borderColor: '#06B6D430', borderDash: [4, 4], borderWidth: 1.5,
-          pointRadius: 0, fill: false, tension: 0 }
+          type: 'line',
+          borderColor: '#06B6D450', borderDash: [4,4], borderWidth: 1.5,
+          pointRadius: 0, fill: false, tension: 0, order: 0 }
       ]},
       options: { responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
