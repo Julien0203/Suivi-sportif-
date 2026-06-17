@@ -538,12 +538,12 @@ function renderDashboard() {
         { lbl: runDone?'✓ Course':'Course', val: km.toFixed(1), den: ' km', color: 'var(--c-run)', pct: Math.min(km/RUN_GOAL_KM,1), glow: runDone, nav: 'run' },
         { lbl: waterDone?'✓ Eau':'Eau', val: (waterMl/1000).toFixed(1), den: ' L', color: waterDone?'#00FF80':'#06B6D4', pct: waterPct, glow: waterDone, nav: 'nutrition' },
       ].map(k=>`
-        <div class="kpi-card" onclick="navigate('${k.nav}')">
+        <div class="kpi-card" onclick="navigate('${k.nav}')" style="--kc:${k.color}">
           <div class="kpi-ring-wrap">
-            <svg viewBox="0 0 100 100" style="width:62px;height:62px">${ring(k.pct, k.color, 36, 8, k.glow)}</svg>
+            <svg viewBox="0 0 100 100" style="width:64px;height:64px">${ring(k.pct, k.color, 36, 8, k.glow)}</svg>
             <div class="kpi-center"><span class="kpi-val">${k.val}</span><span class="kpi-den">${k.den}</span></div>
           </div>
-          <div class="kpi-lbl" style="${(k.glow)?`color:${k.color}`:''}">${k.lbl}</div>
+          <div class="kpi-lbl" style="${k.glow?`color:${k.color};font-weight:600`:''}">${k.lbl}</div>
         </div>
       `).join('')}
     </div>
