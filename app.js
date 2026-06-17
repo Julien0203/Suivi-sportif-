@@ -2394,7 +2394,7 @@ function renderStats() {
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-top:16px">
       <div class="chart-lbl">
         <span>Hydratation · 30 jours</span>
         <span style="font-size:11px;color:var(--t3)">Objectif ${(NUTRI_TARGETS.water/1000).toFixed(1)} L/j</span>
