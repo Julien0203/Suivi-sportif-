@@ -564,7 +564,7 @@ function renderDashboard() {
         const p = Math.min(val/max*100,100).toFixed(1);
         return `<div class="macro-row">
           <span class="macro-lbl">${lbl}</span>
-          <div class="macro-track"><div class="macro-fill" style="width:${p}%;background:${color};box-shadow:0 0 6px ${color}55"></div></div>
+          <div class="macro-track"><div class="macro-fill" style="--p:${p/100};background:${color};box-shadow:0 0 6px ${color}55"></div></div>
           <span class="macro-num">${val}${unit} <span class="macro-tgt">${tgt}</span></span>
         </div>`;
       }).join('')}
@@ -585,7 +585,7 @@ function renderDashboard() {
           return `<div class="mcol" onclick="navigate('workout')">
             <div class="mcol-vol" style="color:${done?m.color:'var(--t4)'}">${vol>0?fmtVol(vol):'—'}</div>
             <div class="mcol-track">
-              <div class="mcol-fill" style="height:${pct.toFixed(1)}%;background:${done?m.color:m.color+'55'};${done?`box-shadow:0 0 12px ${m.color}99`:''}"></div>
+              <div class="mcol-fill" style="--p:${(pct/100).toFixed(3)};background:${done?m.color:m.color+'55'};${done?`box-shadow:0 0 12px ${m.color}99`:''}"></div>
             </div>
             <div class="mcol-dot" style="background:${m.color};${done?`box-shadow:0 0 8px ${m.color}`:'opacity:.3'}"></div>
             <div class="mcol-name" style="${done?`color:${m.color};font-weight:600`:'color:var(--t3)'}">${m.short}</div>
@@ -1116,6 +1116,15 @@ const MEAL_PRESETS = [
   },
   {
     category: 'Viandes',
+    name: 'Dinde (escalope cuite)',
+    emoji: '🦃',
+    defaultG: 150,
+    perG: { cal: 1.35, prot: 0.29, carbs: 0, fat: 0.015 },
+    note: 'Escalope de dinde cuite',
+    detail: 'par 100g cuit : ~135 kcal · 29g prot · 0g glucides · 1,5g lip.'
+  },
+  {
+    category: 'Viandes',
     name: 'Jambon blanc',
     emoji: '🍖',
     defaultG: 80,
@@ -1195,6 +1204,15 @@ const MEAL_PRESETS = [
     perG: { cal: 1.50, prot: 0.09, carbs: 0.22, fat: 0.035 },
     note: 'Sushis au saumon',
     detail: 'par 100g : ~150 kcal · 9g prot · 22g glucides · 3,5g lip. (≈6 pièces = 220g)'
+  },
+  {
+    category: 'Poissons & mer',
+    name: 'Sushis au thon',
+    emoji: '🍣',
+    defaultG: 220,
+    perG: { cal: 1.40, prot: 0.095, carbs: 0.24, fat: 0.012 },
+    note: 'Sushis au thon',
+    detail: 'par 100g : ~140 kcal · 9,5g prot · 24g glucides · 1,2g lip. (≈6 pièces = 220g)'
   },
   {
     category: 'Poissons & mer',
@@ -1340,7 +1358,7 @@ function _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct,
           </span>
           <span style="font-size:11px;color:var(--t3)">/ ${effectiveCal.toLocaleString('fr-FR')}</span>
         </div>
-        <div class="nutri-track"><div class="nutri-fill nutri-cal" style="width:${calPct}%"></div></div>
+        <div class="nutri-track"><div class="nutri-fill nutri-cal" style="--p:${calPct/100}"></div></div>
         <div class="flex-between" style="margin-top:5px">
           <span class="sect-lbl">Calories</span>
           <span style="font-size:10px;color:${calPct>=100?'var(--green)':'var(--t3)'}">${calPct>=100?'Objectif ✓':Math.max(0,effectiveCal-todayCal)+' restantes'}</span>
@@ -1354,7 +1372,7 @@ function _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct,
           </span>
           <span style="font-size:11px;color:var(--t3)">/ ${NUTRI_TARGETS.protein}g protéines</span>
         </div>
-        <div class="nutri-track"><div class="nutri-fill nutri-prot" style="width:${protPct}%"></div></div>
+        <div class="nutri-track"><div class="nutri-fill nutri-prot" style="--p:${protPct/100}"></div></div>
         <div class="flex-between" style="margin-top:5px">
           <span class="sect-lbl">Protéines</span>
           <span style="font-size:10px;color:${protPct>=100?'var(--green)':'var(--t3)'}">${protPct>=100?'Objectif ✓':Math.max(0,NUTRI_TARGETS.protein-todayProt)+'g restantes'}</span>
@@ -1368,7 +1386,7 @@ function _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct,
           </span>
           <span style="font-size:11px;color:var(--t3)">/ ${NUTRI_TARGETS.carbs}g glucides</span>
         </div>
-        <div class="nutri-track"><div class="nutri-fill nutri-carbs" style="width:${carbsPct}%"></div></div>
+        <div class="nutri-track"><div class="nutri-fill nutri-carbs" style="--p:${carbsPct/100}"></div></div>
         <div class="flex-between" style="margin-top:5px">
           <span class="sect-lbl">Glucides</span>
           <span style="font-size:10px;color:${carbsPct>=100?'var(--green)':'var(--t3)'}">${carbsPct>=100?'Objectif ✓':Math.max(0,NUTRI_TARGETS.carbs-todayCarbs)+'g restants'}</span>
@@ -1382,7 +1400,7 @@ function _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct,
           </span>
           <span style="font-size:11px;color:var(--t3)">/ ${NUTRI_TARGETS.fat}g lipides</span>
         </div>
-        <div class="nutri-track"><div class="nutri-fill nutri-fat" style="width:${fatPct}%"></div></div>
+        <div class="nutri-track"><div class="nutri-fill nutri-fat" style="--p:${fatPct/100}"></div></div>
         <div class="flex-between" style="margin-top:5px">
           <span class="sect-lbl">Lipides</span>
           <span style="font-size:10px;color:${fatPct>=100?'var(--green)':'var(--t3)'}">${fatPct>=100?'Objectif ✓':Math.max(0,NUTRI_TARGETS.fat-todayFat)+'g restants'}</span>
@@ -1396,7 +1414,7 @@ function _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct,
         <span class="sect-lbl">💧 Hydratation</span>
         <span class="t3" style="font-size:10px">${(waterMl/1000).toFixed(1)} / ${(NUTRI_TARGETS.water/1000).toFixed(1)} L</span>
       </div>
-      <div class="nutri-track" style="margin-bottom:12px"><div class="nutri-fill nutri-water" style="width:${waterPct}%"></div></div>
+      <div class="nutri-track" style="margin-bottom:12px"><div class="nutri-fill nutri-water" style="--p:${waterPct/100}"></div></div>
       <div class="flex-between">
         <button class="btn btn-ghost btn-sm" onclick="addWater(-250)" style="flex:1;margin-right:8px">−250 ml</button>
         <span style="font-size:15px;font-weight:600;color:var(--t1);flex:0;padding:0 12px">${waterMl} ml</span>
