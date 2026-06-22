@@ -502,7 +502,7 @@ function renderDashboard() {
   <div class="dash-v2">
 
     <!-- ① HERO + SEMAINE INTÉGRÉE -->
-    <div class="hero-v2" style="border-top:2px solid ${todayDone?'#00FF80':accentColor}${todayDone?`;box-shadow:0 0 0 1px #00FF8030,0 0 40px #00FF8018,var(--card-shadow)`:''}">${todayDone?`<div style="position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#00FF8008 0%,transparent 60%);z-index:0"></div>`:''}
+    <div class="hero-v2" style="--hero-accent:${todayDone?'#00FF80':accentColor};border-top:2px solid ${todayDone?'#00FF80':accentColor}${todayDone?`;box-shadow:0 0 0 1px #00FF8030,0 0 40px #00FF8018,var(--sh-3)`:''}">${todayDone?`<div style="position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#00FF8008 0%,transparent 60%);z-index:0"></div>`:''}
       <div class="hero-head">
         <div>
           <div class="hero-date">${DAYS_FULL[dow]} — Sem. ${S.weekType}</div>
@@ -2955,7 +2955,7 @@ function initEvents() {
     document.documentElement.dataset.theme=next; S.theme=next; save();
     document.getElementById('icon-sun').style.display  = next==='dark'?'none':'block';
     document.getElementById('icon-moon').style.display = next==='dark'?'block':'none';
-    document.getElementById('meta-theme').content = next==='dark'?'#0f0f0f':'#ffffff';
+    document.getElementById('meta-theme').content = next==='dark'?'#08090C':'#ffffff';
     if(S.view==='stats'){ destroyCharts(); renderStats(); }
   });
 
@@ -2981,7 +2981,7 @@ function applyTheme() {
   const dark=S.theme==='dark';
   document.getElementById('icon-sun').style.display  = dark?'none':'block';
   document.getElementById('icon-moon').style.display = dark?'block':'none';
-  document.getElementById('meta-theme').content = dark?'#0f0f0f':'#ffffff';
+  document.getElementById('meta-theme').content = dark?'#08090C':'#ffffff';
 }
 
 // ============================================================
