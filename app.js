@@ -247,6 +247,22 @@ function todayStr()    { return localDateStr(new Date()); }
 function thisWeekKey() { return getWeekKey(new Date()); }
 function prevWeekKey() { const d = new Date(); d.setDate(d.getDate()-7); return getWeekKey(d); }
 
+// Index de semaine (nb de semaines depuis l'epoch) à partir d'une weekKey (lundi)
+function weekIndex(weekKey) { return Math.round(new Date(weekKey + 'T00:00:00').getTime() / 604800000); }
+
+// Type de semaine A/B déduit automatiquement de la date du jour.
+// On se cale sur l'alternance de l'historique pour rester cohérent ;
+// à défaut, parité de l'index de semaine.
+function autoWeekType() {
+  const cur = weekIndex(thisWeekKey());
+  const last = (S.workouts||[]).filter(w => w.weekKey && w.weekType).sort((a,b) => b.date.localeCompare(a.date))[0];
+  if (last) {
+    const diff = cur - weekIndex(last.weekKey);
+    return (((diff % 2) + 2) % 2 === 0) ? last.weekType : (last.weekType === 'A' ? 'B' : 'A');
+  }
+  return (cur % 2 === 0) ? 'A' : 'B';
+}
+
 function formatDate(ds) {
   const d = new Date(ds + 'T12:00:00');
   return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
@@ -2967,6 +2983,12 @@ function initEvents() {
   });
 
   document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target.id==='modal-overlay') closeModal(); });
+
+  // Sauvegarde du brouillon de séance dès que l'app se ferme / passe en arrière-plan
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && S.view === 'workout') saveWkDraft();
+  });
+  window.addEventListener('pagehide', () => { if (S.view === 'workout') saveWkDraft(); });
 }
 
 function updateWeekBadge() {
@@ -3029,7 +3051,7 @@ function fireTestNotif() {
 }
 
 function init() {
-  loadState(); applyTheme(); updateWeekBadge(); initEvents();
+  loadState(); S.weekType = autoWeekType(); applyTheme(); updateWeekBadge(); initEvents();
   navigate(S.view||'dashboard'); registerSW();
   initSwipe(); initPullToRefresh();
   initFirebase(); // onAuthStateChanged gère le pull automatique

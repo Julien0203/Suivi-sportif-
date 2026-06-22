@@ -59,8 +59,8 @@ html { -webkit-text-size-adjust: 100%; }
   --fast: .14s;
   --mid:  .22s;
 
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Bricolage Grotesque', 'Inter', -apple-system, sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
 }
 
 [data-theme="light"] {
@@ -1810,9 +1810,9 @@ select.form-inp {
 .donut-val,
 .streak-num,
 .kpi-val {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -.04em;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', sans-serif;
+  font-weight: 600;
+  letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
 }
 /* Labels de section — tracking large, plus raffiné */
