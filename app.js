@@ -1104,6 +1104,15 @@ const MEAL_PRESETS = [
   },
   {
     category: 'Féculents',
+    name: 'Pâtes protéines Panzani',
+    emoji: '🍝',
+    defaultG: 250,
+    perG: { cal: 1.58, prot: 0.09, carbs: 0.252, fat: 0.0135 },
+    note: 'Panzani Les Protéinées, pesées cuites',
+    detail: 'par 100g cuit : ~158 kcal · 9g prot · 25g glucides · 1,4g lip.'
+  },
+  {
+    category: 'Féculents',
     name: 'Riz basmati cuit',
     emoji: '🍚',
     defaultG: 300,
