@@ -279,6 +279,16 @@ function calcSessionVol(exs) {
 function getLastSession(mg, wt) {
   return S.workouts.filter(w => w.muscleGroup===mg && w.weekType===wt).sort((a,b) => b.date.localeCompare(a.date))[0] || null;
 }
+
+// Évolution du volume d'une séance vs la précédente du même groupe + semaine A/B.
+// Renvoie le % (positif = progression) ou null s'il n'y a pas de séance de référence.
+function sessionVolDelta(item) {
+  const prev = S.workouts
+    .filter(w => w.muscleGroup===item.muscleGroup && w.weekType===item.weekType && w.date < item.date && w.id !== item.id)
+    .sort((a,b) => b.date.localeCompare(a.date))[0];
+  if (!prev || !prev.totalVolume) return null;
+  return (item.totalVolume - prev.totalVolume) / prev.totalVolume * 100;
+}
 function workoutsThisWeek()   { return S.workouts.filter(w => w.weekKey === thisWeekKey()); }
 function workoutsPrevWeek()   { return S.workouts.filter(w => w.weekKey === prevWeekKey()); }
 function runsThisWeek()       { return S.runs.filter(r => r.weekKey === thisWeekKey()); }
@@ -718,12 +728,26 @@ function loadWkDraft(mg, wt) {
 
 function clearWkDraft() { localStorage.removeItem(WK_DRAFT_KEY); }
 
+// Séance en cours récente (< 4h) avec au moins une valeur saisie :
+// sert à rouvrir automatiquement l'onglet Séance après un rechargement iOS.
+function hasActiveWkDraft() {
+  try {
+    const raw = localStorage.getItem(WK_DRAFT_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (Date.now() - (d._ts || 0) > 4 * 60 * 60 * 1000) return false;
+    return Object.values(d.inputs || {}).some(v => v.w || v.r);
+  } catch { return false; }
+}
+
 function renderWorkout() {
   const dow = new Date().getDay();
   // Restore muscle group from draft if available, otherwise use today's schedule
   const draft = (() => { try { const r = localStorage.getItem(WK_DRAFT_KEY); if (!r) return null; const d = JSON.parse(r); return (Date.now() - (d._ts||0) < WK_DRAFT_TTL) ? d : null; } catch { return null; } })();
   wkState.muscleGroup = wkState.muscleGroup || draft?.mg || DAY_TO_MUSCLE[dow] || 'bras';
-  wkState.weekType    = S.weekType;
+  // Si on restaure un brouillon pour ce muscle, on reprend SA semaine A/B,
+  // sinon les exos affichés ne correspondraient pas aux données saisies.
+  wkState.weekType    = (draft && draft.mg === wkState.muscleGroup && draft.wt) ? draft.wt : S.weekType;
   wkState.date        = todayStr();
   renderWorkoutForm();
 }
@@ -790,16 +814,17 @@ function renderWorkoutForm() {
           ${Array.from({length:SETS},(_,si)=>{
             const pv = prevSets[si]||{weight:'',reps:''};
             const dv = draft?.inputs?.[`${ei}-${si}`];
-            const wVal = dv?.w ?? pv.weight ?? '';
-            const rVal = dv?.r ?? pv.reps ?? '';
+            // Champs vides par défaut : on ne pré-remplit QUE depuis le brouillon en cours.
+            // L'ancienne perf reste visible en placeholder gris subtil (référence, non saisie).
+            const wVal = dv?.w ?? '';
+            const rVal = dv?.r ?? '';
             return `
-            ${pv.weight ? `<div class="set-ghost"><span class="ghost-lbl">S${si+1}</span><span class="ghost-val">${pv.weight} kg × ${pv.reps}</span></div>` : ''}
             <div class="set-row" id="set-row-${ei}-${si}">
               <span class="set-num">S${si+1}</span>
               <div class="inp-pill">
                 <button class="adj-btn" onclick="adj(${ei},${si},'weight',-2.5)">−</button>
                 <input type="number" class="set-input" inputmode="decimal" step="0.5"
-                  id="w-${ei}-${si}" value="${wVal}" placeholder="—"
+                  id="w-${ei}-${si}" value="${wVal}" placeholder="${pv.weight||'—'}"
                   oninput="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}" onchange="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}">
                 <span class="set-unit-lbl">kg</span>
                 <button class="adj-btn" onclick="adj(${ei},${si},'weight',2.5)">+</button>
@@ -808,7 +833,7 @@ function renderWorkoutForm() {
               <div class="inp-pill">
                 <button class="adj-btn" onclick="adj(${ei},${si},'reps',-1)">−</button>
                 <input type="number" class="set-input" inputmode="numeric" step="1"
-                  id="r-${ei}-${si}" value="${rVal}" placeholder="—"
+                  id="r-${ei}-${si}" value="${rVal}" placeholder="${pv.reps||'—'}"
                   oninput="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}" onchange="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}">
                 <span class="set-unit-lbl">rep</span>
                 <button class="adj-btn" onclick="adj(${ei},${si},'reps',1)">+</button>
@@ -2071,7 +2096,9 @@ function renderHistory() {
       ? `<div class="empty"><div class="empty-icon">—</div><h3>Aucune session</h3><p>Commence à logger tes entraînements.</p></div>`
       : Object.keys(groups).sort().reverse().map(gk=>`
         <div class="month-lbl">${groups[gk].lbl}</div>
-        ${groups[gk].items.map(item => histTab==='workout' ? `
+        ${groups[gk].items.map(item => histTab==='workout' ? (() => {
+          const dlt = sessionVolDelta(item);
+          return `
           <div class="hist-item" onclick="openSessionDetail('${item.id}')">
             <div class="hist-icon" style="background:${WORKOUT_PLAN[item.muscleGroup].color}">${WORKOUT_PLAN[item.muscleGroup].short}</div>
             <div class="hist-info">
@@ -2080,10 +2107,13 @@ function renderHistory() {
             </div>
             <div class="hist-right">
               <div class="hist-vol">${fmtVol(item.totalVolume)} kg</div>
+              ${dlt!==null
+                ? `<div class="hist-delta ${dlt>=0?'delta-up':'delta-down'}">${dlt>=0?'↑':'↓'} ${Math.abs(dlt).toFixed(1)}%</div>`
+                : `<div class="hist-delta delta-neu">1re séance</div>`}
             </div>
             <span class="hist-chev">›</span>
-          </div>
-        ` : histTab==='run' ? `
+          </div>`;
+        })() : histTab==='run' ? `
           <div class="hist-item" onclick="openRunDetail('${item.id}')">
             <div class="hist-icon" style="background:#00FFD4">KM</div>
             <div class="hist-info">
@@ -3060,7 +3090,9 @@ function fireTestNotif() {
 }
 
 function init() {
-  loadState(); S.weekType = autoWeekType(); applyTheme(); updateWeekBadge(); initEvents();
+  loadState(); S.weekType = autoWeekType();
+  if (hasActiveWkDraft()) S.view = 'workout'; // reprendre une séance en cours après rechargement
+  applyTheme(); updateWeekBadge(); initEvents();
   navigate(S.view||'dashboard'); registerSW();
   initSwipe(); initPullToRefresh();
   initFirebase(); // onAuthStateChanged gère le pull automatique

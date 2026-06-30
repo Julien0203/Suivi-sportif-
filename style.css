@@ -1144,7 +1144,7 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
   font-variant-numeric: tabular-nums; font-family: var(--font);
   -moz-appearance: textfield; padding: 0;
 }
-.set-input::placeholder { color: var(--t4); }
+.set-input::placeholder { color: var(--t3); font-weight: 400; }
 .set-input::-webkit-outer-spin-button,
 .set-input::-webkit-inner-spin-button { -webkit-appearance: none; }
 .set-unit-lbl {
@@ -1281,8 +1281,14 @@ select.form-inp {
 .hist-sub    { font-size: 11px; color: var(--t3); margin-top: 2px; font-weight: 400; }
 .hist-vol    { font-size: 14px; font-weight: 500; color: var(--t1); font-variant-numeric: tabular-nums; }
 .hist-date2  { font-size: 10px; color: var(--t3); margin-top: 2px; }
+.hist-delta  {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 10px; font-weight: 600; letter-spacing: .02em;
+  border-radius: var(--r-xs); padding: 2px 6px; margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
 .hist-info   { flex: 1; }
-.hist-right  { text-align: right; }
+.hist-right  { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 .hist-chev   { color: var(--t4); font-size: 14px; margin-left: 2px; }
 
 /* 20. STATS */
@@ -1404,19 +1410,6 @@ select.form-inp {
   from { opacity: 0; transform: translateY(7px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-/* Ghost row — reference from last session */
-.set-ghost {
-  display: flex; align-items: center; gap: 8px;
-  padding: 3px 0 1px 32px;
-  font-size: 11px; font-weight: 400;
-  color: var(--t4);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .01em;
-  pointer-events: none; user-select: none;
-}
-.ghost-lbl { font-size: 9px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--t4); opacity: .6; }
-.ghost-val { font-size: 11px; }
 
 /* Set done — glass effect */
 .set-row.done {
