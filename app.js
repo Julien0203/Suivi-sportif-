@@ -1157,6 +1157,15 @@ const MEAL_PRESETS = [
   },
   {
     category: 'Viandes',
+    name: 'Boulettes de viande',
+    emoji: '🧆',
+    defaultG: 150,
+    perG: { cal: 2.50, prot: 0.16, carbs: 0.06, fat: 0.18 },
+    note: 'Boulettes de viande cuites',
+    detail: 'par 100g cuit : ~250 kcal · 16g prot · 6g glucides · 18g lip.'
+  },
+  {
+    category: 'Viandes',
     name: 'Chevreuil rôti',
     emoji: '🦌',
     defaultG: 150,
@@ -1230,6 +1239,15 @@ const MEAL_PRESETS = [
   // ── Poissons & mer ─────────────────────────────────────────────────
   {
     category: 'Poissons & mer',
+    name: 'Cabillaud cuit',
+    emoji: '🐟',
+    defaultG: 150,
+    perG: { cal: 0.90, prot: 0.20, carbs: 0, fat: 0.008 },
+    note: 'Cabillaud cuit',
+    detail: 'par 100g cuit : ~90 kcal · 20g prot · 0g glucides · 0,8g lip.'
+  },
+  {
+    category: 'Poissons & mer',
     name: 'Crevettes cuites',
     emoji: '🦐',
     defaultG: 100,
@@ -1292,6 +1310,15 @@ const MEAL_PRESETS = [
     detail: 'par 100g : ~82 kcal · 14,8g prot · 2,2g glucides · 1g lip.'
   },
   // ── Laitiers ───────────────────────────────────────────────────────
+  {
+    category: 'Laitiers',
+    name: 'Chèvre (bûche)',
+    emoji: '🧀',
+    defaultG: 30,
+    perG: { cal: 2.90, prot: 0.19, carbs: 0.01, fat: 0.24 },
+    note: 'Bûche de chèvre',
+    detail: 'par 100g : ~290 kcal · 19g prot · 1g glucides · 24g lip.'
+  },
   {
     category: 'Laitiers',
     name: 'Skyr',
