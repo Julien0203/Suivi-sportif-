@@ -144,6 +144,7 @@ async function pullFromCloud() {
       localStorage.setItem('sport-crm-v2', JSON.stringify(S));
       RUN_GOAL_KM   = S.runGoal || 15;
       NUTRI_TARGETS = { calories: S.nutGoal?.cal || 3000, protein: S.nutGoal?.prot || 150, carbs: S.nutGoal?.carbs || 300, fat: S.nutGoal?.fat || 70, water: S.nutGoal?.water || 2500 };
+      applyOneTimeFixes();
       _setSyncIcon('synced');
       navigate(S.view || 'dashboard');
       showToast('Données synchronisées ✓');
@@ -1383,6 +1384,7 @@ const MEAL_PRESETS = [
 ];
 
 let nutriTab    = 'today';
+let nutriDate   = todayStr();
 let nutriCharts = {};
 
 function destroyNutriCharts() {
@@ -1391,7 +1393,7 @@ function destroyNutriCharts() {
 }
 
 function renderNutrition() {
-  const today    = todayStr();
+  const today    = nutriDate;
   const entries  = (S.nutrition || []).filter(n => n.date === today);
   const todayCal  = Math.ceil(entries.reduce((s, n) => s + (n.calories || 0), 0));
   const todayProt = Math.ceil(entries.reduce((s, n) => s + (n.protein  || 0), 0));
@@ -1423,6 +1425,10 @@ function renderNutrition() {
 function _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct, carbsPct, fatPct, effectiveCal, burned, waterMl, waterPct, entries) {
   return `
     <div class="card">
+      <div class="sect-row" style="margin-bottom:12px">
+        <span class="sect-lbl">${nutriDate === todayStr() ? "Aujourd'hui" : formatDate(nutriDate)}</span>
+        <input type="date" class="form-inp wk-date-inline" id="nutri-date" value="${nutriDate}" max="${todayStr()}" onchange="setNutriDate(this.value)">
+      </div>
       <div class="sect-row" style="margin-bottom:16px">
         <span class="sect-lbl">Objectif · Prise de masse</span>
         ${burned > 0 ? `<span class="t3" style="font-size:10px;color:var(--green)">+${burned} kcal sport</span>` : '<span class="t3" style="font-size:10px">61 kg · 1m75</span>'}
@@ -1660,6 +1666,17 @@ function _nutriStats() {
       </div>
     </div>
 
+    <div class="charts-pair">
+      <div class="card" style="margin-bottom:0">
+        <div class="chart-lbl"><span>Glucides · 7 jours</span></div>
+        <div class="chart-wrap chart-wrap-sm"><canvas id="chart-carbs"></canvas></div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="chart-lbl"><span>Lipides · 7 jours</span></div>
+        <div class="chart-wrap chart-wrap-sm"><canvas id="chart-fat"></canvas></div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="chart-lbl"><span>Hydratation · 30 jours</span><span style="font-size:11px;color:var(--t3)">% objectif ${NUTRI_TARGETS.water/1000}L</span></div>
       <div class="chart-wrap" style="height:140px"><canvas id="chart-water"></canvas></div>
@@ -1748,7 +1765,7 @@ function updatePresetCalc(idx) {
 }
 
 function addWater(ml) {
-  const d = todayStr();
+  const d = nutriDate;
   if (!S.hydration) S.hydration = {};
   S.hydration[d] = Math.max(0, (S.hydration[d] || 0) + ml);
   save();
@@ -1767,7 +1784,7 @@ function logNutriPreset(idx) {
     fat   = Math.round((p.perG.fat || 0) * g);
   }
   if (!S.nutrition) S.nutrition = [];
-  S.nutrition.push({ id: uid(), date: todayStr(), calories: cal, protein: prot, carbs, fat, note: p.note });
+  S.nutrition.push({ id: uid(), date: nutriDate, calories: cal, protein: prot, carbs, fat, note: p.note });
   save();
   haptic([4]);
   showToast(`${p.emoji} ${p.name} ajouté`);
@@ -1782,7 +1799,7 @@ function logNutrition() {
   const note  = document.getElementById('n-note')?.value || '';
   if (!cal && !prot) { showToast('Entre calories ou protéines'); return; }
   if (!S.nutrition) S.nutrition = [];
-  S.nutrition.push({ id: uid(), date: todayStr(), calories: cal, protein: prot, carbs, fat, note });
+  S.nutrition.push({ id: uid(), date: nutriDate, calories: cal, protein: prot, carbs, fat, note });
   save();
   showToast('Repas ajouté');
   renderNutrition();
@@ -1811,6 +1828,7 @@ function deleteWeight(id) {
 }
 
 function setNutriTab(tab) { nutriTab = tab; renderNutrition(); }
+function setNutriDate(date) { nutriDate = date || todayStr(); renderNutrition(); }
 
 function calcCaloriesBurned(date) {
   const runCal  = (S.runs  ||[]).filter(r=>r.date===date).reduce((s,r)=>s+(r.calories||Math.round((r.distance||0)*CAL_PER_KM)),0);
@@ -1854,6 +1872,32 @@ function buildNutriCharts() {
       options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
         scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
           y:{grid:{color:grid}, suggestedMax:NUTRI_TARGETS.protein+20, ticks:{callback:v=>v+'g'}} }
+      }
+    });
+  }
+
+  const cbc = document.getElementById('chart-carbs')?.getContext('2d');
+  if (cbc) {
+    const data = days7.map(d=>(S.nutrition||[]).filter(n=>n.date===d).reduce((s,n)=>s+(n.carbs||0),0)||null);
+    nutriCharts.carbs = new Chart(cbc, {
+      type:'bar',
+      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#F59E0B80', borderColor:'#F59E0B', borderWidth:0, borderRadius:4 }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
+        scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
+          y:{grid:{color:grid}, suggestedMax:NUTRI_TARGETS.carbs+40, ticks:{callback:v=>v+'g'}} }
+      }
+    });
+  }
+
+  const fc = document.getElementById('chart-fat')?.getContext('2d');
+  if (fc) {
+    const data = days7.map(d=>(S.nutrition||[]).filter(n=>n.date===d).reduce((s,n)=>s+(n.fat||0),0)||null);
+    nutriCharts.fat = new Chart(fc, {
+      type:'bar',
+      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#EF444480', borderColor:'#EF4444', borderWidth:0, borderRadius:4 }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
+        scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
+          y:{grid:{color:grid}, suggestedMax:NUTRI_TARGETS.fat+15, ticks:{callback:v=>v+'g'}} }
       }
     });
   }
@@ -3116,8 +3160,17 @@ function fireTestNotif() {
   showToast('Notification test envoyée ✓');
 }
 
+// Correctif ponctuel : décaler les entrées nutrition du 1er juillet au 30 juin (idempotent)
+function applyOneTimeFixes() {
+  if (S._nutFix0701) return;
+  let changed = false;
+  (S.nutrition || []).forEach(n => { if (n.date === '2026-07-01') { n.date = '2026-06-30'; changed = true; } });
+  S._nutFix0701 = true;
+  if (changed) save();
+}
+
 function init() {
-  loadState(); S.weekType = autoWeekType();
+  loadState(); applyOneTimeFixes(); S.weekType = autoWeekType();
   if (hasActiveWkDraft()) S.view = 'workout'; // reprendre une séance en cours après rechargement
   applyTheme(); updateWeekBadge(); initEvents();
   navigate(S.view||'dashboard'); registerSW();
