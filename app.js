@@ -1139,6 +1139,15 @@ const MEAL_PRESETS = [
   },
   {
     category: 'Féculents',
+    name: 'Lasagnes',
+    emoji: '🍜',
+    defaultG: 350,
+    perG: { cal: 1.45, prot: 0.075, carbs: 0.13, fat: 0.07 },
+    note: 'Lasagnes bolognaise',
+    detail: 'par 100g : ~145 kcal · 7,5g prot · 13g glucides · 7g lip.'
+  },
+  {
+    category: 'Féculents',
     name: 'Riz basmati cuit',
     emoji: '🍚',
     defaultG: 300,
