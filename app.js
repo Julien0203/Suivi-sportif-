@@ -1155,6 +1155,24 @@ const MEAL_PRESETS = [
     note: 'Riz basmati cuit',
     detail: 'par 100g cuit : ~117 kcal · 2,3g prot · 25g glucides'
   },
+  {
+    category: 'Féculents',
+    name: 'Frites',
+    emoji: '🍟',
+    defaultG: 150,
+    perG: { cal: 2.90, prot: 0.035, carbs: 0.38, fat: 0.14 },
+    note: 'Frites',
+    detail: 'par 100g : ~290 kcal · 3,5g prot · 38g glucides · 14g lip.'
+  },
+  {
+    category: 'Féculents',
+    name: 'Ravioles du Dauphiné',
+    emoji: '🥟',
+    defaultG: 150,
+    perG: { cal: 2.75, prot: 0.12, carbs: 0.40, fat: 0.085 },
+    note: 'Ravioles du Dauphiné',
+    detail: 'par 100g : ~275 kcal · 12g prot · 40g glucides · 8,5g lip.'
+  },
   // ── Viandes ────────────────────────────────────────────────────────
   {
     category: 'Viandes',
@@ -1164,6 +1182,15 @@ const MEAL_PRESETS = [
     perG: { cal: 1.65, prot: 0.31, carbs: 0, fat: 0.036 },
     note: 'Blanc de poulet cuit',
     detail: 'par 100g cuit : ~165 kcal · 31g prot · 0g glucides · 3,6g lip.'
+  },
+  {
+    category: 'Viandes',
+    name: 'Filet de bœuf cuit',
+    emoji: '🥩',
+    defaultG: 150,
+    perG: { cal: 2.00, prot: 0.27, carbs: 0, fat: 0.10 },
+    note: 'Filet de bœuf cuit',
+    detail: 'par 100g cuit : ~200 kcal · 27g prot · 0g glucides · 10g lip.'
   },
   {
     category: 'Viandes',
@@ -1366,6 +1393,15 @@ const MEAL_PRESETS = [
     perG: { cal: 1.27, prot: 0.086, carbs: 0.227, fat: 0.005 },
     note: 'Haricots rouges cuits',
     detail: 'par 100g cuit : ~127 kcal · 8,6g prot · 22,7g glucides · 0,5g lip.'
+  },
+  {
+    category: 'Légumes',
+    name: 'Mélange de légumes',
+    emoji: '🥕',
+    defaultG: 200,
+    perG: { cal: 0.45, prot: 0.025, carbs: 0.06, fat: 0.005 },
+    note: 'Mélange de légumes cuits',
+    detail: 'par 100g cuit : ~45 kcal · 2,5g prot · 6g glucides · 0,5g lip.'
   },
   // ── Fruits ─────────────────────────────────────────────────────────
   {
