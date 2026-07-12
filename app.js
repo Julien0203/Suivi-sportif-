@@ -1176,6 +1176,15 @@ const MEAL_PRESETS = [
   // ── Viandes ────────────────────────────────────────────────────────
   {
     category: 'Viandes',
+    name: 'Agneau cuit',
+    emoji: '🍖',
+    defaultG: 150,
+    perG: { cal: 2.50, prot: 0.25, carbs: 0, fat: 0.16 },
+    note: 'Agneau cuit',
+    detail: 'par 100g cuit : ~250 kcal · 25g prot · 0g glucides · 16g lip.'
+  },
+  {
+    category: 'Viandes',
     name: 'Blanc de poulet cuit',
     emoji: '🍗',
     defaultG: 150,

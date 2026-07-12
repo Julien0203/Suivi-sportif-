@@ -1,4 +1,4 @@
-const CACHE = 'sport-crm-v38';
+const CACHE = 'sport-crm-v39';
 const ASSETS = [
   './index.html',
   './style.css',
