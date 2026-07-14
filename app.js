@@ -1185,6 +1185,15 @@ const MEAL_PRESETS = [
   },
   {
     category: 'Viandes',
+    name: 'Pintade cuite',
+    emoji: '🍗',
+    defaultG: 150,
+    perG: { cal: 1.70, prot: 0.29, carbs: 0, fat: 0.06 },
+    note: 'Pintade cuite',
+    detail: 'par 100g cuit : ~170 kcal · 29g prot · 0g glucides · 6g lip.'
+  },
+  {
+    category: 'Viandes',
     name: 'Blanc de poulet cuit',
     emoji: '🍗',
     defaultG: 150,
