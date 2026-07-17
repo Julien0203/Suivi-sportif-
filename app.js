@@ -1176,6 +1176,15 @@ const MEAL_PRESETS = [
   // ── Viandes ────────────────────────────────────────────────────────
   {
     category: 'Viandes',
+    name: 'Museau de porc',
+    emoji: '🐖',
+    defaultG: 100,
+    perG: { cal: 1.50, prot: 0.09, carbs: 0, fat: 0.12 },
+    note: 'Museau de porc',
+    detail: 'par 100g : ~150 kcal · 9g prot · 0g glucides · 12g lip.'
+  },
+  {
+    category: 'Viandes',
     name: 'Agneau cuit',
     emoji: '🍖',
     defaultG: 150,
