@@ -1176,6 +1176,24 @@ const MEAL_PRESETS = [
   // ── Viandes ────────────────────────────────────────────────────────
   {
     category: 'Viandes',
+    name: 'Bœuf bourguignon',
+    emoji: '🍲',
+    defaultG: 250,
+    perG: { cal: 1.50, prot: 0.13, carbs: 0.05, fat: 0.08 },
+    note: 'Bœuf bourguignon',
+    detail: 'par 100g : ~150 kcal · 13g prot · 5g glucides · 8g lip.'
+  },
+  {
+    category: 'Viandes',
+    name: 'Basse côte de bœuf',
+    emoji: '🥩',
+    defaultG: 150,
+    perG: { cal: 2.50, prot: 0.26, carbs: 0, fat: 0.16 },
+    note: 'Basse côte de bœuf cuite',
+    detail: 'par 100g cuit : ~250 kcal · 26g prot · 0g glucides · 16g lip.'
+  },
+  {
+    category: 'Viandes',
     name: 'Museau de porc',
     emoji: '🐖',
     defaultG: 100,
@@ -3232,12 +3250,28 @@ function fireTestNotif() {
   showToast('Notification test envoyée ✓');
 }
 
-// Correctif ponctuel : décaler les entrées nutrition du 1er juillet au 30 juin (idempotent)
+// Correctifs ponctuels sur les données (chacun protégé par son flag, idempotents)
 function applyOneTimeFixes() {
-  if (S._nutFix0701) return;
   let changed = false;
-  (S.nutrition || []).forEach(n => { if (n.date === '2026-07-01') { n.date = '2026-06-30'; changed = true; } });
-  S._nutFix0701 = true;
+
+  // Décaler les entrées nutrition du 1er juillet au 30 juin
+  if (!S._nutFix0701) {
+    (S.nutrition || []).forEach(n => { if (n.date === '2026-07-01') { n.date = '2026-06-30'; changed = true; } });
+    S._nutFix0701 = true;
+    changed = true;
+  }
+
+  // Repas oublié du 19 juillet : 300g basse côte cuite + 400g pâtes cuites
+  if (!S._nutAdd0719) {
+    if (!S.nutrition) S.nutrition = [];
+    S.nutrition.push(
+      { id: uid(), date: '2026-07-19', calories: 750, protein: 78, carbs: 0,   fat: 48, note: 'Basse côte cuite (300g)' },
+      { id: uid(), date: '2026-07-19', calories: 560, protein: 16, carbs: 112, fat: 4,  note: 'Pâtes cuites (400g)' }
+    );
+    S._nutAdd0719 = true;
+    changed = true;
+  }
+
   if (changed) save();
 }
 
