@@ -30,7 +30,7 @@ const WORKOUT_PLAN = {
   jambes: {
     label: 'Jambes', short: 'JA', color: '#BF5AF2', schedule: 5,
     A: ['Seated leg curl', 'Leg extension', 'Leg press', 'Adductor machine', 'Squat barre guidée'],
-    B: ['Hip thrust', 'Goblet squat avec haltère', 'Squat bulgare avec haltères', 'Presse à cuisses horizontale', 'Leg extension']
+    B: ['Hip thrust', 'Super hack squat', 'Leg curling', 'Squat machine', 'Leg extension']
   }
 };
 
@@ -3280,6 +3280,27 @@ function applyOneTimeFixes() {
       { id: uid(), date: '2026-07-20', calories: 1260, protein: 36, carbs: 252, fat: 9,  note: 'Pâtes cuites (900g)' }
     );
     S._nutAdd0720 = true;
+    changed = true;
+  }
+
+  // Remplacement d'exercices jambes (semaine B) dans la dernière séance : renommer + fixer les poids
+  if (!S._jambesSwap1) {
+    const map = {
+      'Goblet squat avec haltère':   { name: 'Super hack squat', weight: 100 },
+      'Squat bulgare avec haltères': { name: 'Leg curling',      weight: 30 },
+      'Presse à cuisses horizontale':{ name: 'Squat machine',    weight: 40 }
+    };
+    const last = (S.workouts || [])
+      .filter(w => w.muscleGroup === 'jambes' && w.weekType === 'B')
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    if (last && last.exercises) {
+      last.exercises.forEach(ex => {
+        const r = map[ex.name];
+        if (r) { ex.name = r.name; (ex.sets || []).forEach(s => { s.weight = r.weight; }); }
+      });
+      last.totalVolume = calcSessionVol(last.exercises);
+    }
+    S._jambesSwap1 = true;
     changed = true;
   }
 
