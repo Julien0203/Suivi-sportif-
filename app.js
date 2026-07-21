@@ -3272,6 +3272,17 @@ function applyOneTimeFixes() {
     changed = true;
   }
 
+  // Repas oublié du 20 juillet : 400g bœuf bourguignon + 900g pâtes cuites
+  if (!S._nutAdd0720) {
+    if (!S.nutrition) S.nutrition = [];
+    S.nutrition.push(
+      { id: uid(), date: '2026-07-20', calories: 600,  protein: 52, carbs: 20,  fat: 32, note: 'Bœuf bourguignon (400g)' },
+      { id: uid(), date: '2026-07-20', calories: 1260, protein: 36, carbs: 252, fat: 9,  note: 'Pâtes cuites (900g)' }
+    );
+    S._nutAdd0720 = true;
+    changed = true;
+  }
+
   if (changed) save();
 }
 
