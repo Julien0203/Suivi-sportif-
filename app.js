@@ -1112,6 +1112,15 @@ const MEAL_PRESETS = [
   // ── Féculents ──────────────────────────────────────────────────────
   {
     category: 'Féculents',
+    name: 'Aligot',
+    emoji: '🥔',
+    defaultG: 200,
+    perG: { cal: 1.80, prot: 0.05, carbs: 0.15, fat: 0.11 },
+    note: 'Aligot',
+    detail: 'par 100g : ~180 kcal · 5g prot · 15g glucides · 11g lip.'
+  },
+  {
+    category: 'Féculents',
     name: 'Patates cuites',
     emoji: '🥔',
     defaultG: 300,
