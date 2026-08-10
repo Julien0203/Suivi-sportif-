@@ -6,37 +6,84 @@
 // 1. DONNÉES
 // ============================================================
 
+// Programme PPL (Push / Pull / Legs) × 2 variantes A/B, en rotation continue.
+// Chaque exercice : { name, sets, reps (plage cible), rest }.
 const WORKOUT_PLAN = {
-  bras: {
-    label: 'Bras', short: 'BR', color: '#FF375F', schedule: 1,
-    A: ['Curl pupitre barre EZ', 'Curl haltère incliné', 'Dips', 'Extensions verticales à la poulie', 'Curl haltère debout sur banc incliné'],
-    B: ['Barre front', 'Extensions des triceps à la poulie haute à la corde', 'Curl Spider', 'Curl Zottman', 'Kickback']
+  push: {
+    label: 'Push', short: 'PU', color: '#FF375F',
+    A: [
+      { name: 'Développé couché barre ou Smith',        sets: 4, reps: '5-8',   rest: '2-3 min' },
+      { name: 'Développé épaules machine convergente',  sets: 3, reps: '8-12',  rest: '2-3 min' },
+      { name: 'Développé incliné haltères',             sets: 3, reps: '8-12',  rest: '2-3 min' },
+      { name: 'Écartés poulie basse',                   sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Élévations latérales poulie',            sets: 3, reps: '12-20', rest: '60-90 s' },
+      { name: 'Extensions triceps overhead poulie',     sets: 3, reps: '10-15', rest: '60-90 s' }
+    ],
+    B: [
+      { name: 'Développé militaire barre/machine',      sets: 4, reps: '5-8',   rest: '2-3 min' },
+      { name: 'Développé couché haltères',              sets: 3, reps: '8-12',  rest: '2-3 min' },
+      { name: 'Dips lestés/machine',                    sets: 3, reps: '8-12',  rest: '2-3 min' },
+      { name: 'Élévations latérales haltères',          sets: 3, reps: '12-20', rest: '60-90 s' },
+      { name: 'Pec deck',                               sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Barre au front EZ/extensions corde',     sets: 3, reps: '10-12', rest: '60-90 s' }
+    ]
   },
-  pec: {
-    label: 'Pectoraux', short: 'PE', color: '#FF9F0A', schedule: 2,
-    A: ['Développé couché à la Smith machine', 'Développé incliné à la machine convergente', 'Développé incliné avec haltères', 'Dips buste penché en avant', 'Écartés à la poulie vis-à-vis'],
-    B: ['Développé incliné à la barre', 'Développé décliné aux haltères', 'Super horizontal bench press', 'Vertical chest press', 'Développé couché haltères']
+  pull: {
+    label: 'Pull', short: 'PL', color: '#0A84FF',
+    A: [
+      { name: 'Tirage vertical neutre/tractions lestées', sets: 4, reps: '6-10',  rest: '2-3 min' },
+      { name: 'Rowing machine convergente',             sets: 4, reps: '8-12',  rest: '2-3 min' },
+      { name: 'Pullover poulie haute',                  sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Face pulls',                             sets: 3, reps: '15-20', rest: '60-90 s' },
+      { name: 'Curl incliné haltères',                  sets: 3, reps: '8-12',  rest: '60-90 s' },
+      { name: 'Curl poulie basse',                      sets: 2, reps: '12-15', rest: '60-90 s' }
+    ],
+    B: [
+      { name: 'SDT roumain/rack pulls',                 sets: 3, reps: '5-8',   rest: '2-3 min' },
+      { name: 'Tirage vertical prise large',            sets: 3, reps: '8-12',  rest: '2-3 min' },
+      { name: 'Rowing haltère unilatéral',              sets: 3, reps: '10-12', rest: '60-90 s' },
+      { name: 'Shrugs haltères/Smith',                  sets: 3, reps: '10-15', rest: '60-90 s' },
+      { name: 'Curl pupitre machine',                   sets: 3, reps: '8-12',  rest: '60-90 s' },
+      { name: 'Curl marteau corde',                     sets: 2, reps: '12-15', rest: '60-90 s' }
+    ]
   },
-  dos: {
-    label: 'Dos', short: 'DO', color: '#0A84FF', schedule: 3,
-    A: ['Tirage vertical poitrine', 'Tractions lestées', 'Rowing barre', 'Tirage vertical prise serrée', 'Tirage horizontal à la poulie'],
-    B: ['Rowing à un bras', 'Reverse fly', 'Tractions', 'Tirage vertical', 'Tirage Horizontal à la Poulie']
-  },
-  epaules: {
-    label: 'Épaules', short: 'EP', color: '#30D158', schedule: 4,
-    A: ['Presse à épaules inclinée', 'Élévations latérales', 'Développé militaire barre', 'Développé Arnold', 'Développé militaire haltères'],
-    B: ['Latéral deltoïde', 'Élévations frontales à la poulie basse', 'Tirage menton barre guidée', 'Deltoïde press', 'Élévations latérales']
-  },
-  jambes: {
-    label: 'Jambes', short: 'JA', color: '#BF5AF2', schedule: 5,
-    A: ['Seated leg curl', 'Leg extension', 'Leg press', 'Adductor machine', 'Squat barre guidée'],
-    B: ['Hip thrust', 'Super hack squat', 'Leg curling', 'Squat machine', 'Leg extension']
+  legs: {
+    label: 'Legs', short: 'LE', color: '#BF5AF2',
+    A: [
+      { name: 'Squat barre ou pendulum/hack',           sets: 4, reps: '5-8',   rest: '2-3 min' },
+      { name: 'Presse à cuisses',                       sets: 3, reps: '8-12',  rest: '2-3 min' },
+      { name: 'Leg curl assis',                         sets: 4, reps: '10-15', rest: '60-90 s' },
+      { name: 'Leg extension',                          sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Mollets debout',                         sets: 4, reps: '10-15', rest: '60-90 s' },
+      { name: 'Crunch poulie haute',                    sets: 3, reps: '10-15', rest: '60-90 s' }
+    ],
+    B: [
+      { name: 'Hack squat/squat bulgare',               sets: 4, reps: '6-10',  rest: '2-3 min' },
+      { name: 'SDT roumain haltères',                   sets: 3, reps: '8-12',  rest: '2-3 min' },
+      { name: 'Leg extension',                          sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Leg curl assis',                         sets: 3, reps: '10-15', rest: '60-90 s' },
+      { name: 'Adducteurs machine',                     sets: 2, reps: '12-15', rest: '60-90 s' },
+      { name: 'Mollets assis',                          sets: 4, reps: '12-20', rest: '60-90 s' }
+    ]
   }
 };
 
-const DAY_TO_MUSCLE = { 1: 'bras', 2: 'pec', 3: 'dos', 4: 'epaules', 5: 'jambes' };
-const MUSCLE_KEYS  = ['bras', 'pec', 'dos', 'epaules', 'jambes'];
-const SETS         = 4;
+const MUSCLE_KEYS = ['push', 'pull', 'legs'];
+// Rotation continue des 6 séances (Push A → Pull A → Legs A → Push B → Pull B → Legs B → …)
+const PPL_SEQUENCE = [['push','A'], ['pull','A'], ['legs','A'], ['push','B'], ['pull','B'], ['legs','B']];
+
+// Anciens groupes (split 5 muscles) — pour que l'historique et les stats des
+// séances déjà enregistrées restent lisibles après le passage au PPL.
+const LEGACY_GROUPS = {
+  bras:    { label: 'Bras',      short: 'BR', color: '#FF375F' },
+  pec:     { label: 'Pectoraux', short: 'PE', color: '#FF9F0A' },
+  dos:     { label: 'Dos',       short: 'DO', color: '#0A84FF' },
+  epaules: { label: 'Épaules',   short: 'EP', color: '#30D158' },
+  jambes:  { label: 'Jambes',    short: 'JA', color: '#BF5AF2' }
+};
+function groupLabel(k) { return WORKOUT_PLAN[k]?.label || LEGACY_GROUPS[k]?.label || k; }
+function groupColor(k) { return WORKOUT_PLAN[k]?.color || LEGACY_GROUPS[k]?.color || '#8E8E93'; }
+function groupShort(k) { return WORKOUT_PLAN[k]?.short || LEGACY_GROUPS[k]?.short || (k||'').slice(0,2).toUpperCase(); }
 let RUN_GOAL_KM  = 15;
 const RUN_SESSIONS = 3;
 const CAL_PER_KM   = 65;
@@ -50,13 +97,13 @@ const FEEL_LABELS  = ['Nul','Dur','OK','Bien','Top'];
 // ============================================================
 
 let S = {};
-const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], rides: [], nutrition: [], weights: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 3000, prot: 150, carbs: 300, fat: 70, water: 2500 }, runGoal: 15, journal: {}, prs: {}, hydration: {} };
+const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], rides: [], nutrition: [], weights: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 2400, prot: 175, carbs: 250, fat: 80, water: 2500 }, runGoal: 15, journal: {}, prs: {}, hydration: {}, shopping: { checked: {}, weekStart: null } };
 
 function loadState() {
   try { S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('sport-crm-v2') || '{}') }; }
   catch { S = { ...DEFAULTS }; }
   RUN_GOAL_KM  = S.runGoal || 15;
-  NUTRI_TARGETS = { calories: S.nutGoal?.cal || 3000, protein: S.nutGoal?.prot || 150, carbs: S.nutGoal?.carbs || 300, fat: S.nutGoal?.fat || 70, water: S.nutGoal?.water || 2500 };
+  NUTRI_TARGETS = { calories: S.nutGoal?.cal || 2400, protein: S.nutGoal?.prot || 175, carbs: S.nutGoal?.carbs || 250, fat: S.nutGoal?.fat || 80, water: S.nutGoal?.water || 2500 };
 }
 function save() {
   localStorage.setItem('sport-crm-v2', JSON.stringify(S));
@@ -143,7 +190,7 @@ async function pullFromCloud() {
       S = { ...DEFAULTS, ...remote, view, theme };
       localStorage.setItem('sport-crm-v2', JSON.stringify(S));
       RUN_GOAL_KM   = S.runGoal || 15;
-      NUTRI_TARGETS = { calories: S.nutGoal?.cal || 3000, protein: S.nutGoal?.prot || 150, carbs: S.nutGoal?.carbs || 300, fat: S.nutGoal?.fat || 70, water: S.nutGoal?.water || 2500 };
+      NUTRI_TARGETS = { calories: S.nutGoal?.cal || 2400, protein: S.nutGoal?.prot || 175, carbs: S.nutGoal?.carbs || 250, fat: S.nutGoal?.fat || 80, water: S.nutGoal?.water || 2500 };
       applyOneTimeFixes();
       _setSyncIcon('synced');
       navigate(S.view || 'dashboard');
@@ -279,6 +326,17 @@ function calcSessionVol(exs) {
 
 function getLastSession(mg, wt) {
   return S.workouts.filter(w => w.muscleGroup===mg && w.weekType===wt).sort((a,b) => b.date.localeCompare(a.date))[0] || null;
+}
+
+// Prochaine séance PPL : on avance d'un cran dans la rotation à partir de la
+// dernière séance PPL enregistrée. Renvoie [group, variant] (ex. ['pull','A']).
+function nextPPLSession() {
+  const last = S.workouts
+    .filter(w => MUSCLE_KEYS.includes(w.muscleGroup))
+    .sort((a,b) => b.date.localeCompare(a.date))[0];
+  if (!last) return PPL_SEQUENCE[0];
+  const idx = PPL_SEQUENCE.findIndex(([g,v]) => g === last.muscleGroup && v === last.weekType);
+  return PPL_SEQUENCE[(idx + 1) % PPL_SEQUENCE.length];
 }
 
 // Évolution du volume d'une séance vs la précédente du même groupe + semaine A/B.
@@ -435,7 +493,7 @@ function fillAllFromLast() {
 function renderDashboard() {
   const today    = new Date();
   const dow      = today.getDay();
-  const muscle   = DAY_TO_MUSCLE[dow];
+  const [nextG, nextV] = nextPPLSession();          // prochaine séance PPL
   const twk      = thisWeekKey();
   const pwk      = prevWeekKey();
   const tv       = totalVol(twk);
@@ -445,11 +503,9 @@ function renderDashboard() {
   const km       = totalKm(twk);
   const runs     = runsThisWeek();
   const wtdone   = workoutsThisWeek().length;
-  const accentColor = muscle ? WORKOUT_PLAN[muscle].color : '#666666';
-  const todayDone = muscle
-    ? workoutsThisWeek().some(w => w.date === todayStr() && w.muscleGroup === muscle)
-    : false;
-  const volDone  = wtdone >= 5;
+  const accentColor = WORKOUT_PLAN[nextG].color;
+  const todayDone = workoutsThisWeek().some(w => w.date === todayStr() && MUSCLE_KEYS.includes(w.muscleGroup));
+  const volDone  = wtdone >= 6;
   const runDone  = km >= RUN_GOAL_KM;
 
   // Nutrition
@@ -502,14 +558,15 @@ function renderDashboard() {
     const date    = new Date(monday);
     date.setDate(monday.getDate() + i);
     const ds      = localDateStr(date);
-    const mk      = DAY_TO_MUSCLE[d];
     const isToday = ds === todayStr();
     const isFuture = ds > todayStr();
-    const isDone  = mk
-      ? S.workouts.some(w => w.date === ds && w.muscleGroup === mk)
-      : S.runs.some(r => r.date === ds);
-    const col = mk ? WORKOUT_PLAN[mk].color : 'var(--c-run)';
-    return { d, i, ds, mk, isToday, isFuture, isDone, col };
+    // Séance PPL enregistrée ce jour-là (sinon course).
+    const wk      = S.workouts.find(w => w.date === ds && MUSCLE_KEYS.includes(w.muscleGroup));
+    const isRun   = !wk && S.runs.some(r => r.date === ds);
+    const isDone  = !!wk || isRun;
+    const short   = wk ? WORKOUT_PLAN[wk.muscleGroup].short : (isRun ? 'KM' : '');
+    const col     = wk ? WORKOUT_PLAN[wk.muscleGroup].color : 'var(--c-run)';
+    return { d, i, ds, isToday, isFuture, isDone, isRun, short, col };
   });
 
   // Max vol pour barres
@@ -532,36 +589,32 @@ function renderDashboard() {
     <div class="hero-v2" style="--hero-accent:${todayDone?'#00FF80':accentColor};border-top:2px solid ${todayDone?'#00FF80':accentColor}${todayDone?`;box-shadow:0 0 0 1px #00FF8030,0 0 40px #00FF8018,var(--sh-3)`:''}">${todayDone?`<div style="position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#00FF8008 0%,transparent 60%);z-index:0"></div>`:''}
       <div class="hero-head">
         <div>
-          <div class="hero-date">${DAYS_FULL[dow]} — Sem. ${S.weekType}</div>
-          <div class="hero-muscle" style="${todayDone?'color:#00FF80':muscle?`color:${accentColor}`:''}">${muscle ? WORKOUT_PLAN[muscle].label : 'Repos'}</div>
-          <div class="hero-exos">${muscle
-            ? `${WORKOUT_PLAN[muscle][S.weekType].length} exercices · ${SETS} séries`
-            : 'L · Bras · M · Pec · M · Dos · J · Épau. · V · Jam.'}</div>
+          <div class="hero-date">${DAYS_FULL[dow]} — ${todayDone ? 'Séance du jour' : 'Prochaine séance'}</div>
+          <div class="hero-muscle" style="${todayDone?'color:#00FF80':`color:${accentColor}`}">${WORKOUT_PLAN[nextG].label} ${nextV}</div>
+          <div class="hero-exos">${WORKOUT_PLAN[nextG][nextV].length} exercices · PPL</div>
         </div>
         ${delta !== null
           ? `<span class="delta-pill ${delta >= 0 ? 'delta-up' : 'delta-down'}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%</span>`
           : `<span class="delta-pill delta-neu">1re sem.</span>`}
       </div>
       <div class="hero-cal">
-        ${calDots.map(({ i, ds, mk, isToday, isFuture, isDone, col }) => {
-          const cls = isDone ? 'hw-done' : (mk && !isFuture ? 'hw-missed' : !mk ? 'hw-rest' : 'hw-plan');
+        ${calDots.map(({ i, isToday, isDone, short, col }) => {
+          const cls = isDone ? 'hw-done' : 'hw-rest';
           return `<div class="hw-day${isToday?' hw-today':''}">
-            <div class="hw-dot ${cls}" style="${isDone?`background:${col};box-shadow:0 0 10px ${col}66`:''}">${isDone&&mk?`<span class="hw-txt">${WORKOUT_PLAN[mk].short}</span>`:''}${isDone&&!mk?`<span class="hw-txt">KM</span>`:''}</div>
+            <div class="hw-dot ${cls}" style="${isDone?`background:${col};box-shadow:0 0 10px ${col}66`:''}">${isDone&&short?`<span class="hw-txt">${short}</span>`:''}</div>
             <div class="hw-lbl">${WD_LBL[i]}</div>
           </div>`;
         }).join('')}
       </div>
-      ${muscle && !todayDone
-        ? `<button class="today-cta" style="background:${accentColor};color:#000;box-shadow:0 6px 24px ${accentColor}44" onclick="navigate('workout')">Commencer la séance</button>`
-        : muscle
-          ? `<div class="today-done"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Séance enregistrée</div>`
-          : `<div class="today-rest">Week-end · récupération</div>`}
+      ${todayDone
+        ? `<div class="today-done"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Séance enregistrée</div>`
+        : `<button class="today-cta" style="background:${accentColor};color:#000;box-shadow:0 6px 24px ${accentColor}44" onclick="navigate('workout')">Commencer la séance</button>`}
     </div>
 
     <!-- ② KPI STRIP -->
     <div class="kpi-strip">
       ${[
-        { lbl: volDone?'✓ Séances':'Séances', val: wtdone, den: '/5', color: volDone?'#00FF80':accentColor, pct: wtdone/5, glow: volDone, nav: 'workout' },
+        { lbl: volDone?'✓ Séances':'Séances', val: wtdone, den: '/6', color: volDone?'#00FF80':accentColor, pct: wtdone/6, glow: volDone, nav: 'workout' },
         { lbl: runDone?'✓ Course':'Course', val: km.toFixed(1), den: ' km', color: 'var(--c-run)', pct: Math.min(km/RUN_GOAL_KM,1), glow: runDone, nav: 'run' },
         { lbl: waterDone?'✓ Eau':'Eau', val: (waterMl/1000).toFixed(1), den: ' L', color: waterDone?'#00FF80':'#06B6D4', pct: waterPct, glow: waterDone, nav: 'nutrition' },
       ].map(k=>`
@@ -601,7 +654,7 @@ function renderDashboard() {
     <div class="card muscles-v2">
       <div class="sect-row" style="margin-bottom:14px">
         <span class="sect-lbl">Muscles · semaine</span>
-        <span style="font-size:11px;color:var(--t3)">${wtdone}/5 séances</span>
+        <span style="font-size:11px;color:var(--t3)">${wtdone}/6 séances</span>
       </div>
       <div class="mcols">
         ${MUSCLE_KEYS.map(k => {
@@ -634,8 +687,8 @@ function renderDashboard() {
           ? `<div style="padding:16px 0;text-align:center;color:var(--t3);font-size:12px">Aucune activité</div>`
           : recent.map(item => item.kind==='w'?`
           <div class="act-row" onclick="openSessionDetail('${item.id}')">
-            <div class="act-icon" style="background:${WORKOUT_PLAN[item.muscleGroup].color}22;color:${WORKOUT_PLAN[item.muscleGroup].color}">${WORKOUT_PLAN[item.muscleGroup].short}</div>
-            <div class="act-body"><div class="act-ttl">${WORKOUT_PLAN[item.muscleGroup].label}</div><div class="act-sub">${formatDate(item.date)}</div></div>
+            <div class="act-icon" style="background:${groupColor(item.muscleGroup)}22;color:${groupColor(item.muscleGroup)}">${groupShort(item.muscleGroup)}</div>
+            <div class="act-body"><div class="act-ttl">${groupLabel(item.muscleGroup)}</div><div class="act-sub">${formatDate(item.date)}</div></div>
             <span class="act-val">${fmtVol(item.totalVolume)} kg</span>
           </div>` : `
           <div class="act-row" onclick="openRunDetail('${item.id}')">
@@ -703,8 +756,8 @@ function saveWkDraft() {
   const mg = wkState.muscleGroup, wt = wkState.weekType;
   const exos = WORKOUT_PLAN[mg][wt];
   const inputs = {};
-  exos.forEach((_, ei) => {
-    for (let si = 0; si < SETS; si++) {
+  exos.forEach((ex, ei) => {
+    for (let si = 0; si < ex.sets; si++) {
       const w = document.getElementById(`w-${ei}-${si}`)?.value || '';
       const r = document.getElementById(`r-${ei}-${si}`)?.value || '';
       inputs[`${ei}-${si}`] = { w, r };
@@ -742,15 +795,31 @@ function hasActiveWkDraft() {
 }
 
 function renderWorkout() {
-  const dow = new Date().getDay();
-  // Restore muscle group from draft if available, otherwise use today's schedule
+  // On propose la prochaine séance de la rotation PPL, sauf si un brouillon est en cours.
   const draft = (() => { try { const r = localStorage.getItem(WK_DRAFT_KEY); if (!r) return null; const d = JSON.parse(r); return (Date.now() - (d._ts||0) < WK_DRAFT_TTL) ? d : null; } catch { return null; } })();
-  wkState.muscleGroup = wkState.muscleGroup || draft?.mg || DAY_TO_MUSCLE[dow] || 'bras';
-  // Si on restaure un brouillon pour ce muscle, on reprend SA semaine A/B,
+  const [nextG, nextV] = nextPPLSession();
+  wkState.muscleGroup = wkState.muscleGroup || draft?.mg || nextG;
+  // Si on restaure un brouillon pour ce groupe, on reprend SA variante A/B,
   // sinon les exos affichés ne correspondraient pas aux données saisies.
-  wkState.weekType    = (draft && draft.mg === wkState.muscleGroup && draft.wt) ? draft.wt : S.weekType;
+  wkState.weekType    = (draft && draft.mg === wkState.muscleGroup && draft.wt) ? draft.wt
+                        : (wkState.muscleGroup === nextG ? nextV : 'A');
   wkState.date        = todayStr();
   renderWorkoutForm();
+}
+
+// Suggestion de charge (double progression) : si à la dernière séance toutes les
+// séries ont atteint le HAUT de la plage de reps, on suggère +2,5 kg (haut du corps)
+// ou +5 kg (jambes). Renvoie { inc, weight } ou null.
+function progressionHint(mg, ex, prevExercise) {
+  const sets = prevExercise?.sets || [];
+  if (!sets.length) return null;
+  const top = parseInt(String(ex.reps).split('-').pop(), 10);
+  if (!top) return null;
+  const allTop = sets.every(s => (parseFloat(s.weight)||0) > 0 && (parseInt(s.reps)||0) >= top);
+  if (!allTop) return null;
+  const inc = mg === 'legs' ? 5 : 2.5;
+  const baseW = Math.max(...sets.map(s => parseFloat(s.weight)||0));
+  return { inc, weight: Math.round((baseW + inc) * 10) / 10 };
 }
 
 function renderWorkoutForm() {
@@ -804,15 +873,20 @@ function renderWorkoutForm() {
 
     <!-- RIGHT: Exercises -->
     <div>
-      ${exos.map((name, ei) => {
+      ${exos.map((ex, ei) => {
+        const name = ex.name;
         const prevSets = last ? (last.exercises[ei]?.sets || []) : [];
+        const hint = progressionHint(mg, ex, last?.exercises[ei]);
         return `
         <div class="ex-block" id="ex-${ei}">
           <div class="ex-head">
-            <div class="ex-name">${name}${(S.prs||{})[name]?.date===todayStr()?'<span class="pr-badge">🏆</span>':''}</div>
+            <div>
+              <div class="ex-name">${name}${(S.prs||{})[name]?.date===todayStr()?'<span class="pr-badge">🏆</span>':''}${hint?`<span class="ex-hint">+${hint.inc} kg</span>`:''}</div>
+              <div class="ex-sub">${ex.sets}×${ex.reps} · ${ex.rest}</div>
+            </div>
             <button class="copy-pill" onclick="copyFirstSet(${ei})">S1→tous</button>
           </div>
-          ${Array.from({length:SETS},(_,si)=>{
+          ${Array.from({length:ex.sets},(_,si)=>{
             const pv = prevSets[si]||{weight:'',reps:''};
             const dv = draft?.inputs?.[`${ei}-${si}`];
             // Champs vides par défaut : on ne pré-remplit QUE depuis le brouillon en cours.
@@ -825,7 +899,7 @@ function renderWorkoutForm() {
               <div class="inp-pill">
                 <button class="adj-btn" onclick="adj(${ei},${si},'weight',-2.5)">−</button>
                 <input type="number" class="set-input" inputmode="decimal" step="0.5"
-                  id="w-${ei}-${si}" value="${wVal}" placeholder="${pv.weight||'—'}"
+                  id="w-${ei}-${si}" value="${wVal}" placeholder="${hint?hint.weight:(pv.weight||'—')}"
                   oninput="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}" onchange="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}">
                 <span class="set-unit-lbl">kg</span>
                 <button class="adj-btn" onclick="adj(${ei},${si},'weight',2.5)">+</button>
@@ -871,10 +945,12 @@ function adj(ei, si, field, step) {
   updateVols();
 }
 
+function exSetCount(ei) { return WORKOUT_PLAN[wkState.muscleGroup]?.[wkState.weekType]?.[ei]?.sets || 0; }
+
 function autoFillFromS1(ei) {
   const w0 = document.getElementById(`w-${ei}-0`)?.value || '';
   const r0 = document.getElementById(`r-${ei}-0`)?.value || '';
-  for (let si = 1; si < SETS; si++) {
+  for (let si = 1; si < exSetCount(ei); si++) {
     const we = document.getElementById(`w-${ei}-${si}`);
     const re = document.getElementById(`r-${ei}-${si}`);
     if (we) we.value = w0;
@@ -901,7 +977,7 @@ function validateSet(ei, si) {
 function copyFirstSet(ei) {
   const w0 = document.getElementById(`w-${ei}-0`)?.value||'';
   const r0 = document.getElementById(`r-${ei}-0`)?.value||'';
-  for (let si=1;si<SETS;si++) {
+  for (let si=1;si<exSetCount(ei);si++) {
     const we=document.getElementById(`w-${ei}-${si}`), re=document.getElementById(`r-${ei}-${si}`);
     if(we) we.value=w0; if(re) re.value=r0;
   }
@@ -911,9 +987,9 @@ function copyFirstSet(ei) {
 function updateVols() {
   const exos = WORKOUT_PLAN[wkState.muscleGroup][wkState.weekType];
   let total = 0;
-  exos.forEach((_,ei)=>{
+  exos.forEach((ex,ei)=>{
     let ev=0;
-    for(let si=0;si<SETS;si++){
+    for(let si=0;si<ex.sets;si++){
       const w=parseFloat(document.getElementById(`w-${ei}-${si}`)?.value)||0;
       const r=parseInt(document.getElementById(`r-${ei}-${si}`)?.value)||0;
       const v=w*r; ev+=v;
@@ -965,8 +1041,8 @@ function saveWorkout() {
   const date = document.getElementById('wk-date')?.value || todayStr();
   const notes= document.getElementById('wk-notes')?.value||'';
   const exos = WORKOUT_PLAN[mg][wt];
-  const exercises = exos.map((name,ei)=>({
-    name, sets: Array.from({length:SETS},(_,si)=>({
+  const exercises = exos.map((ex,ei)=>({
+    name: ex.name, sets: Array.from({length:ex.sets},(_,si)=>({
       weight: parseFloat(document.getElementById(`w-${ei}-${si}`)?.value)||0,
       reps:   parseInt(document.getElementById(`r-${ei}-${si}`)?.value)||0
     }))
@@ -1103,10 +1179,10 @@ function formatTimerTime(s) {
 // 5c. NUTRITION & POIDS
 // ============================================================
 
-let NUTRI_TARGETS = { calories: 3000, protein: 150, carbs: 300, fat: 70, water: 2500 };
-// Calculé pour 61 kg · 1m75 · ~25 ans · activité modérée-élevée · prise de masse
-// BMR Mifflin-St Jeor ≈ 1584 kcal · TDEE ×1.55 ≈ 2455 · Surplus +500 ≈ 2955 → 3000 kcal
-// Protéines : 2.5 g/kg × 61 ≈ 152 → 150 g
+let NUTRI_TARGETS = { calories: 2400, protein: 175, carbs: 250, fat: 80, water: 2500 };
+// Recomposition corporelle (sèche + muscle) : léger déficit + protéines élevées.
+// ~2400 kcal · 175 g protéines (≈2.9 g/kg) · 250 g glucides · 80 g lipides.
+// Jour OFF : viser 2000-2100 kcal (glucides ↓).
 
 const MEAL_PRESETS = [
   // ── Féculents ──────────────────────────────────────────────────────
@@ -1482,6 +1558,28 @@ const MEAL_PRESETS = [
   }
 ];
 
+// Journée type recomp (≈ 2300-2400 kcal / 175 g protéines répartis sur 4 repas).
+const DAY_PLAN = [
+  { emoji: '🌅', name: 'Petit-déjeuner', items: "Flocons d'avoine 80 g · Whey 30 g · Fruits rouges · Beurre de cacahuète 15 g",
+    calories: 550, protein: 40, carbs: 55, fat: 18 },
+  { emoji: '🍽️', name: 'Déjeuner', items: 'Poulet/bœuf maigre 150 g · Riz ou pâtes 80 g (cru) · Légumes · Huile olive 10 g',
+    calories: 650, protein: 50, carbs: 65, fat: 18 },
+  { emoji: '🥤', name: 'Collation', items: 'Skyr/fromage blanc 250 g · Amandes 20 g · Banane',
+    calories: 400, protein: 35, carbs: 35, fat: 12 },
+  { emoji: '🌙', name: 'Dîner', items: 'Poisson/œufs/viande 150 g · Patate douce 200 g · Légumes verts · ½ avocat',
+    calories: 700, protein: 50, carbs: 55, fat: 25 }
+];
+
+// Liste de courses hebdo (cochable, réinitialisée chaque semaine).
+const SHOPPING_LIST = [
+  { cat: 'Protéines',        items: ['Poulet', 'Bœuf maigre', 'Poisson blanc', 'Saumon', 'Œufs', 'Whey', 'Skyr / fromage blanc', 'Thon'] },
+  { cat: 'Glucides',         items: ["Flocons d'avoine", 'Riz', 'Pâtes', 'Patate douce', 'Pain complet'] },
+  { cat: 'Légumes & fruits', items: ['Brocoli', 'Épinards', 'Courgette', 'Haricots verts', 'Salade', 'Tomates', 'Banane', 'Fruits rouges'] },
+  { cat: 'Graisses',         items: ['Huile olive', 'Avocat', 'Amandes', 'Beurre de cacahuète'] },
+  { cat: 'Divers',           items: ['Café / thé', 'Épices', 'Sel / poivre'] }
+];
+const SHOPPING_AVOID = ['Sodas & jus sucrés', 'Alcool', 'Fritures', 'Sucreries industrielles'];
+
 let nutriTab    = 'today';
 let nutriDate   = todayStr();
 let nutriCharts = {};
@@ -1510,10 +1608,12 @@ function renderNutrition() {
   document.getElementById('app').innerHTML = `
     <div class="tab-row">
       <button class="tab-btn ${nutriTab==='today' ?'active':''}" onclick="setNutriTab('today')">Aujourd'hui</button>
+      <button class="tab-btn ${nutriTab==='plan'  ?'active':''}" onclick="setNutriTab('plan')">Plan</button>
       <button class="tab-btn ${nutriTab==='stats' ?'active':''}" onclick="setNutriTab('stats')">Stats</button>
       <button class="tab-btn ${nutriTab==='weight'?'active':''}" onclick="setNutriTab('weight')">Poids</button>
     </div>
     ${nutriTab === 'today'  ? _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct, carbsPct, fatPct, effectiveCal, burned, waterMl, waterPct, entries) : ''}
+    ${nutriTab === 'plan'   ? _nutriPlan() : ''}
     ${nutriTab === 'stats'  ? _nutriStats() : ''}
     ${nutriTab === 'weight' ? _nutriWeight() : ''}
     <div class="spacer"></div>
@@ -1529,8 +1629,8 @@ function _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct,
         <input type="date" class="form-inp wk-date-inline" id="nutri-date" value="${nutriDate}" max="${todayStr()}" onchange="setNutriDate(this.value)">
       </div>
       <div class="sect-row" style="margin-bottom:16px">
-        <span class="sect-lbl">Objectif · Prise de masse</span>
-        ${burned > 0 ? `<span class="t3" style="font-size:10px;color:var(--green)">+${burned} kcal sport</span>` : '<span class="t3" style="font-size:10px">61 kg · 1m75</span>'}
+        <span class="sect-lbl">Objectif · Recomposition</span>
+        ${burned > 0 ? `<span class="t3" style="font-size:10px;color:var(--green)">+${burned} kcal sport</span>` : '<span class="t3" style="font-size:10px">2400 kcal · 175 g prot</span>'}
       </div>
 
       <div style="margin-bottom:14px">
@@ -1695,6 +1795,73 @@ function _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct,
         </div>
       `).join('')}
     </div>` : ''}
+  `;
+}
+
+// Initialise l'objet courses et remet les cases à zéro au changement de semaine.
+function ensureShopping() {
+  if (!S.shopping) S.shopping = { checked: {}, weekStart: null };
+  const wk = thisWeekKey();
+  if (S.shopping.weekStart !== wk) {
+    S.shopping.checked = {};
+    S.shopping.weekStart = wk;
+    save();
+  }
+}
+
+function _nutriPlan() {
+  ensureShopping();
+  const checked = S.shopping.checked || {};
+
+  const meals = DAY_PLAN.map((m, i) => `
+    <div class="plan-meal">
+      <div class="plan-meal-head">
+        <span class="plan-meal-name">${m.emoji} ${m.name}</span>
+        <button class="copy-pill" onclick="logDayMeal(${i})">Logger</button>
+      </div>
+      <div class="plan-meal-items">${m.items}</div>
+      <div class="plan-meal-macros">${m.calories} kcal · ${m.protein} g prot · ${m.carbs} g gluc · ${m.fat} g lip</div>
+    </div>`).join('');
+
+  const shop = SHOPPING_LIST.map(g => `
+    <div class="shop-group">
+      <div class="shop-cat">${g.cat}</div>
+      ${g.items.map(it => {
+        const on = !!checked[it];
+        return `<label class="shop-item${on?' on':''}" onclick="toggleShopItem('${it.replace(/'/g,"\\'")}')">
+          <span class="shop-box">${on?'✓':''}</span>${it}
+        </label>`;
+      }).join('')}
+    </div>`).join('');
+
+  return `
+    <div class="card">
+      <div class="sect-row" style="margin-bottom:12px">
+        <span class="sect-lbl">🍽️ Journée type</span>
+        <span class="t3" style="font-size:10px">≈ 2300 kcal · 175 g prot</span>
+      </div>
+      ${meals}
+      <div class="plan-note">Jour OFF (repos) : viser <b>2000-2100 kcal</b>, réduire surtout les glucides.</div>
+    </div>
+
+    <div class="card">
+      <div class="sect-lbl" style="margin-bottom:10px">⚖️ Règles d'ajustement</div>
+      <ul class="plan-rules">
+        <li>Poids <b>stable 2 semaines</b> → −200 kcal (glucides) pour relancer la perte de gras.</li>
+        <li>Force qui <b>baisse</b> ou fatigue → +150-200 kcal, garder les protéines hautes.</li>
+        <li>Protéines <b>non négociables</b> : ~175 g/jour même les jours OFF.</li>
+        <li>Eau ≥ 2,5 L · sommeil 7-8 h : leviers de recomp aussi importants que la salle.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="sect-row" style="margin-bottom:10px">
+        <span class="sect-lbl">🛒 Liste de courses</span>
+        <button class="copy-pill" onclick="resetShopping()">Réinitialiser</button>
+      </div>
+      ${shop}
+      <div class="shop-avoid"><b>À éviter :</b> ${SHOPPING_AVOID.join(' · ')}</div>
+    </div>
   `;
 }
 
@@ -1887,6 +2054,36 @@ function logNutriPreset(idx) {
   save();
   haptic([4]);
   showToast(`${p.emoji} ${p.name} ajouté`);
+  renderNutrition();
+}
+
+function logDayMeal(idx) {
+  const m = DAY_PLAN[idx];
+  if (!m) return;
+  if (!S.nutrition) S.nutrition = [];
+  S.nutrition.push({ id: uid(), date: nutriDate, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat, note: m.name });
+  save();
+  haptic([4]);
+  showToast(`${m.emoji} ${m.name} ajouté`);
+  nutriTab = 'today';
+  renderNutrition();
+}
+
+function toggleShopItem(item) {
+  ensureShopping();
+  S.shopping.checked[item] = !S.shopping.checked[item];
+  save();
+  haptic([4]);
+  renderNutrition();
+}
+
+function resetShopping() {
+  if (!S.shopping) S.shopping = { checked: {}, weekStart: null };
+  S.shopping.checked = {};
+  S.shopping.weekStart = thisWeekKey();
+  save();
+  haptic([8]);
+  showToast('Liste réinitialisée');
   renderNutrition();
 }
 
@@ -2270,9 +2467,9 @@ function renderHistory() {
           const dlt = sessionVolDelta(item);
           return `
           <div class="hist-item" onclick="openSessionDetail('${item.id}')">
-            <div class="hist-icon" style="background:${WORKOUT_PLAN[item.muscleGroup].color}">${WORKOUT_PLAN[item.muscleGroup].short}</div>
+            <div class="hist-icon" style="background:${groupColor(item.muscleGroup)}">${groupShort(item.muscleGroup)}</div>
             <div class="hist-info">
-              <div class="hist-title">${WORKOUT_PLAN[item.muscleGroup].label} · Sem. ${item.weekType}</div>
+              <div class="hist-title">${groupLabel(item.muscleGroup)} · ${item.weekType}</div>
               <div class="hist-sub">${formatDate(item.date)} · ${item.exercises.length} exercices</div>
             </div>
             <div class="hist-right">
@@ -2348,7 +2545,7 @@ function exportCSV(type) {
     S.workouts.sort((a,b)=>a.date.localeCompare(b.date)).forEach(w => {
       w.exercises.forEach(ex => {
         ex.sets.forEach((s,i) => {
-          rows.push([w.date, WORKOUT_PLAN[w.muscleGroup].label, w.weekType, w.totalVolume, ex.name, i+1, s.weight, s.reps]);
+          rows.push([w.date, groupLabel(w.muscleGroup), w.weekType, w.totalVolume, ex.name, i+1, s.weight, s.reps]);
         });
       });
     });
@@ -2372,11 +2569,10 @@ function exportCSV(type) {
 
 function openSessionDetail(id) {
   const s = S.workouts.find(w=>w.id===id); if(!s) return;
-  const m = WORKOUT_PLAN[s.muscleGroup];
   showModal(`
     <div class="modal-head">
       <div>
-        <div class="t3" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">${m.label} · Semaine ${s.weekType}</div>
+        <div class="t3" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">${groupLabel(s.muscleGroup)} · ${s.weekType}</div>
         <div class="modal-title">${fmtVol(s.totalVolume)} kg</div>
         <div class="t3" style="font-size:12px;margin-top:2px">${formatDate(s.date)}</div>
       </div>
@@ -2724,7 +2920,7 @@ function renderProfile() {
         </div>
         <div class="prof-row-right">
           <input id="g-cal" class="prof-row-input" type="number"
-            value="${nut.cal||3000}" step="50" min="500" max="6000">
+            value="${nut.cal||2400}" step="50" min="500" max="6000">
           <span class="prof-row-unit">kcal</span>
         </div>
       </div>
@@ -2736,7 +2932,7 @@ function renderProfile() {
         </div>
         <div class="prof-row-right">
           <input id="g-prot" class="prof-row-input" type="number"
-            value="${nut.prot||150}" step="5" min="20" max="400">
+            value="${nut.prot||175}" step="5" min="20" max="400">
           <span class="prof-row-unit">g</span>
         </div>
       </div>
@@ -2748,7 +2944,7 @@ function renderProfile() {
         </div>
         <div class="prof-row-right">
           <input id="g-carbs" class="prof-row-input" type="number"
-            value="${nut.carbs||300}" step="10" min="0" max="800">
+            value="${nut.carbs||250}" step="10" min="0" max="800">
           <span class="prof-row-unit">g</span>
         </div>
       </div>
@@ -2760,7 +2956,7 @@ function renderProfile() {
         </div>
         <div class="prof-row-right">
           <input id="g-fat" class="prof-row-input" type="number"
-            value="${nut.fat||70}" step="5" min="0" max="300">
+            value="${nut.fat||80}" step="5" min="0" max="300">
           <span class="prof-row-unit">g</span>
         </div>
       </div>
@@ -2958,10 +3154,10 @@ function saveProfile() {
     date:    document.getElementById('g-date')?.value || null,
   };
   S.nutGoal = {
-    cal:   parseInt(document.getElementById('g-cal')?.value)   || 3000,
-    prot:  parseInt(document.getElementById('g-prot')?.value)  || 150,
-    carbs: parseInt(document.getElementById('g-carbs')?.value) || 300,
-    fat:   parseInt(document.getElementById('g-fat')?.value)   || 70,
+    cal:   parseInt(document.getElementById('g-cal')?.value)   || 2400,
+    prot:  parseInt(document.getElementById('g-prot')?.value)  || 175,
+    carbs: parseInt(document.getElementById('g-carbs')?.value) || 250,
+    fat:   parseInt(document.getElementById('g-fat')?.value)   || 80,
     water: parseInt(document.getElementById('g-water')?.value) || 2500,
   };
   S.runGoal = parseInt(document.getElementById('g-km')?.value) || 15;
@@ -3251,10 +3447,9 @@ function scheduleNotification() {
 
 function fireTestNotif() {
   closeModal();
-  const dow = new Date().getDay();
-  const muscle = DAY_TO_MUSCLE[dow];
-  const title = muscle ? `Séance ${WORKOUT_PLAN[muscle].label} aujourd'hui 💪` : 'Tempo · Récupération active 🧘';
-  const body  = muscle ? `${WORKOUT_PLAN[muscle][S.weekType].length} exercices · ${SETS} séries — C'est parti !` : 'Profite du repos, tu l\'as mérité.';
+  const [g, v] = nextPPLSession();
+  const title = `Séance ${WORKOUT_PLAN[g].label} ${v} 💪`;
+  const body  = `${WORKOUT_PLAN[g][v].length} exercices · PPL — C'est parti !`;
   new Notification(title, { body, icon: './icon.png', badge: './icon.png' });
   showToast('Notification test envoyée ✓');
 }
@@ -3310,6 +3505,15 @@ function applyOneTimeFixes() {
       last.totalVolume = calcSessionVol(last.exercises);
     }
     S._jambesSwap1 = true;
+    changed = true;
+  }
+
+  // Passage aux objectifs de recomposition (2400 kcal / 175 g prot).
+  // On écrase l'ancien objectif prise de masse (3000/150) déjà sauvegardé.
+  if (!S._recompGoals) {
+    S.nutGoal = { cal: 2400, prot: 175, carbs: 250, fat: 80, water: (S.nutGoal?.water || 2500) };
+    NUTRI_TARGETS = { calories: 2400, protein: 175, carbs: 250, fat: 80, water: S.nutGoal.water };
+    S._recompGoals = true;
     changed = true;
   }
 
