@@ -44,7 +44,7 @@ const WORKOUT_PLAN = {
       { name: 'Rowing haltère unilatéral',              sets: 3, reps: '10-12', rest: '60-90 s' },
       { name: 'Shrugs haltères/Smith',                  sets: 3, reps: '10-15', rest: '60-90 s' },
       { name: 'Curl pupitre machine',                   sets: 3, reps: '8-12',  rest: '60-90 s' },
-      { name: 'Curl marteau corde',                     sets: 2, reps: '12-15', rest: '60-90 s' }
+      { name: 'Curl marteau haltères assis',            sets: 2, reps: '12-15', rest: '60-90 s' }
     ]
   },
   legs: {
@@ -881,7 +881,7 @@ function renderWorkoutForm() {
         <div class="ex-block" id="ex-${ei}">
           <div class="ex-head">
             <div>
-              <div class="ex-name">${name}${(S.prs||{})[name]?.date===todayStr()?'<span class="pr-badge">🏆</span>':''}${hint?`<span class="ex-hint">+${hint.inc} kg</span>`:''}</div>
+              <div class="ex-name">${name}<button class="ex-copy" onclick="copyExName(this,'${name.replace(/'/g,"\\'")}')" aria-label="Copier le nom">⧉</button>${(S.prs||{})[name]?.date===todayStr()?'<span class="pr-badge">🏆</span>':''}${hint?`<span class="ex-hint">+${hint.inc} kg</span>`:''}</div>
               <div class="ex-sub">${ex.sets}×${ex.reps} · ${ex.rest}</div>
             </div>
             <button class="copy-pill" onclick="copyFirstSet(${ei})">S1→tous</button>
@@ -982,6 +982,20 @@ function copyFirstSet(ei) {
     if(we) we.value=w0; if(re) re.value=r0;
   }
   updateVols();
+}
+
+function copyExName(btn, name) {
+  const done = () => { showToast(`« ${name} » copié`); if(btn){ btn.textContent='✓'; setTimeout(()=>{ btn.textContent='⧉'; }, 1200); } };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(name).then(done).catch(()=>fallbackCopy(name, done));
+  } else { fallbackCopy(name, done); }
+}
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); done(); } catch(e){}
+  document.body.removeChild(ta);
 }
 
 function updateVols() {

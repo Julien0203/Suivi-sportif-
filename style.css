@@ -1098,6 +1098,10 @@ body.menu-open .menu-overlay { opacity: 1; pointer-events: all; }
 .ex-hint { font-size: 10px; font-weight: 700; color: #00FF80; margin-left: 6px; padding: 1px 6px; border-radius: 6px;
   background: rgba(0,255,128,.12); box-shadow: 0 0 8px rgba(0,255,128,.25); vertical-align: middle; }
 .pr-badge { font-size: 13px; margin-left: 6px; }
+.ex-copy { font-size: 13px; line-height: 1; margin-left: 6px; padding: 2px 5px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface2); color: var(--t3); cursor: pointer; vertical-align: middle; transition: color .15s, background .15s; }
+.ex-copy:active { transform: scale(.9); }
+.ex-copy:hover { color: var(--t1); border-color: var(--border2); }
 .ex-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .copy-pill {
   font-size: 10px; font-weight: 500; color: var(--t3); letter-spacing: .04em; text-transform: uppercase;
