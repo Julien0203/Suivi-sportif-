@@ -959,7 +959,7 @@ function saveWkDraft() {
   // Formulaire absent (ex. onglet Course affiché) : on n'écrase pas le brouillon avec des champs vides
   if (!document.getElementById('wk-date')) return;
   const mg = wkState.muscleGroup, wt = wkState.weekType;
-  const exos = WORKOUT_PLAN[mg][wt];
+  const exos = sessionExos(mg, wt);
   const inputs = {};
   exos.forEach((ex, ei) => {
     for (let si = 0; si < ex.sets; si++) {
@@ -972,6 +972,7 @@ function saveWkDraft() {
     mg, wt, date: wkState.date,
     notes: document.getElementById('wk-notes')?.value || '',
     inputs, done: Object.keys(wkState.doneSets || {}).filter(k => wkState.doneSets[k]),
+    override: wkState.override?.key === mg + wt ? wkState.override.exos : null,
     startTs: wkTimer.startTs || null, _ts: Date.now()
   }));
 }
@@ -1038,13 +1039,17 @@ function progressionHint(mg, ex, prevExercise) {
 function renderWorkoutForm() {
   const mg   = wkState.muscleGroup;
   const wt   = wkState.weekType;
-  const exos = WORKOUT_PLAN[mg][wt];
+  const draft = loadWkDraft(mg, wt);
+  // Séance modifiée (remplacement / ordre) reprise du brouillon
+  wkState.override = Array.isArray(draft?.override) ? { key: mg + wt, exos: draft.override } : null;
+  const exos = sessionExos(mg, wt);
   const last = getLastSession(mg, wt);
   const m    = WORKOUT_PLAN[mg];
   wkState.prevExercises = last ? last.exercises : [];
   // Dernière perf de chaque exercice (par nom) : sert à colorer les séries (plus lourd / pareil / moins lourd)
-  wkState.prevSets = WORKOUT_PLAN[mg][wt].map(ex => lastSetsFor(ex.name));
-  const draft = loadWkDraft(mg, wt);
+  wkState.prevSets = exos.map(ex => lastSetsFor(ex.name));
+  // Meilleur 1RM estimé déjà enregistré par exercice : sert à détecter un record en direct
+  wkState.prBest = exos.map(ex => bestE1rm(ex.name));
   // Séries validées du brouillon (anciens brouillons sans cette info : série remplie = faite)
   wkState.doneSets = {};
   if (Array.isArray(draft?.done)) draft.done.forEach(k => { wkState.doneSets[k] = true; });
@@ -1108,11 +1113,13 @@ function exCard(ex, ei, mg, last, draft) {
   const prevSets = lastSetsFor(name);
   const hint = progressionHint(mg, ex, { sets: prevSets });
   const safe = name.replace(/'/g, "\\'");
-  const prevW = prevSets.map(s => parseFloat(s.weight) || 0);
-  const lastTxt = prevW.some(Boolean)
+  // Séries réellement faites la dernière fois (les séries non validées sont enregistrées à 0)
+  const prevDone = prevSets.filter(s => parseFloat(s.weight) > 0 && parseInt(s.reps) > 0);
+  const prevW = prevDone.map(s => parseFloat(s.weight));
+  const lastTxt = prevW.length
     ? (prevW.every(w => w === prevW[0])
-        ? `Dernière fois : ${String(prevW[0]).replace('.', ',')} kg × ${prevSets.map(s => s.reps || '–').join(', ')}`
-        : `Dernière fois : ${prevSets.map(s => `${String(s.weight || 0).replace('.', ',')}×${s.reps || '–'}`).join(' · ')}`)
+        ? `Dernière fois : ${String(prevW[0]).replace('.', ',')} kg × ${prevDone.map(s => s.reps).join(', ')}`
+        : `Dernière fois : ${prevDone.map(s => `${String(s.weight).replace('.', ',')}×${s.reps}`).join(' · ')}`)
     : '';
   const pr = (S.prs || {})[name]?.date === todayStr();
   return `
@@ -1131,9 +1138,13 @@ function exCard(ex, ei, mg, last, draft) {
         <span class="pill">${ex.sets} × ${ex.reps}</span>
         <span class="pill">Repos ${ex.rest}</span>
         ${hint ? `<span class="pill pill-ink">+${String(hint.inc).replace('.', ',')} kg conseillé</span>` : ''}
+        ${ex.replaced ? `<span class="pill" title="Remplace ${ex.replaced.replace(/"/g, '')}">Remplaçant</span>` : ''}
       </div>
       <div class="ex-last"><span>${lastTxt || 'Première fois sur cet exercice'}</span>
-        <button class="tool-btn" onclick="copyExName(this,'${safe}')" aria-label="Copier le nom de l'exercice">${ICON_COPY}</button></div>
+        <span class="ex-last-btns">
+          <button class="tool-chip" onclick="openExChange(${ei})" aria-label="Remplacer ou décaler l'exercice">${ICON_SWAP}Changer</button>
+          <button class="tool-btn" onclick="copyExName(this,'${safe}')" aria-label="Copier le nom de l'exercice">${ICON_COPY}</button>
+        </span></div>
       ${Array.from({ length: ex.sets }, (_, si) => {
         const pv = prevSets[si] || prevSets[prevSets.length - 1] || {};
         const dv = draft?.inputs?.[`${ei}-${si}`];
@@ -1153,12 +1164,97 @@ function exCard(ex, ei, mg, last, draft) {
   </article>`;
 }
 
+// ── Changer d'exercice en pleine séance : « faire plus tard » ou remplaçant pour le même muscle
+function exoByName(name) {
+  for (const g of MUSCLE_KEYS) for (const v of SESSION_KEYS) { const e = WORKOUT_PLAN[g][v].find(x => x.name === name); if (e) return e; }
+  return null;
+}
+function openExChange(ei) {
+  const exos = sessionExos(); const ex = exos[ei]; if (!ex) return;
+  const muscle = exoMuscle(ex.name) || exoMuscle(ex.replaced || '');
+  const inSession = new Set(exos.map(e => e.name));
+  const seen = new Set(); const pool = [];
+  MUSCLE_KEYS.forEach(g => SESSION_KEYS.forEach(v => WORKOUT_PLAN[g][v].forEach(e => {
+    if (seen.has(e.name) || inSession.has(e.name) || exoMuscle(e.name) !== muscle) return;
+    seen.add(e.name); pool.push(e);
+  })));
+  if (ex.replaced && !inSession.has(ex.replaced) && !seen.has(ex.replaced)) { const o = exoByName(ex.replaced); if (o) pool.unshift(o); }
+  const doneHere = Array.from({ length: ex.sets }, (_, si) => wkState.doneSets[`${ei}-${si}`]).filter(Boolean).length;
+  const isLast = ei === exos.length - 1;
+  const lastPerf = name => { const st = lastSetsFor(name).filter(x => parseFloat(x.weight) > 0 && parseInt(x.reps) > 0); const w = Math.max(0, ...st.map(x => parseFloat(x.weight))); return w ? `Dernière fois ${String(w).replace('.', ',')} kg × ${st.map(x => x.reps).join(', ')}` : 'Jamais fait'; };
+  showModal(`
+    <div class="modal-head"><div><div class="modal-title">Changer d'exercice</div><div class="modal-sub">${ex.name}</div></div><button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button></div>
+    <button class="change-later" onclick="postponeExercise(${ei})" ${isLast ? 'disabled' : ''}>
+      <span class="change-later-i">${ICON_LATER}</span>
+      <span><b>Faire plus tard</b><small>${isLast ? 'C’est déjà le dernier exercice' : 'Il passe en fin de séance, tes séries saisies le suivent'}</small></span>
+    </button>
+    <div class="sec-row" style="margin:16px 0 8px"><h2>Remplacer par</h2><span class="sec-note">${muscle || 'même muscle'}</span></div>
+    ${doneHere ? `<p class="change-warn">Les ${doneHere} série${doneHere > 1 ? 's validées' : ' validée'} de cet exercice ${doneHere > 1 ? 'seront effacées' : 'sera effacée'}.</p>` : ''}
+    ${pool.length ? `<div class="change-list">${pool.map(e => `
+      <button class="change-row" onclick="replaceExercise(${ei}, '${e.name.replace(/'/g, "\\'")}')">
+        ${exoThumbHTML(e.name)}
+        <span class="change-row-b"><b>${e.name}${ex.replaced === e.name ? ' · prévu' : ''}</b><small>${lastPerf(e.name)}</small></span>
+      </button>`).join('')}</div>` : '<p class="t3">Aucun autre exercice pour ce muscle dans ta bibliothèque.</p>'}
+    <p class="change-note">Le changement vaut pour cette séance seulement : ${ex.sets} × ${ex.reps}, repos ${ex.rest}.</p>
+  `);
+}
+// Applique une nouvelle liste d'exercices ; map[i] = ancien index de l'exercice i (null = nouvel exercice)
+function applySessionChange(newExos, map, openIdx) {
+  const mg = wkState.muscleGroup, wt = wkState.weekType;
+  saveWkDraft();
+  const d = JSON.parse(localStorage.getItem(WK_DRAFT_KEY) || '{}');
+  const inputs = {}, done = [];
+  newExos.forEach((ex, ni) => {
+    const oi = map[ni]; if (oi == null) return;
+    for (let si = 0; si < ex.sets; si++) {
+      const v = d.inputs?.[`${oi}-${si}`]; if (v) inputs[`${ni}-${si}`] = v;
+      if (wkState.doneSets[`${oi}-${si}`]) done.push(`${ni}-${si}`);
+    }
+  });
+  wkState.override = { key: mg + wt, exos: newExos };
+  localStorage.setItem(WK_DRAFT_KEY, JSON.stringify({ ...d, mg, wt, date: wkState.date, inputs, done, override: newExos, startTs: wkTimer.startTs || d.startTs || null, _ts: Date.now() }));
+  closeModal();
+  wkState.openKey = mg + wt;
+  wkState.openEx = openIdx;
+  renderWorkoutForm();
+  if (openIdx != null) setTimeout(() => document.getElementById(`ex-${openIdx}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+}
+function postponeExercise(ei) {
+  const exos = sessionExos();
+  if (ei >= exos.length - 1) return;
+  const order = exos.map((_, i) => i).filter(i => i !== ei).concat(ei);
+  const newExos = order.map(i => exos[i]);
+  wkState.doneSets = { ...wkState.doneSets };
+  // Ouvre le premier exercice pas terminé dans le nouvel ordre
+  const doneAfter = {}; order.forEach((oi, ni) => { for (let si = 0; si < exos[oi].sets; si++) if (wkState.doneSets[`${oi}-${si}`]) doneAfter[`${ni}-${si}`] = true; });
+  const nextOpen = newExos.findIndex((e, ni) => !Array.from({ length: e.sets }, (_, si) => doneAfter[`${ni}-${si}`]).every(Boolean));
+  applySessionChange(newExos, order, nextOpen === -1 ? null : nextOpen);
+  showToast(`${exos[ei].name} · fait plus tard`);
+}
+function replaceExercise(ei, name) {
+  const exos = sessionExos(); const slot = exos[ei]; const cand = exoByName(name); if (!slot || !cand) return;
+  const original = slot.replaced || slot.name;
+  const newEx = name === original ? { ...cand, sets: slot.sets, reps: slot.reps, rest: slot.rest }
+                                  : { ...cand, sets: slot.sets, reps: slot.reps, rest: slot.rest, replaced: original };
+  const newExos = exos.map((e, i) => i === ei ? newEx : e);
+  applySessionChange(newExos, exos.map((_, i) => i === ei ? null : i), ei);
+  haptic([8]);
+  showToast(`Remplacé par ${name}`);
+}
+
 function exoThumbHTML(name) {
   const src = exoImg(name);
   return `<span class="th">${src ? `<img src="${src}" alt="" loading="lazy" decoding="async">` : ICON_DUMBBELL}</span>`;
 }
 
-function curExos() { return WORKOUT_PLAN[wkState.muscleGroup]?.[wkState.weekType] || []; }
+// Exercices de la séance en cours : le programme, ou sa version modifiée (remplacement, « faire plus tard »),
+// gardée dans le brouillon pour survivre à un rechargement.
+function sessionExos(mg = wkState.muscleGroup, wt = wkState.weekType) {
+  const ov = wkState.override;
+  if (ov && ov.key === mg + wt && Array.isArray(ov.exos)) return ov.exos;
+  return WORKOUT_PLAN[mg]?.[wt] || [];
+}
+function curExos() { return sessionExos(); }
 function exIsDone(ei, exos = curExos()) {
   return Array.from({ length: exos[ei].sets }, (_, si) => wkState.doneSets[`${ei}-${si}`]).every(Boolean);
 }
@@ -1234,6 +1330,12 @@ function validateSet(ei, si) {
   haptic([10, 20, 10]);
   if (!wkTimer.startTs) startWkTimer();
   updateVols();
+  if (document.getElementById(`set-row-${ei}-${si}`)?.classList.contains('pr')) {
+    const w = parseFloat(we.value), r = parseInt(re.value);
+    const extra = BODYWEIGHT_SLUGS.includes(EXO_MEDIA[exos[ei].name]) ? bodyWeight() : 0;
+    haptic([30, 40, 30, 40, 60]);
+    showToast(`🏆 Record · ${exos[ei].name} · ${String(w).replace('.', ',')} kg × ${r} (1RM ≈ ${Math.round(e1rm(w + extra, r))} kg)`);
+  }
   const next = firstOpenEx(exos);
   if (next === null) { stopTimer(); showToast('Séance complète · tu peux terminer'); return; }
   startRestTimer(restSeconds(exos[ei].rest));
@@ -1309,6 +1411,7 @@ function refreshSetStates() {
       if (wf) ['t-up', 't-same', 't-down'].forEach(c => wf.classList.toggle(c, !done && tone === c.slice(2)));
     }
   });
+  markRecords();
 }
 
 function setTone(ei, si) {
@@ -1326,6 +1429,35 @@ function seanceProgress() {
   const done = exos.reduce((t, e, ei) => t + Array.from({ length: e.sets }, (_, si) => wkState.doneSets[`${ei}-${si}`]).filter(Boolean).length, 0);
   return { done, total, pct: total ? Math.round(done / total * 100) : 0 };
 }
+// Meilleur 1RM estimé enregistré pour un exercice (ancien nom compris), hors séance en cours
+function bestE1rm(name) {
+  const names = [name, ...(PREV_ALIASES[name] || [])];
+  let best = 0;
+  (S.workouts || []).forEach(w => (w.exercises || []).forEach(ex => {
+    if (!names.includes(ex.name)) return;
+    const extra = BODYWEIGHT_SLUGS.includes(EXO_MEDIA[name]) ? bodyWeight() : 0;
+    (ex.sets || []).forEach(st => { best = Math.max(best, e1rm((parseFloat(st.weight) || 0) + extra, parseInt(st.reps) || 0)); });
+  }));
+  return best;
+}
+// Séries record de la séance : validée et meilleure que tout ce qui précède (historique + séries d'avant).
+// Pas de « record » la toute première fois sur un exercice.
+function markRecords() {
+  curExos().forEach((ex, ei) => {
+    let run = wkState.prBest?.[ei] || 0;
+    const base = run;
+    const extra = BODYWEIGHT_SLUGS.includes(EXO_MEDIA[ex.name]) ? bodyWeight() : 0;
+    for (let si = 0; si < ex.sets; si++) {
+      const row = document.getElementById(`set-row-${ei}-${si}`); if (!row) continue;
+      const done = !!wkState.doneSets[`${ei}-${si}`];
+      const v = done ? e1rm((parseFloat(document.getElementById(`w-${ei}-${si}`)?.value) || 0) + extra, parseInt(document.getElementById(`r-${ei}-${si}`)?.value) || 0) : 0;
+      const isPR = done && base > 0 && v > run + 0.01;
+      row.classList.toggle('pr', isPR);
+      if (done) run = Math.max(run, v);
+    }
+  });
+}
+
 function seanceProgressLabel() {
   const p = seanceProgress();
   return `${p.pct} % · ${p.done}/${p.total} séries`;
@@ -1399,7 +1531,7 @@ function saveWorkout(validatedOnly = false) {
   if (_savingWorkout) return;
   const mg   = wkState.muscleGroup;
   const wt   = wkState.weekType;
-  const exos = WORKOUT_PLAN[mg][wt];
+  const exos = sessionExos(mg, wt);
   const val  = (id, f) => f(document.getElementById(id)?.value) || 0;
   const filledNotDone = exos.reduce((t, ex, ei) => t + Array.from({ length: ex.sets }, (_, si) =>
     !wkState.doneSets[`${ei}-${si}`] && val(`w-${ei}-${si}`, parseFloat) > 0 && val(`r-${ei}-${si}`, parseInt) > 0).filter(Boolean).length, 0);
@@ -1409,6 +1541,22 @@ function saveWorkout(validatedOnly = false) {
   }
   _savingWorkout = true;
   setTimeout(() => { _savingWorkout = false; }, 3000);
+  // Pour le bilan : couleurs des séries (vs la dernière fois) et records, lus avant de quitter l'écran
+  const summary = { up: 0, same: 0, down: 0, fresh: 0, records: [] };
+  exos.forEach((ex, ei) => {
+    const extra = BODYWEIGHT_SLUGS.includes(EXO_MEDIA[ex.name]) ? bodyWeight() : 0;
+    for (let si = 0; si < ex.sets; si++) {
+      if (!wkState.doneSets[`${ei}-${si}`]) continue;
+      const t = setTone(ei, si); summary[t || 'fresh']++;
+      if (document.getElementById(`set-row-${ei}-${si}`)?.classList.contains('pr')) {
+        const w = val(`w-${ei}-${si}`, parseFloat), r = val(`r-${ei}-${si}`, parseInt);
+        const prev = summary.records.find(x => x.name === ex.name);
+        const rec = { name: ex.name, w, r, e1: e1rm(w + extra, r), before: wkState.prBest?.[ei] || 0 };
+        if (!prev) summary.records.push(rec); else if (rec.e1 > prev.e1) Object.assign(prev, rec);
+      }
+    }
+  });
+  const lastSame = getLastSession(mg, wt);
   const date = document.getElementById('wk-date')?.value || todayStr();
   const notes= document.getElementById('wk-notes')?.value||'';
   const exercises = exos.map((ex,ei)=>({
@@ -1431,9 +1579,9 @@ function saveWorkout(validatedOnly = false) {
   exercises.forEach(ex => {
     ex.sets.forEach(set => {
       if (!set.weight || !set.reps) return;
-      const score = set.weight * set.reps;
+      const score = e1rm(set.weight, set.reps);
       const prev = S.prs[ex.name];
-      if (!prev || score > (prev.weight * prev.reps)) {
+      if (!prev || score > e1rm(prev.weight, prev.reps)) {
         S.prs[ex.name] = { weight: set.weight, reps: set.reps, date };
         newPRs.push(`${ex.name} — ${set.weight}kg × ${set.reps}`);
       }
@@ -1445,12 +1593,51 @@ function saveWorkout(validatedOnly = false) {
   saveBackup('séance');
   clearWkDraft();
   haptic([40, 30, 80]);
-  if (newPRs.length) {
-    setTimeout(() => showToast(`🏆 PR : ${newPRs[0]}`), 600);
-  }
-  showToast(`${WORKOUT_PLAN[mg].label} · ${fmtVol(totalVolume)} kg · ${formatDur(duration)}`);
-  wkState.muscleGroup = null;
+  wkState.muscleGroup = null; wkState.override = null;
   navigate('dashboard');
+  const doneSets = exercises.reduce((t, e) => t + e.sets.filter(x => x.weight > 0 && x.reps > 0).length, 0);
+  showSessionSummary({ mg, wt, date, totalVolume, duration, doneSets, totalSets: exos.reduce((t, e) => t + e.sets, 0),
+    lastVolume: lastSame?.totalVolume || 0, ...summary });
+}
+
+// Bilan de fin de séance
+function showSessionSummary(r) {
+  const n = r.up + r.same + r.down + r.fresh || 1;
+  const seg = (k, c) => r[k] ? `<i class="sum-seg ${c}" style="flex:${r[k]}"></i>` : '';
+  const volDelta = r.lastVolume ? Math.round((r.totalVolume - r.lastVolume) / r.lastVolume * 100) : null;
+  const weekN = weekDoneCount();
+  const [ng, nv] = nextPPLSession();
+  showModal(`
+    <div class="sum-head">
+      <span class="sum-check" aria-hidden="true">${ICON_CHECK}</span>
+      <div><div class="modal-title">Séance enregistrée</div><div class="modal-sub">${sessionTitle(r.mg, r.wt)} · ${WORKOUT_PLAN[r.mg].focus?.[r.wt] || ''} · ${formatDate(r.date)}</div></div>
+    </div>
+    <div class="sum-tiles">
+      <div><small>Volume</small><b>${(r.totalVolume / 1000).toFixed(1).replace('.', ',')} <em>t</em></b>${volDelta === null ? '<span class="dpill">1re fois</span>' : deltaPill(volDelta)}</div>
+      <div><small>Durée</small><b>${r.duration ? formatDur(r.duration) : '—'}</b><span class="sum-tile-s">chrono</span></div>
+      <div><small>Séries</small><b>${r.doneSets}<em> / ${r.totalSets}</em></b><span class="sum-tile-s">validées</span></div>
+    </div>
+    <div class="sum-block">
+      <div class="sum-bar">${seg('up', 'up')}${seg('same', 'same')}${seg('down', 'down')}${seg('fresh', 'fresh')}</div>
+      <div class="sum-legend">
+        ${r.up ? `<span><i class="up"></i>${r.up} plus lourd${r.up > 1 ? 'es' : 'e'}</span>` : ''}
+        ${r.same ? `<span><i class="same"></i>${r.same} même poids</span>` : ''}
+        ${r.down ? `<span><i class="down"></i>${r.down} moins lourd${r.down > 1 ? 'es' : 'e'}</span>` : ''}
+        ${r.fresh ? `<span><i class="fresh"></i>${r.fresh} sans référence</span>` : ''}
+      </div>
+    </div>
+    ${r.records.length ? `
+    <div class="sum-block">
+      <div class="sum-title">🏆 ${r.records.length} record${r.records.length > 1 ? 's' : ''}</div>
+      ${r.records.map(x => `<div class="sum-rec"><span>${x.name}</span><b>${String(x.w).replace('.', ',')} kg × ${x.r}</b><small>1RM ≈ ${Math.round(x.e1)} kg${x.before ? ` · +${Math.round(x.e1 - x.before)} kg` : ''}</small></div>`).join('')}
+    </div>` : ''}
+    <div class="sum-block">
+      <div class="sum-week"><span>Semaine ${weekLetter()}</span><b>${weekN} <em>/ 6</em></b></div>
+      <span class="prog"><i style="width:${Math.min(100, weekN / 6 * 100).toFixed(1)}%"></i></span>
+      <div class="sum-next">${weekN >= 6 ? 'Semaine bouclée, bravo !' : `Prochaine séance : <b>${sessionTitle(ng, nv)}</b>`}</div>
+    </div>
+    <button class="btn btn-primary" onclick="closeModal()">Fermer</button>
+  `);
 }
 
 // ============================================================
@@ -1483,7 +1670,7 @@ function draftInfo() {
   try {
     const d = JSON.parse(localStorage.getItem(WK_DRAFT_KEY) || 'null');
     if (!d || !WORKOUT_PLAN[d.mg]?.[d.wt]) return null;
-    const total = WORKOUT_PLAN[d.mg][d.wt].reduce((t, e) => t + e.sets, 0);
+    const total = (Array.isArray(d.override) ? d.override : WORKOUT_PLAN[d.mg][d.wt]).reduce((t, e) => t + e.sets, 0);
     const done = Array.isArray(d.done) ? d.done.length : Object.values(d.inputs || {}).filter(v => parseFloat(v.w) > 0 && parseInt(v.r) > 0).length;
     if (!done) return null;
     return { ...d, done, total, pct: Math.round(done / total * 100), ts: d._ts || Date.now() };
@@ -1552,7 +1739,7 @@ function askCancelSeance(info) {
 }
 function confirmCancelSeance() {
   clearWkDraft(); stopWkTimer(); stopTimer();
-  wkState.muscleGroup = null; wkState.openKey = null; wkState.doneSets = {};
+  wkState.muscleGroup = null; wkState.openKey = null; wkState.doneSets = {}; wkState.override = null;
   closeModal(); navigate('dashboard');
   haptic([20, 40, 20]);
   showToast('Séance annulée');
@@ -3005,7 +3192,7 @@ function openSessionDetail(id) {
       const ev=ex.sets.reduce((t,ss)=>t+(ss.weight*ss.reps),0);
       return `<div class="detail-ex">
         <div class="detail-name">${ex.name} <span class="t3" style="font-size:11px;font-weight:600">· ${fmtVol(ev)} kg</span></div>
-        <div>${ex.sets.map((ss,i)=>`<span class="detail-tag">S${i+1} ${ss.weight} kg × ${ss.reps}</span>`).join('')}</div>
+        <div>${ex.sets.filter(ss => ss.weight > 0 || ss.reps > 0).length ? ex.sets.map((ss,i)=> (ss.weight > 0 || ss.reps > 0) ? `<span class="detail-tag">S${i+1} ${String(ss.weight).replace('.', ',')} kg × ${ss.reps}</span>` : '').join('') : '<span class="detail-tag">Non fait</span>'}</div>
       </div>`;
     }).join('')}
     ${s.notes?`<div class="t3 mt-12" style="font-size:12px;padding:10px;background:var(--surface2);border-radius:var(--r-xs);border:1px solid var(--border)">${s.notes}</div>`:''}
@@ -3852,6 +4039,8 @@ const ICON_DROP     = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor
 const ICON_SCALE    = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="5" y="5" width="22" height="22" rx="6"/><path d="M11 13a7 7 0 0 1 10 0M16 13l2-3"/></svg>';
 const ICON_RUN      = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="19" cy="6" r="2.5"/><path d="M12 14l4-4 4 3 3 1M16 10l-2 7 5 4v6M14 17l-4 5H6"/></svg>';
 const ICON_CLOUD    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 9.6 4.2 4.2 0 0 0 7 18z"/></svg>';
+const ICON_SWAP     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4 3 8l4 4M3 8h13M17 20l4-4-4-4M21 16H8"/></svg>';
+const ICON_LATER    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>';
 const ICON_PERSON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
 
 function viewHead(title, { kicker = '', left = '', right = '' } = {}) {

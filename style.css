@@ -1906,3 +1906,77 @@ body.in-seance .bottom-nav { display: none; }
 }
 .cancel-seance:active { background: #FDECEE; }
 .cancel-warn { font-size: 13.5px; color: var(--t2); line-height: 1.5; margin: 0 0 14px; }
+
+/* ============================================================
+   33. CHANGER D'EXERCICE · RECORD EN DIRECT · BILAN
+   ============================================================ */
+.modal-sub { font-size: 13px; color: var(--t2); margin-top: 3px; line-height: 1.35; }
+.ex-last-btns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.tool-chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface);
+  font-size: 13px; font-weight: 600; color: var(--t1); cursor: pointer; white-space: nowrap;
+}
+.tool-chip svg { width: 14px; height: 14px; }
+
+.change-later {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px;
+  border: none; border-radius: 16px; background: var(--surface2); text-align: left; color: inherit; cursor: pointer;
+}
+.change-later:disabled { opacity: .45; cursor: default; }
+.change-later-i { width: 40px; height: 40px; border-radius: 12px; background: var(--surface); display: grid; place-items: center; flex-shrink: 0; }
+.change-later-i svg { width: 20px; height: 20px; }
+.change-later b, .change-row b { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; }
+.change-later small, .change-row small { display: block; font-size: 12px; color: var(--t2); margin-top: 2px; line-height: 1.35; }
+.change-warn { font-size: 13px; color: var(--red); margin: 0 0 8px; }
+.change-list { display: flex; flex-direction: column; gap: 8px; }
+.change-row {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px;
+  border: none; border-radius: 16px; background: var(--surface); box-shadow: 0 0 0 1px var(--border);
+  text-align: left; color: inherit; cursor: pointer;
+}
+.change-row:active { background: var(--surface2); }
+.change-row .th { width: 52px; height: 52px; border-radius: 12px; }
+.change-row-b { flex: 1; min-width: 0; }
+.change-note { font-size: 12px; color: var(--t3); margin-top: 12px; }
+
+/* Record en direct : pastille sur la série */
+.set-card { position: relative; }
+.set-card.pr::after {
+  content: "🏆 Record"; position: absolute; top: -9px; right: 54px;
+  height: 18px; line-height: 18px; padding: 0 8px; border-radius: var(--r-pill);
+  background: var(--ink); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .01em; white-space: nowrap;
+}
+
+/* Bilan de fin de séance */
+.sum-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.sum-check { width: 44px; height: 44px; border-radius: 50%; background: var(--set-up); color: #0A0A0A; display: grid; place-items: center; flex-shrink: 0; }
+.sum-check svg { width: 22px; height: 22px; }
+.sum-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+.sum-tiles > div { background: var(--surface2); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.sum-tiles small { font-size: 11px; color: var(--t2); font-weight: 500; }
+.sum-tiles b { font-size: 19px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sum-tiles b em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--t2); }
+.sum-tile-s { font-size: 11px; color: var(--t3); }
+.sum-block { background: var(--surface2); border-radius: 16px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+.sum-bar { display: flex; gap: 3px; height: 12px; border-radius: 12px; overflow: hidden; }
+.sum-seg { display: block; height: 100%; border-radius: 3px; }
+.sum-seg.up { background: var(--set-up); } .sum-seg.same { background: var(--set-same); }
+.sum-seg.down { background: var(--set-down); } .sum-seg.fresh { background: #CFCFCF; }
+.sum-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--t2); }
+.sum-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.sum-legend i { width: 9px; height: 9px; border-radius: 3px; }
+.sum-legend i.up { background: var(--set-up); } .sum-legend i.same { background: var(--set-same); }
+.sum-legend i.down { background: var(--set-down); } .sum-legend i.fresh { background: #CFCFCF; }
+.sum-title { font-size: 14px; font-weight: 700; }
+.sum-rec { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; padding-top: 6px; border-top: 1px solid var(--border); }
+.sum-rec:first-of-type { border-top: none; padding-top: 0; }
+.sum-rec span { font-size: 13px; font-weight: 600; line-height: 1.3; min-width: 0; }
+.sum-rec b { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sum-rec small { grid-column: 1 / -1; font-size: 11.5px; color: var(--t2); }
+.sum-week { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.sum-week b { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sum-week b em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--t2); }
+.sum-next { font-size: 13px; color: var(--t2); }
+.sum-next b { color: var(--t1); }
+@media (max-width: 360px) { .sum-tiles b { font-size: 16px; } .tool-chip { padding: 0 10px; } }

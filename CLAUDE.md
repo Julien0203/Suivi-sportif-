@@ -46,6 +46,8 @@ App de suivi musculation & course à pied (PWA perso, en français).
 - Sauvegardes de secours IndexedDB (`tempo-backups`, 10 copies, après chaque séance + 1/jour), restauration auto si le stockage est vidé (`initBackups()`), liste dans Profil
 - Brouillon de séance : 72 h, séries validées et chrono conservés, date d'origine gardée ; réouverture > 2 h → proposition d'enregistrer (`checkForgottenOnOpen()`)
 - Enregistrement : seules les séries validées, sauf confirmation pour les séries remplies non validées
+- Séance modifiable en cours (`sessionExos()` : remplacement / « faire plus tard », stocké dans le brouillon `override`) — toujours passer par `sessionExos()` / `curExos()`, jamais `WORKOUT_PLAN[mg][wt]` directement
+- Records : comparés au 1RM estimé (Epley), en direct (`markRecords()`) et à l'enregistrement (`S.prs`)
 - Notifications via le service worker uniquement (`showLocalNotif()`, iOS 16.4+ app installée), permission demandée sur geste ; séance à 100 % non enregistrée → notif en quittant
 
 ## Contraintes
