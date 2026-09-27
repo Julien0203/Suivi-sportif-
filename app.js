@@ -6,80 +6,185 @@
 // 1. DONNÉES
 // ============================================================
 
-// Programme PPL (Push / Pull / Legs) × 2 variantes A/B, en rotation continue.
-// Chaque exercice : { name, sets, reps (plage cible), rest }.
+// Programme PPL : 6 séances différentes par semaine (Push 1, Pull 1, Legs 1, Push 2, Pull 2, Legs 2),
+// et une semaine A / une semaine B aux exercices différents, qui alternent d'après la date.
+// Clés de séance : 'A1', 'A2', 'B1', 'B2' (lettre = semaine, chiffre = 1re ou 2e séance du groupe).
+// Chaque exercice : { name, img (illustration dans img/exos/), sets, reps (plage cible), rest }.
 const WORKOUT_PLAN = {
   push: {
-    label: 'Push', short: 'PU', color: '#FF375F',
-    A: [
-      { name: 'Développé couché barre ou Smith',        sets: 4, reps: '5-8',   rest: '2-3 min' },
-      { name: 'Développé épaules machine convergente',  sets: 3, reps: '8-12',  rest: '2-3 min' },
-      { name: 'Développé incliné haltères',             sets: 3, reps: '8-12',  rest: '2-3 min' },
-      { name: 'Écartés poulie basse',                   sets: 3, reps: '12-15', rest: '60-90 s' },
-      { name: 'Élévations latérales poulie',            sets: 3, reps: '12-20', rest: '60-90 s' },
-      { name: 'Extensions triceps overhead poulie',     sets: 3, reps: '10-15', rest: '60-90 s' }
+    label: 'Push', short: 'PU', color: '#0A0A0A',
+    focus: { A1: 'Pecs lourds', A2: 'Épaules et haut des pecs', B1: 'Pecs aux haltères', B2: 'Guidé et poulies' },
+    A1: [
+      { name: 'Développé couché barre', img: 'dc-barre', sets: 4, reps: '5-8', rest: '2-3 min' },
+      { name: 'Développé incliné haltères', img: 'di-halteres', sets: 3, reps: '8-12', rest: '2 min' },
+      { name: 'Développé épaules haltères', img: 'de-halteres', sets: 3, reps: '8-12', rest: '2 min' },
+      { name: 'Écarté poulie vis-à-vis', img: 'ecarte-vis-a-vis', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Élévations latérales haltères', img: 'lat-halteres', sets: 4, reps: '12-20', rest: '60-90 s' },
+      { name: 'Extension triceps poulie haute corde', img: 'tri-corde', sets: 3, reps: '10-15', rest: '60-90 s' }
     ],
-    B: [
-      { name: 'Développé militaire barre/machine',      sets: 4, reps: '5-8',   rest: '2-3 min' },
-      { name: 'Développé couché haltères',              sets: 3, reps: '8-12',  rest: '2-3 min' },
-      { name: 'Dips lestés/machine',                    sets: 3, reps: '8-12',  rest: '2-3 min' },
-      { name: 'Élévations latérales haltères',          sets: 3, reps: '12-20', rest: '60-90 s' },
-      { name: 'Pec deck',                               sets: 3, reps: '12-15', rest: '60-90 s' },
-      { name: 'Barre au front EZ/extensions corde',     sets: 3, reps: '10-12', rest: '60-90 s' }
+    A2: [
+      { name: 'Développé épaules machine', img: 'de-machine', sets: 4, reps: '6-10', rest: '2-3 min' },
+      { name: 'Développé incliné machine convergente', img: 'di-machine', sets: 3, reps: '8-12', rest: '2 min' },
+      { name: 'Dips pectoraux', img: 'dips', sets: 3, reps: '8-12', rest: '2 min' },
+      { name: 'Élévations latérales poulie', img: 'lat-poulie', sets: 4, reps: '12-20', rest: '60-90 s' },
+      { name: 'Écarté unilatéral poulie', img: 'ecarte-unilateral', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Barre au front', img: 'barre-front', sets: 3, reps: '8-12', rest: '90 s' },
+      { name: 'Extension triceps nuque poulie basse', img: 'tri-nuque-poulie', sets: 2, reps: '12-15', rest: '60 s' }
+    ],
+    B1: [
+      { name: 'Développé couché haltères', img: 'dc-halteres', sets: 4, reps: '6-10', rest: '2-3 min' },
+      { name: 'Développé incliné barre', img: 'di-barre', sets: 3, reps: '6-10', rest: '2-3 min' },
+      { name: 'Développé Arnold', img: 'arnold', sets: 3, reps: '8-12', rest: '2 min' },
+      { name: 'Écarté couché haltères', img: 'ecarte-halteres', sets: 3, reps: '10-15', rest: '60-90 s' },
+      { name: 'Élévations latérales machine', img: 'lat-machine', sets: 4, reps: '12-20', rest: '60-90 s' },
+      { name: 'Extension triceps poulie haute', img: 'tri-poulie', sets: 3, reps: '10-15', rest: '60-90 s' }
+    ],
+    B2: [
+      { name: 'Développé couché Smith machine', img: 'dc-smith', sets: 4, reps: '6-10', rest: '2-3 min' },
+      { name: 'Développé épaules Smith machine', img: 'de-smith', sets: 3, reps: '8-12', rest: '2 min' },
+      { name: 'Développé incliné poulie', img: 'di-poulie', sets: 3, reps: '10-12', rest: '90 s' },
+      { name: 'Écarté poulie vis-à-vis', img: 'ecarte-vis-a-vis', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Élévations latérales buste incliné', img: 'lat-incline', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Extension triceps assis haltère', img: 'tri-assis', sets: 3, reps: '10-12', rest: '90 s' },
+      { name: 'Tate press', img: 'tate-press', sets: 2, reps: '10-12', rest: '60 s' }
     ]
   },
   pull: {
-    label: 'Pull', short: 'PL', color: '#0A84FF',
-    A: [
-      { name: 'Tirage vertical neutre/tractions lestées', sets: 4, reps: '6-10',  rest: '2-3 min' },
-      { name: 'Rowing machine convergente',             sets: 4, reps: '8-12',  rest: '2-3 min' },
-      { name: 'Pullover poulie haute',                  sets: 3, reps: '12-15', rest: '60-90 s' },
-      { name: 'Face pulls',                             sets: 3, reps: '15-20', rest: '60-90 s' },
-      { name: 'Curl incliné haltères',                  sets: 3, reps: '8-12',  rest: '60-90 s' },
-      { name: 'Curl poulie basse',                      sets: 2, reps: '12-15', rest: '60-90 s' }
+    label: 'Pull', short: 'PL', color: '#6E6E6E',
+    focus: { A1: 'Largeur du dos', A2: 'Épaisseur du dos', B1: 'Tirages et rowings', B2: 'Prises variées' },
+    A1: [
+      { name: 'Tractions', img: 'tractions', sets: 4, reps: '6-10', rest: '2-3 min' },
+      { name: 'Rowing barre', img: 'rowing-barre', sets: 4, reps: '6-10', rest: '2-3 min' },
+      { name: 'Tirage horizontal poulie', img: 'tirage-horizontal', sets: 3, reps: '10-12', rest: '90 s' },
+      { name: 'Oiseau à la poulie', img: 'oiseau-poulie', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Curl barre', img: 'curl-barre', sets: 3, reps: '8-12', rest: '60-90 s' },
+      { name: 'Curl marteau haltères', img: 'curl-marteau', sets: 3, reps: '10-12', rest: '60-90 s' },
+      { name: 'Relevé de genoux suspendu', img: 'releve-genoux', sets: 3, reps: '10-15', rest: '60 s' }
     ],
-    B: [
-      { name: 'SDT roumain/rack pulls',                 sets: 3, reps: '5-8',   rest: '2-3 min' },
-      { name: 'Tirage vertical prise large',            sets: 3, reps: '8-12',  rest: '2-3 min' },
-      { name: 'Rowing haltère unilatéral',              sets: 3, reps: '10-12', rest: '60-90 s' },
-      { name: 'Shrugs haltères/Smith',                  sets: 3, reps: '10-15', rest: '60-90 s' },
-      { name: 'Curl pupitre machine',                   sets: 3, reps: '8-12',  rest: '60-90 s' },
-      { name: 'Curl marteau haltères assis',            sets: 2, reps: '12-15', rest: '60-90 s' }
+    A2: [
+      { name: 'Tirage vertical prise serrée', img: 'tv-serre', sets: 4, reps: '8-12', rest: '2 min' },
+      { name: 'Rowing machine Hammer Strength', img: 'rowing-hammer', sets: 4, reps: '8-12', rest: '2 min' },
+      { name: 'Pull-over poulie', img: 'pullover-poulie', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Face pull', img: 'face-pull', sets: 3, reps: '15-20', rest: '60 s' },
+      { name: 'Curl haltères banc incliné', img: 'curl-incline', sets: 3, reps: '8-12', rest: '60-90 s' },
+      { name: 'Curl pupitre barre EZ', img: 'curl-pupitre', sets: 2, reps: '10-12', rest: '60-90 s' }
+    ],
+    B1: [
+      { name: 'Tirage vertical prise large', img: 'tv-large', sets: 4, reps: '8-12', rest: '2 min' },
+      { name: 'Rowing haltères banc incliné', img: 'rowing-banc-incline', sets: 4, reps: '8-12', rest: '2 min' },
+      { name: 'Rowing machine prise pronation', img: 'rowing-pronation', sets: 3, reps: '10-12', rest: '90 s' },
+      { name: 'Élévation en Y à la poulie', img: 'y-raise', sets: 3, reps: '12-15', rest: '60 s' },
+      { name: 'Curl haltères alterné', img: 'curl-alterne', sets: 3, reps: '8-12', rest: '60-90 s' },
+      { name: 'Curl poulie basse', img: 'curl-poulie', sets: 2, reps: '12-15', rest: '60 s' },
+      { name: 'Sit-up décliné', img: 'situp-decline', sets: 3, reps: '10-15', rest: '60 s' }
+    ],
+    B2: [
+      { name: 'Tirage vertical prise inversée', img: 'tv-inverse', sets: 4, reps: '6-10', rest: '2 min' },
+      { name: 'Tirage horizontal prise large', img: 'th-large', sets: 4, reps: '8-12', rest: '2 min' },
+      { name: 'Tirage vertical banc incliné', img: 'tv-incline', sets: 3, reps: '10-12', rest: '90 s' },
+      { name: 'Oiseau à la poulie', img: 'oiseau-poulie', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Curl marteau au pupitre', img: 'curl-marteau-pupitre', sets: 3, reps: '10-12', rest: '60-90 s' },
+      { name: 'Curl concentré', img: 'curl-concentre', sets: 2, reps: '12-15', rest: '60 s' }
     ]
   },
   legs: {
-    label: 'Legs', short: 'LE', color: '#BF5AF2',
-    A: [
-      { name: 'Squat barre ou pendulum/hack',           sets: 4, reps: '5-8',   rest: '2-3 min' },
-      { name: 'Presse à cuisses',                       sets: 3, reps: '8-12',  rest: '2-3 min' },
-      { name: 'Leg curl assis',                         sets: 4, reps: '10-15', rest: '60-90 s' },
-      { name: 'Leg extension',                          sets: 3, reps: '12-15', rest: '60-90 s' },
-      { name: 'Mollets debout',                         sets: 4, reps: '10-15', rest: '60-90 s' },
-      { name: 'Crunch poulie haute',                    sets: 3, reps: '10-15', rest: '60-90 s' }
+    label: 'Legs', short: 'LE', color: '#ABABAB',
+    focus: { A1: 'Quadriceps', A2: 'Ischios et fessiers', B1: 'Quadriceps guidés', B2: 'Chaîne postérieure' },
+    A1: [
+      { name: 'Squat barre', img: 'squat-barre', sets: 4, reps: '5-8', rest: '2-3 min' },
+      { name: 'Presse à cuisses 45°', img: 'presse-45', sets: 3, reps: '8-12', rest: '2 min' },
+      { name: 'Leg extension', img: 'leg-extension', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Leg curl assis', img: 'leg-curl-assis', sets: 4, reps: '10-15', rest: '60-90 s' },
+      { name: 'Hip thrust machine', img: 'hip-thrust', sets: 3, reps: '8-12', rest: '90 s' },
+      { name: 'Mollets debout barre', img: 'mollets-debout', sets: 4, reps: '10-15', rest: '60 s' },
+      { name: 'Crunch machine', img: 'crunch-machine', sets: 3, reps: '10-15', rest: '60 s' }
     ],
-    B: [
-      { name: 'Hack squat/squat bulgare',               sets: 4, reps: '6-10',  rest: '2-3 min' },
-      { name: 'SDT roumain haltères',                   sets: 3, reps: '8-12',  rest: '2-3 min' },
-      { name: 'Leg extension',                          sets: 3, reps: '12-15', rest: '60-90 s' },
-      { name: 'Leg curl assis',                         sets: 3, reps: '10-15', rest: '60-90 s' },
-      { name: 'Adducteurs machine',                     sets: 2, reps: '12-15', rest: '60-90 s' },
-      { name: 'Mollets assis',                          sets: 4, reps: '12-20', rest: '60-90 s' }
+    A2: [
+      { name: 'Hack squat', img: 'hack-squat', sets: 4, reps: '6-10', rest: '2-3 min' },
+      { name: 'Soulevé de terre roumain', img: 'sdt-roumain', sets: 3, reps: '8-10', rest: '2-3 min' },
+      { name: 'Leg curl allongé', img: 'leg-curl-allonge', sets: 3, reps: '10-12', rest: '60-90 s' },
+      { name: 'Leg extension', img: 'leg-extension', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Extension de hanche machine', img: 'ext-hanche', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Mollets presse assis', img: 'mollets-assis-presse', sets: 4, reps: '12-20', rest: '60 s' },
+      { name: 'Relevé de jambes chaise romaine', img: 'releve-chaise', sets: 3, reps: '10-15', rest: '60 s' }
+    ],
+    B1: [
+      { name: 'Squat Smith machine', img: 'squat-smith', sets: 4, reps: '6-10', rest: '2-3 min' },
+      { name: 'Presse à cuisses 45°', img: 'presse-45', sets: 3, reps: '10-12', rest: '2 min' },
+      { name: 'Leg extension', img: 'leg-extension', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Leg curl assis', img: 'leg-curl-assis', sets: 4, reps: '10-15', rest: '60-90 s' },
+      { name: 'Hip thrust machine', img: 'hip-thrust', sets: 4, reps: '8-12', rest: '90 s' },
+      { name: 'Mollets presse 45°', img: 'mollets-presse', sets: 4, reps: '10-15', rest: '60 s' },
+      { name: 'Crunch au sol', img: 'crunch-sol', sets: 3, reps: '15-20', rest: '60 s' }
+    ],
+    B2: [
+      { name: 'Soulevé de terre', img: 'sdt', sets: 3, reps: '4-6', rest: '3 min' },
+      { name: 'Presse à cuisses verticale', img: 'presse-verticale', sets: 3, reps: '10-12', rest: '2 min' },
+      { name: 'Leg curl allongé', img: 'leg-curl-allonge', sets: 4, reps: '8-12', rest: '60-90 s' },
+      { name: 'Leg extension', img: 'leg-extension', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Extension de hanche machine', img: 'ext-hanche', sets: 3, reps: '12-15', rest: '60-90 s' },
+      { name: 'Mollets assis barre', img: 'mollets-assis-barre', sets: 4, reps: '12-20', rest: '60 s' },
+      { name: 'Relevé de genoux suspendu', img: 'releve-genoux', sets: 3, reps: '10-15', rest: '60 s' }
     ]
   }
 };
 
+// Repos conseillé en secondes (borne basse) : '2-3 min' → 120, '90 s' → 90
+function restSeconds(rest) {
+  const n = parseInt(String(rest).match(/\d+/)?.[0] || '90', 10);
+  return /min/.test(rest) ? n * 60 : n;
+}
+
 const MUSCLE_KEYS = ['push', 'pull', 'legs'];
 // Rotation continue des 6 séances (Push A → Pull A → Legs A → Push B → Pull B → Legs B → …)
-const PPL_SEQUENCE = [['push','A'], ['pull','A'], ['legs','A'], ['push','B'], ['pull','B'], ['legs','B']];
+// Semaine en cours : 6 séances à la suite. La lettre A/B se déduit de la date (parité de la semaine).
+const WEEK_SLOTS = [['push', 1], ['pull', 1], ['legs', 1], ['push', 2], ['pull', 2], ['legs', 2]];
+const SESSION_KEYS = ['A1', 'A2', 'B1', 'B2'];
+
+// Illustrations : nom d'exercice → fichier (img/exos/<slug>.jpg image fixe, .mp4 animation en boucle).
+// Anciens noms (programmes précédents) rattachés à l'illustration la plus proche pour l'historique.
+const EXO_MEDIA = {
+  'Développé couché barre ou Smith': 'dc-barre', 'Développé épaules machine convergente': 'de-machine',
+  'Écartés poulie basse': 'ecarte-vis-a-vis', 'Extensions triceps overhead poulie': 'tri-nuque-poulie',
+  'Développé militaire barre/machine': 'de-machine', 'Dips lestés/machine': 'dips', 'Pec deck': 'ecarte-vis-a-vis',
+  'Barre au front EZ/extensions corde': 'barre-front', 'Tirage vertical neutre/tractions lestées': 'tv-serre',
+  'Rowing machine convergente': 'rowing-hammer', 'Pullover poulie haute': 'pullover-poulie', 'Face pulls': 'face-pull',
+  'Curl incliné haltères': 'curl-incline', 'SDT roumain/rack pulls': 'sdt-roumain', 'Rowing haltère unilatéral': 'rowing-banc-incline',
+  'Curl pupitre machine': 'curl-pupitre', 'Curl marteau haltères assis': 'curl-marteau', 'Squat barre ou pendulum/hack': 'squat-barre',
+  'Presse à cuisses': 'presse-45', 'Mollets debout': 'mollets-debout', 'Crunch poulie haute': 'crunch-machine',
+  'Hack squat/squat bulgare': 'hack-squat', 'SDT roumain haltères': 'sdt-roumain', 'Mollets assis': 'mollets-assis-presse'
+};
+MUSCLE_KEYS.forEach(g => SESSION_KEYS.forEach(v => WORKOUT_PLAN[g][v].forEach(ex => { EXO_MEDIA[ex.name] = ex.img; })));
+function exoImg(name)   { const s = EXO_MEDIA[name]; return s ? `img/exos/${s}.jpg` : null; }
+function exoVideo(name) { const s = EXO_MEDIA[name]; return s ? `img/exos/${s}.mp4` : null; }
+
+// Même exercice sous un ancien nom : sert à retrouver ta dernière perf après le changement de programme
+const PREV_ALIASES = {
+  'Développé couché barre': ['Développé couché barre ou Smith'],
+  'Développé épaules machine': ['Développé épaules machine convergente'],
+  'Dips pectoraux': ['Dips lestés/machine'],
+  'Barre au front': ['Barre au front EZ/extensions corde'],
+  'Rowing machine Hammer Strength': ['Rowing machine convergente'],
+  'Pull-over poulie': ['Pullover poulie haute'],
+  'Face pull': ['Face pulls'],
+  'Curl haltères banc incliné': ['Curl incliné haltères'],
+  'Curl marteau haltères': ['Curl marteau haltères assis'],
+  'Soulevé de terre roumain': ['SDT roumain/rack pulls'],
+  'Squat barre': ['Squat barre ou pendulum/hack'],
+  'Presse à cuisses 45°': ['Presse à cuisses'],
+  'Hack squat': ['Hack squat/squat bulgare'],
+  'Mollets debout barre': ['Mollets debout'],
+  'Mollets presse assis': ['Mollets assis']
+};
 
 // Anciens groupes (split 5 muscles) — pour que l'historique et les stats des
 // séances déjà enregistrées restent lisibles après le passage au PPL.
 const LEGACY_GROUPS = {
-  bras:    { label: 'Bras',      short: 'BR', color: '#FF375F' },
-  pec:     { label: 'Pectoraux', short: 'PE', color: '#FF9F0A' },
-  dos:     { label: 'Dos',       short: 'DO', color: '#0A84FF' },
-  epaules: { label: 'Épaules',   short: 'EP', color: '#30D158' },
-  jambes:  { label: 'Jambes',    short: 'JA', color: '#BF5AF2' }
+  bras:    { label: 'Bras',      short: 'BR', color: '#0A0A0A' },
+  pec:     { label: 'Pectoraux', short: 'PE', color: '#4A4A4A' },
+  dos:     { label: 'Dos',       short: 'DO', color: '#6E6E6E' },
+  epaules: { label: 'Épaules',   short: 'EP', color: '#8E8E8E' },
+  jambes:  { label: 'Jambes',    short: 'JA', color: '#ABABAB' }
 };
 function groupLabel(k) { return WORKOUT_PLAN[k]?.label || LEGACY_GROUPS[k]?.label || k; }
 function groupColor(k) { return WORKOUT_PLAN[k]?.color || LEGACY_GROUPS[k]?.color || '#8E8E93'; }
@@ -145,6 +250,8 @@ function _syncRef() {
 }
 
 function _updateSyncBtn() {
+  const av = document.getElementById('av-btn');
+  if (av) av.outerHTML = avatarBtn();
   const btn = document.getElementById('sync-btn');
   if (!btn) return;
   if (currentUser?.photoURL) {
@@ -344,15 +451,50 @@ function getLastSession(mg, wt) {
   return S.workouts.filter(w => w.muscleGroup===mg && w.weekType===wt).sort((a,b) => b.date.localeCompare(a.date))[0] || null;
 }
 
-// Prochaine séance PPL : on avance d'un cran dans la rotation à partir de la
-// dernière séance PPL enregistrée. Renvoie [group, variant] (ex. ['pull','A']).
+// Lettre de la semaine (A/B) d'après la date : parité du numéro de semaine, sans choix manuel.
+function weekLetter(date = new Date()) { return weekIndex(getWeekKey(date)) % 2 === 0 ? 'A' : 'B'; }
+// Les 6 séances de la semaine, dans l'ordre : [['push','A1'], ['pull','A1'], …, ['legs','A2']]
+function weekSessions(letter = weekLetter()) { return WEEK_SLOTS.map(([g, n]) => [g, letter + n]); }
+function doneThisWeek() {
+  const wk = thisWeekKey();
+  return S.workouts.filter(w => w.weekKey === wk && MUSCLE_KEYS.includes(w.muscleGroup));
+}
+function isSessionDone(g, v) { return doneThisWeek().some(w => w.muscleGroup === g && w.weekType === v); }
+function weekDoneCount() { return weekSessions().filter(([g, v]) => isSessionDone(g, v)).length; }
+
+// Prochaine séance : celle qui suit la dernière faite cette semaine (une séance sautée ne décale rien).
+// Semaine bouclée : on repart de la 1re séance. Renvoie [groupe, séance] (ex. ['pull', 'B1']).
 function nextPPLSession() {
-  const last = S.workouts
-    .filter(w => MUSCLE_KEYS.includes(w.muscleGroup))
-    .sort((a,b) => b.date.localeCompare(a.date))[0];
-  if (!last) return PPL_SEQUENCE[0];
-  const idx = PPL_SEQUENCE.findIndex(([g,v]) => g === last.muscleGroup && v === last.weekType);
-  return PPL_SEQUENCE[(idx + 1) % PPL_SEQUENCE.length];
+  const seq = weekSessions();
+  const done = doneThisWeek().filter(w => seq.some(([g, v]) => g === w.muscleGroup && v === w.weekType));
+  if (!done.length) return seq[0];
+  const last = [...done].sort((a, b) => a.date.localeCompare(b.date)).at(-1);
+  const idx = seq.findIndex(([g, v]) => g === last.muscleGroup && v === last.weekType);
+  for (let k = 1; k <= seq.length; k++) {
+    const cand = seq[(idx + k) % seq.length];
+    if (!isSessionDone(...cand)) return cand;
+  }
+  return seq[0];
+}
+
+// Séance d'un groupe à faire cette semaine (sa 1re si pas encore faite, sinon sa 2e)
+function variantForGroup(g) {
+  const L = weekLetter();
+  return isSessionDone(g, L + '1') && !isSessionDone(g, L + '2') ? L + '2' : L + '1';
+}
+// Rang de la séance dans la semaine (1 à 6)
+function sessionIndex(g, v) { return WEEK_SLOTS.findIndex(([gg, n]) => gg === g && `${n}` === `${v}`.slice(1)) + 1; }
+function sessionTitle(g, v) { return `${WORKOUT_PLAN[g]?.label || groupLabel(g)} ${/^[AB][12]$/.test(v) ? v.slice(1) : (v || '')}`.trim(); }
+
+// Dernière perf connue d'un exercice (par son nom, ancien nom compris), quelle que soit la séance
+function lastSetsFor(name) {
+  const names = [name, ...(PREV_ALIASES[name] || [])];
+  const sorted = [...S.workouts].sort((a, b) => b.date.localeCompare(a.date));
+  for (const w of sorted) {
+    const ex = (w.exercises || []).find(e => names.includes(e.name));
+    if (ex && ex.sets?.some(st => parseFloat(st.weight) > 0)) return ex.sets;
+  }
+  return [];
 }
 
 // Évolution du volume d'une séance vs la précédente du même groupe + semaine A/B.
@@ -507,229 +649,167 @@ function fillAllFromLast() {
 // ============================================================
 
 function renderDashboard() {
-  const today    = new Date();
-  const dow      = today.getDay();
-  const [nextG, nextV] = nextPPLSession();          // prochaine séance PPL
-  const twk      = thisWeekKey();
-  const pwk      = prevWeekKey();
-  const tv       = totalVol(twk);
-  const pv       = totalVol(pwk);
-  const delta    = pv > 0 ? ((tv - pv) / pv * 100) : null;
-  const thisVM   = volByMuscle(twk);
-  const km       = totalKm(twk);
-  const runs     = runsThisWeek();
-  const wtdone   = workoutsThisWeek().length;
-  const accentColor = WORKOUT_PLAN[nextG].color;
-  const todayDone = workoutsThisWeek().some(w => w.date === todayStr() && MUSCLE_KEYS.includes(w.muscleGroup));
-  const volDone  = wtdone >= 6;
-  const runDone  = km >= RUN_GOAL_KM;
+  const draft   = activeWkDraft();                                  // séance commencée et pas terminée
+  const [g, v]  = draft ? [draft.mg, draft.wt] : nextPPLSession();
+  const plan    = WORKOUT_PLAN[g][v];
+  const nSets   = plan.reduce((n, e) => n + e.sets, 0);
+  const mins    = Math.round(plan.reduce((n, e) => n + e.sets * (restSeconds(e.rest) + 40), 0) / 60 / 5) * 5;
+  const rot     = sessionIndex(g, v);
+  const weekN   = weekDoneCount();
+  const todayW  = S.workouts.find(w => w.date === todayStr() && MUSCLE_KEYS.includes(w.muscleGroup));
+  const first   = (S.profile?.name || '').trim().split(/\s+/)[0];
 
-  // Nutrition
+  // Nutrition, eau, poids du jour
   const todayNutri = (S.nutrition || []).filter(n => n.date === todayStr());
-  const todayCal   = Math.ceil(todayNutri.reduce((s, n) => s + n.calories, 0));
-  const todayProt  = Math.ceil(todayNutri.reduce((s, n) => s + n.protein, 0));
-  const calPct     = Math.min(todayCal / NUTRI_TARGETS.calories * 100, 100);
-  const protPct    = Math.min(todayProt / NUTRI_TARGETS.protein * 100, 100);
+  const kcal = Math.ceil(todayNutri.reduce((t, n) => t + (n.calories || 0), 0));
+  const prot = Math.ceil(todayNutri.reduce((t, n) => t + (n.protein  || 0), 0));
+  const water = (S.hydration || {})[todayStr()] || 0;
+  const weights = [...(S.weights || [])].sort((a, b) => a.date.localeCompare(b.date));
+  const lastW = weights.at(-1), prevW = weights.at(-2);
+  const pct = (a, b) => Math.min(a / b * 100, 100).toFixed(1);
 
-  // Poids
-  const sortedW = [...(S.weights || [])].sort((a, b) => a.date.localeCompare(b.date));
-  const lastW   = sortedW[sortedW.length - 1];
-  const last7W  = sortedW.slice(-7);
-
-  function sparkSVG(pts, w = 110, h = 34) {
-    if (pts.length < 2) return '';
-    const vals = pts.map(x => x.weight);
-    const mn = Math.min(...vals), mx = Math.max(...vals), rng = (mx - mn) || 0.5;
-    const cs = vals.map((v, i) => {
-      const x = (i / (vals.length - 1)) * w;
-      const y = h - 4 - ((v - mn) / rng) * (h - 10);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    });
-    const line = cs.join(' L ');
-    return `<path d="M ${line}" fill="none" stroke="#00FF80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M ${line} L ${w},${h} L 0,${h} Z" fill="#00FF80" opacity=".1"/>`;
-  }
-
-  // SVG ring helper
-  function ring(pct, color, r = 36, sw = 7, glow = false) {
-    const c = 2 * Math.PI * r;
-    const fid = glow ? `gf${r}` : '';
-    const defs = glow ? `<defs><filter id="${fid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>` : '';
-    return `${defs}<circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="${sw}"/>
-      <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
-        stroke-linecap="round"${glow ? ` filter="url(#${fid})"` : ''}
-        stroke-dasharray="${(c * Math.min(pct, 1)).toFixed(1)} ${c.toFixed(1)}"
-        transform="rotate(-90 50 50)"/>`;
-  }
-
-  // Calendrier semaine
-  const todayDow = today.getDay();
-  const monday   = new Date(today);
-  monday.setDate(today.getDate() - (todayDow === 0 ? 6 : todayDow - 1));
-  monday.setHours(0, 0, 0, 0);
-  const WD_ORDER = [1, 2, 3, 4, 5, 6, 0];
-  const WD_LBL   = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-  const calDots = WD_ORDER.map((d, i) => {
-    const date    = new Date(monday);
-    date.setDate(monday.getDate() + i);
-    const ds      = localDateStr(date);
-    const isToday = ds === todayStr();
-    const isFuture = ds > todayStr();
-    // Séance PPL enregistrée ce jour-là (sinon course).
-    const wk      = S.workouts.find(w => w.date === ds && MUSCLE_KEYS.includes(w.muscleGroup));
-    const isRun   = !wk && S.runs.some(r => r.date === ds);
-    const isDone  = !!wk || isRun;
-    const short   = wk ? WORKOUT_PLAN[wk.muscleGroup].short : (isRun ? 'KM' : '');
-    const col     = wk ? WORKOUT_PLAN[wk.muscleGroup].color : 'var(--c-run)';
-    return { d, i, ds, isToday, isFuture, isDone, isRun, short, col };
+  // Semaine (lundi → dimanche)
+  const now = new Date(), monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7)); monday.setHours(0, 0, 0, 0);
+  const week = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((lbl, i) => {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const ds = localDateStr(d);
+    const active = S.workouts.some(w => w.date === ds) || S.runs.some(r => r.date === ds) || (S.rides || []).some(r => r.date === ds);
+    return { lbl, day: d.getDate(), today: ds === todayStr(), active };
   });
+  const wtdone = workoutsThisWeek().filter(w => MUSCLE_KEYS.includes(w.muscleGroup)).length;
+  const km = totalKm(thisWeekKey());
+  const streaks = getStreaks();
 
-  // Max vol pour barres
-  const maxMV = Math.max(...MUSCLE_KEYS.map(k => thisVM[k]), 1);
-
-  // Récent
   const recent = [
     ...S.workouts.map(w => ({ ...w, kind: 'w' })),
     ...S.runs.map(r => ({ ...r, kind: 'r' }))
-  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
+  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
 
-  const waterMl  = (S.hydration||{})[todayStr()]||0;
-  const waterPct = Math.min(waterMl / NUTRI_TARGETS.water, 1);
-  const waterDone = waterPct >= 1;
+  const headline = weekN >= 6
+    ? `Semaine bouclée,<br><span>6 séances sur 6.</span>`
+    : todayW
+      ? `Séance faite,<br><span>prochaine : ${sessionTitle(g, v)}.</span>`
+      : `Ta séance du jour,<br><span>${sessionTitle(g, v)}.</span>`;
 
   document.getElementById('app').innerHTML = `
-  <div class="dash-v2">
-
-    <!-- ① HERO + SEMAINE INTÉGRÉE -->
-    <div class="hero-v2" style="--hero-accent:${todayDone?'#00FF80':accentColor};border-top:2px solid ${todayDone?'#00FF80':accentColor}${todayDone?`;box-shadow:0 0 0 1px #00FF8030,0 0 40px #00FF8018,var(--sh-3)`:''}">${todayDone?`<div style="position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#00FF8008 0%,transparent 60%);z-index:0"></div>`:''}
-      <div class="hero-head">
-        <div>
-          <div class="hero-date">${DAYS_FULL[dow]} — ${todayDone ? 'Séance du jour' : 'Prochaine séance'}</div>
-          <div class="hero-muscle" style="${todayDone?'color:#00FF80':`color:${accentColor}`}">${WORKOUT_PLAN[nextG].label} ${nextV}</div>
-          <div class="hero-exos">${WORKOUT_PLAN[nextG][nextV].length} exercices · PPL</div>
-        </div>
-        ${delta !== null
-          ? `<span class="delta-pill ${delta >= 0 ? 'delta-up' : 'delta-down'}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%</span>`
-          : `<span class="delta-pill delta-neu">1re sem.</span>`}
+    <header class="dash-top">
+      <div>
+        <div class="view-kicker">${dashDateLabel()}</div>
+        <div class="dash-hello">Salut${first ? ' ' + first : ''}, prêt ?</div>
       </div>
-      <div class="hero-cal">
-        ${calDots.map(({ i, isToday, isDone, short, col }) => {
-          const cls = isDone ? 'hw-done' : 'hw-rest';
-          return `<div class="hw-day${isToday?' hw-today':''}">
-            <div class="hw-dot ${cls}" style="${isDone?`background:${col};box-shadow:0 0 10px ${col}66`:''}">${isDone&&short?`<span class="hw-txt">${short}</span>`:''}</div>
-            <div class="hw-lbl">${WD_LBL[i]}</div>
-          </div>`;
+      ${avatarBtn()}
+    </header>
+
+    <h1 class="dash-h1">${headline}</h1>
+
+    <div class="days" aria-label="Cette semaine">
+      ${week.map(d => `<div class="day${d.today ? ' on' : ''}${d.active ? ' done' : ''}"><small>${d.lbl}</small><b>${d.day}</b><i></i></div>`).join('')}
+    </div>
+
+    <section class="banner">
+      <div class="banner-txt">
+        <div class="banner-k">${draft ? 'Séance en cours' : `Semaine ${v[0]} · ${rot} sur 6`}</div>
+        <div class="banner-n">${sessionTitle(g, v)}</div>
+        <div class="banner-m">${WORKOUT_PLAN[g].focus?.[v] || ''}<br>${plan.length} exercices · ${nSets} séries<br>≈ ${mins} min</div>
+        <button class="banner-btn" onclick="startSeance()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>${draft ? 'Reprendre' : 'Démarrer'}</button>
+      </div>
+      <img class="banner-img" src="img/hero/${plan[0].img}.jpg" alt="" decoding="async">
+    </section>
+
+    <div class="sec-row"><h2>Aujourd'hui</h2><button class="sec-link" onclick="navigate('nutrition')">Nutrition</button></div>
+    <div class="stack">
+      <button class="lcard" onclick="navigate('nutrition')">
+        <span class="th">${ICON_FLAME}</span>
+        <span class="lcard-b"><span class="lcard-t">Calories<em>${kcal.toLocaleString('fr-FR')}</em></span>
+          <span class="lcard-s">sur ${NUTRI_TARGETS.calories.toLocaleString('fr-FR')} kcal · reste ${Math.max(0, NUTRI_TARGETS.calories - kcal).toLocaleString('fr-FR')}</span>
+          <span class="prog"><i style="width:${pct(kcal, NUTRI_TARGETS.calories)}%"></i></span></span>
+      </button>
+      <button class="lcard" onclick="navigate('nutrition')">
+        <span class="th">${ICON_EGG}</span>
+        <span class="lcard-b"><span class="lcard-t">Protéines<em>${prot} g</em></span>
+          <span class="lcard-s">sur ${NUTRI_TARGETS.protein} g · reste ${Math.max(0, NUTRI_TARGETS.protein - prot)} g</span>
+          <span class="prog"><i style="width:${pct(prot, NUTRI_TARGETS.protein)}%"></i></span></span>
+      </button>
+      <div class="lcard">
+        <span class="th">${ICON_DROP}</span>
+        <span class="lcard-b"><span class="lcard-t">Eau<em>${(water / 1000).toFixed(2).replace('.', ',')} L</em></span>
+          <span class="lcard-s">sur ${(NUTRI_TARGETS.water / 1000).toFixed(1).replace('.', ',')} L</span>
+          <span class="prog"><i style="width:${pct(water, NUTRI_TARGETS.water)}%"></i></span></span>
+        <button class="lcard-act" onclick="dashWater(250)" aria-label="Ajouter 250 ml d'eau">+250 ml</button>
+      </div>
+      <button class="lcard" onclick="navigate('body')">
+        <span class="th">${ICON_SCALE}</span>
+        <span class="lcard-b"><span class="lcard-t">Poids<em>${lastW ? String(lastW.weight).replace('.', ',') + ' kg' : '—'}</em></span>
+          <span class="lcard-s">${lastW ? `${formatDate(lastW.date)}${prevW ? ` · ${(lastW.weight - prevW.weight) > 0 ? '+' : ''}${(lastW.weight - prevW.weight).toFixed(1).replace('.', ',')} kg` : ''}` : 'Aucune pesée · touche pour te peser'}</span></span>
+      </button>
+    </div>
+
+    <div class="sec-row"><h2>Cette semaine</h2><button class="sec-link" onclick="navigate('progress')">Progrès</button></div>
+    <div class="card week-card">
+      <div class="wk-line"><span>Séances · semaine ${weekLetter()}</span><b>${weekN} <small>/ 6</small></b></div>
+      <span class="prog"><i style="width:${pct(weekN, 6)}%"></i></span>
+      <div class="wk-line"><span>Course</span><b>${km.toFixed(1).replace('.', ',')} <small>/ ${RUN_GOAL_KM} km</small></b></div>
+      <span class="prog"><i style="width:${pct(km, RUN_GOAL_KM)}%"></i></span>
+      <div class="wk-groups">
+        ${weekSessions().map(([k, vv]) => {
+          const done = isSessionDone(k, vv);
+          return `<span class="pill${done ? ' pill-ink' : ''}">${done ? '✓ ' : ''}${sessionTitle(k, vv)}</span>`;
         }).join('')}
       </div>
-      ${todayDone
-        ? `<div class="today-done"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Séance enregistrée</div>`
-        : `<button class="today-cta" style="background:${accentColor};color:#000;box-shadow:0 6px 24px ${accentColor}44" onclick="navigate('workout')">Commencer la séance</button>`}
+      ${streaks.overall > 1 ? `<div class="wk-streak">${streaks.overall} jours actifs d'affilée${streaks.workout > 1 ? ` · ${streaks.workout} séances de suite` : ''}</div>` : ''}
     </div>
 
-    <!-- ② KPI STRIP -->
-    <div class="kpi-strip">
-      ${[
-        { lbl: volDone?'✓ Séances':'Séances', val: wtdone, den: '/6', color: volDone?'#00FF80':accentColor, pct: wtdone/6, glow: volDone, nav: 'workout' },
-        { lbl: runDone?'✓ Course':'Course', val: km.toFixed(1), den: ' km', color: 'var(--c-run)', pct: Math.min(km/RUN_GOAL_KM,1), glow: runDone, nav: 'run' },
-        { lbl: waterDone?'✓ Eau':'Eau', val: (waterMl/1000).toFixed(1), den: ' L', color: waterDone?'#00FF80':'#06B6D4', pct: waterPct, glow: waterDone, nav: 'nutrition' },
-      ].map(k=>`
-        <div class="kpi-card" onclick="navigate('${k.nav}')" style="--kc:${k.color}">
-          <div class="kpi-ring-wrap">
-            <svg viewBox="0 0 100 100" style="width:64px;height:64px">${ring(k.pct, k.color, 36, 8, k.glow)}</svg>
-            <div class="kpi-center"><span class="kpi-val">${k.val}</span><span class="kpi-den">${k.den}</span></div>
-          </div>
-          <div class="kpi-lbl" style="${k.glow?`color:${k.color};font-weight:600`:''}">${k.lbl}</div>
-        </div>
-      `).join('')}
+    ${recent.length ? `
+    <div class="sec-row"><h2>Récent</h2><button class="sec-link" onclick="navigate('history')">Historique</button></div>
+    <div class="stack">
+      ${recent.map(item => item.kind === 'w' ? `
+        <button class="lcard" onclick="openSessionDetail('${item.id}')">
+          ${exoThumbHTML(item.exercises?.[0]?.name)}
+          <span class="lcard-b"><span class="lcard-t">${sessionTitle(item.muscleGroup, item.weekType)}<em>${fmtVol(item.totalVolume)} kg</em></span>
+            <span class="lcard-s">${formatDate(item.date)} · ${item.exercises?.length || 0} exercices${item.duration ? ' · ' + formatDur(item.duration) : ''}</span></span>
+        </button>` : `
+        <button class="lcard" onclick="openRunDetail('${item.id}')">
+          <span class="th">${ICON_RUN}</span>
+          <span class="lcard-b"><span class="lcard-t">Course<em>${item.distance.toFixed(1).replace('.', ',')} km</em></span>
+            <span class="lcard-s">${formatDate(item.date)} · ${fmtPace(item.pace)}/km · ${formatDur(item.duration)}</span></span>
+        </button>`).join('')}
+    </div>` : ''}
+
+    <div class="sec-row"><h2>Note du jour</h2></div>
+    <div class="card note-card">
+      <textarea class="note-inp" id="day-note" placeholder="Ressenti, sommeil, objectifs…" oninput="saveDayNote()">${(S.journal || {})[todayStr()] || ''}</textarea>
     </div>
-
-    <!-- ③ NUTRITION + POIDS -->
-    <div class="macros-card" onclick="navigate('nutrition')" style="cursor:pointer">
-      <div class="macros-head">
-        <span class="sect-lbl">Nutrition du jour</span>
-        ${lastW ? `<div class="poids-chip">
-          <span style="font-size:15px;font-weight:600;color:#00FF80">${lastW.weight}<span style="font-size:11px;font-weight:400;color:var(--t3)"> kg</span></span>
-          ${last7W.length>=2?`<svg viewBox="0 0 80 22" style="width:54px;height:18px;overflow:visible;flex-shrink:0">${sparkSVG(last7W,80,18)}</svg>`:''}
-        </div>` : ''}
-      </div>
-      ${[
-        {lbl:'Kcal', val:todayCal, max:NUTRI_TARGETS.calories, unit:'', color:'#FF6B35', tgt:`/ ${NUTRI_TARGETS.calories}`},
-        {lbl:'Prot.', val:todayProt, max:NUTRI_TARGETS.protein, unit:'g', color:'#00D0FF', tgt:`/ ${NUTRI_TARGETS.protein}g`},
-      ].map(({lbl,val,max,unit,color,tgt})=>{
-        const p = Math.min(val/max*100,100).toFixed(1);
-        return `<div class="macro-row">
-          <span class="macro-lbl">${lbl}</span>
-          <div class="macro-track"><div class="macro-fill" style="--p:${p/100};background:${color};box-shadow:0 0 6px ${color}55"></div></div>
-          <span class="macro-num">${val}${unit} <span class="macro-tgt">${tgt}</span></span>
-        </div>`;
-      }).join('')}
-    </div>
-
-    <!-- ④ MUSCLES SEMAINE (colonnes verticales) -->
-    <div class="card muscles-v2">
-      <div class="sect-row" style="margin-bottom:14px">
-        <span class="sect-lbl">Muscles · semaine</span>
-        <span style="font-size:11px;color:var(--t3)">${wtdone}/6 séances</span>
-      </div>
-      <div class="mcols">
-        ${MUSCLE_KEYS.map(k => {
-          const m = WORKOUT_PLAN[k];
-          const vol = thisVM[k];
-          const pct = (vol / maxMV) * 100;
-          const done = workoutsThisWeek().some(w => w.muscleGroup === k);
-          return `<div class="mcol" onclick="navigate('workout')">
-            <div class="mcol-vol" style="color:${done?m.color:'var(--t4)'}">${vol>0?fmtVol(vol):'—'}</div>
-            <div class="mcol-track">
-              <div class="mcol-fill" style="--p:${(pct/100).toFixed(3)};background:${done?m.color:m.color+'55'};${done?`box-shadow:0 0 12px ${m.color}99`:''}"></div>
-            </div>
-            <div class="mcol-dot" style="background:${m.color};${done?`box-shadow:0 0 8px ${m.color}`:'opacity:.3'}"></div>
-            <div class="mcol-name" style="${done?`color:${m.color};font-weight:600`:'color:var(--t3)'}">${m.short}</div>
-            <div class="mcol-ck" style="color:${m.color}">${done?'✓':''}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <!-- ⑤ NOTE + RÉCENT -->
-    <div class="dash-bottom">
-      <div class="card" style="flex:1;min-width:0">
-        <div class="sect-lbl" style="margin-bottom:8px">Note du jour</div>
-        <textarea class="note-inp" id="day-note" placeholder="Ressenti, objectifs…" oninput="saveDayNote()">${(S.journal||{})[todayStr()]||''}</textarea>
-      </div>
-      <div class="card act-card" style="flex:1;min-width:0">
-        <div class="sect-lbl" style="margin-bottom:10px">Récent</div>
-        ${recent.length===0
-          ? `<div style="padding:16px 0;text-align:center;color:var(--t3);font-size:12px">Aucune activité</div>`
-          : recent.map(item => item.kind==='w'?`
-          <div class="act-row" onclick="openSessionDetail('${item.id}')">
-            <div class="act-icon" style="background:${groupColor(item.muscleGroup)}22;color:${groupColor(item.muscleGroup)}">${groupShort(item.muscleGroup)}</div>
-            <div class="act-body"><div class="act-ttl">${groupLabel(item.muscleGroup)}</div><div class="act-sub">${formatDate(item.date)}</div></div>
-            <span class="act-val">${fmtVol(item.totalVolume)} kg</span>
-          </div>` : `
-          <div class="act-row" onclick="openRunDetail('${item.id}')">
-            <div class="act-icon" style="background:rgba(0,208,255,.1);color:var(--c-run)">KM</div>
-            <div class="act-body"><div class="act-ttl">${item.distance.toFixed(1)} km</div><div class="act-sub">${formatDate(item.date)} · ${fmtPace(item.pace)}/km</div></div>
-            <span class="act-val">${formatDur(item.duration)}</span>
-          </div>`).join('')}
-      </div>
-    </div>
-
-    <!-- ⑥ STREAKS -->
-    ${(() => {
-      const st = getStreaks();
-      if (!st.overall) return '';
-      const items = [
-        st.workout   ? `<div class="streak-item"><span class="streak-fire">🔥</span><span class="streak-num">${st.workout}</span><span class="streak-lbl">séances</span></div>` : '',
-        st.nutrition ? `<div class="streak-item"><span class="streak-fire">🥗</span><span class="streak-num">${st.nutrition}</span><span class="streak-lbl">nutrition</span></div>` : '',
-        st.overall > 1 ? `<div class="streak-item"><span class="streak-fire">⚡</span><span class="streak-num">${st.overall}</span><span class="streak-lbl">jours actifs</span></div>` : '',
-      ].filter(Boolean).join('');
-      return items ? `<div class="card streak-card"><div class="sect-lbl mb-10">Séries en cours</div><div class="streak-row">${items}</div></div>` : '';
-    })()}
-
-  </div>
-  <div class="spacer"></div>
+    <div class="spacer"></div>
   `;
+}
+
+function dashDateLabel() {
+  const d = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  return d.charAt(0).toUpperCase() + d.slice(1);
+}
+
+// Eau depuis l'accueil : ajoute au jour même et reste sur l'accueil
+function dashWater(ml) {
+  if (!S.hydration) S.hydration = {};
+  S.hydration[todayStr()] = Math.max(0, (S.hydration[todayStr()] || 0) + ml);
+  save(); haptic([6]); renderDashboard();
+}
+
+// Brouillon de séance commencée (au moins une valeur saisie) → { mg, wt } ou null
+function activeWkDraft() {
+  if (!hasActiveWkDraft()) return null;
+  try { const d = JSON.parse(localStorage.getItem(WK_DRAFT_KEY)); return WORKOUT_PLAN[d.mg]?.[d.wt] ? { mg: d.mg, wt: d.wt } : null; }
+  catch { return null; }
+}
+
+// Accueil → séance : ouvre la séance proposée et lance le chrono
+function startSeance() {
+  seanceMode = 'muscu';
+  wkState.muscleGroup = null;
+  navigate('workout');
+  if (!wkTimer.startTs) startWkTimer();
+  renderRunbar();
 }
 
 // ============================================================
@@ -753,7 +833,7 @@ function _tickWkTimer() {
 }
 function _updateTimerBtn() {
   const btn = document.getElementById('timer-toggle-btn');
-  if (btn) btn.textContent = wkTimer.running ? '⏸' : '▶';
+  if (btn) btn.classList.toggle('paused', !!wkTimer.startTs && !wkTimer.running);
 }
 function toggleWkTimer() {
   if (wkTimer.running) { pauseWkTimer(); } else { startWkTimer(); }
@@ -769,6 +849,8 @@ const WK_DRAFT_TTL = 12 * 60 * 60 * 1000; // 12h
 
 function saveWkDraft() {
   if (!wkState.muscleGroup) return;
+  // Formulaire absent (ex. onglet Course affiché) : on n'écrase pas le brouillon avec des champs vides
+  if (!document.getElementById('wk-date')) return;
   const mg = wkState.muscleGroup, wt = wkState.weekType;
   const exos = WORKOUT_PLAN[mg][wt];
   const inputs = {};
@@ -782,7 +864,8 @@ function saveWkDraft() {
   localStorage.setItem(WK_DRAFT_KEY, JSON.stringify({
     mg, wt, date: wkState.date,
     notes: document.getElementById('wk-notes')?.value || '',
-    inputs, _ts: Date.now()
+    inputs, done: Object.keys(wkState.doneSets || {}).filter(k => wkState.doneSets[k]),
+    startTs: wkTimer.startTs || null, _ts: Date.now()
   }));
 }
 
@@ -811,15 +894,21 @@ function hasActiveWkDraft() {
 }
 
 function renderWorkout() {
-  // On propose la prochaine séance de la rotation PPL, sauf si un brouillon est en cours.
-  const draft = (() => { try { const r = localStorage.getItem(WK_DRAFT_KEY); if (!r) return null; const d = JSON.parse(r); return (Date.now() - (d._ts||0) < WK_DRAFT_TTL) ? d : null; } catch { return null; } })();
+  // Brouillon d'un ancien programme (séances 'A'/'B') : plus de séance correspondante, on l'écarte
+  let draft = (() => { try { const r = localStorage.getItem(WK_DRAFT_KEY); if (!r) return null; const d = JSON.parse(r); return (Date.now() - (d._ts||0) < WK_DRAFT_TTL) ? d : null; } catch { return null; } })();
+  if (draft && !WORKOUT_PLAN[draft.mg]?.[draft.wt]) { clearWkDraft(); draft = null; }
   const [nextG, nextV] = nextPPLSession();
   wkState.muscleGroup = wkState.muscleGroup || draft?.mg || nextG;
-  // Si on restaure un brouillon pour ce groupe, on reprend SA variante A/B,
-  // sinon les exos affichés ne correspondraient pas aux données saisies.
-  wkState.weekType    = (draft && draft.mg === wkState.muscleGroup && draft.wt) ? draft.wt
-                        : (wkState.muscleGroup === nextG ? nextV : 'A');
-  wkState.date        = todayStr();
+  // Brouillon de ce groupe : on reprend sa séance (sinon les exos ne correspondraient pas à la saisie).
+  // Sinon, la séance de ce groupe prévue cette semaine.
+  wkState.weekType = (draft && draft.mg === wkState.muscleGroup) ? draft.wt
+                   : (wkState.muscleGroup === nextG ? nextV : variantForGroup(wkState.muscleGroup));
+  wkState.date     = todayStr();
+  // Après un rechargement iOS en pleine séance : le chrono reprend là où il en était
+  if (!wkTimer.startTs && draft?.startTs && draft.mg === wkState.muscleGroup && draft.wt === wkState.weekType) {
+    wkTimer.startTs = draft.startTs;
+    startWkTimer();
+  }
   renderWorkoutForm();
 }
 
@@ -845,128 +934,162 @@ function renderWorkoutForm() {
   const last = getLastSession(mg, wt);
   const m    = WORKOUT_PLAN[mg];
   wkState.prevExercises = last ? last.exercises : [];
-  wkState.doneSets = {};
+  // Dernière perf de chaque exercice (par nom) : sert à colorer les séries (plus lourd / pareil / moins lourd)
+  wkState.prevSets = WORKOUT_PLAN[mg][wt].map(ex => lastSetsFor(ex.name));
   const draft = loadWkDraft(mg, wt);
+  // Séries validées du brouillon (anciens brouillons sans cette info : série remplie = faite)
+  wkState.doneSets = {};
+  if (Array.isArray(draft?.done)) draft.done.forEach(k => { wkState.doneSets[k] = true; });
+  else exos.forEach((ex, ei) => {
+    for (let si = 0; si < ex.sets; si++) {
+      const dv = draft?.inputs?.[`${ei}-${si}`];
+      if (dv && parseFloat(dv.w) > 0 && parseInt(dv.r) > 0) wkState.doneSets[`${ei}-${si}`] = true;
+    }
+  });
+  if (wkState.openKey !== mg + wt) { wkState.openKey = mg + wt; wkState.openEx = firstOpenEx(exos); }
+  const rot = sessionIndex(mg, wt);
 
   document.getElementById('app').innerHTML = `
-  <div class="workout-desktop">
-
-    <!-- LEFT: Selectors + Summary -->
-    <div class="workout-sidebar">
-      <div class="card card-sm mb-10">
-        <div class="muscle-chips mb-10">
-          ${MUSCLE_KEYS.map(k=>`
-            <button class="chip ${k===mg?'active':''}"
-              style="${k===mg?`background:${WORKOUT_PLAN[k].color};border-color:${WORKOUT_PLAN[k].color};color:#000;box-shadow:0 0 14px ${WORKOUT_PLAN[k].color}70;`:''}"
-              onclick="setWorkoutMuscle('${k}')">
-              ${WORKOUT_PLAN[k].label}
-            </button>`).join('')}
-        </div>
-        <div class="wk-meta-row">
-          <div class="flex gap-6">
-            <button class="chip chip-plain chip-sm ${wt==='A'?'active-a':''}" onclick="setWorkoutWeek('A')">A</button>
-            <button class="chip chip-plain chip-sm ${wt==='B'?'active-b':''}" onclick="setWorkoutWeek('B')">B</button>
-          </div>
-          <input type="date" class="form-inp wk-date-inline" id="wk-date" value="${wkState.date}" onchange="wkState.date=this.value">
-        </div>
+    <header class="view-head">
+      <div class="view-head-l">
+        <button class="icon-btn" onclick="leaveSeance()" aria-label="Retour à l'accueil">${ICON_BACK}</button>
+        <div class="wk-titles"><div class="view-kicker">Semaine ${wt[0]} · séance ${rot} sur 6</div><h1 class="view-title">${sessionTitle(mg, wt)}</h1>${m.focus?.[wt] ? `<div class="wk-focus">${m.focus[wt]}</div>` : ''}</div>
       </div>
-
-      <!-- Summary / Save -->
-      <div class="session-bar" style="position:relative;top:auto">
-        <div>
-          <div><span class="sess-vol" id="session-total">0</span> <span class="sess-unit">kg</span></div>
-          ${last
-            ? `<div class="sess-ref">Réf. ${fmtVol(last.totalVolume)} kg <span id="session-delta"></span></div>`
-            : `<div class="sess-ref">Première séance</div>`}
-        </div>
-        <div class="sess-timer-wrap">
-          <button class="timer-toggle-btn" id="timer-toggle-btn" onclick="toggleWkTimer()">${wkTimer.running ? '⏸' : '▶'}</button>
-          <span class="sess-timer" id="session-timer">${wkTimer.startTs ? formatDur(Math.floor((Date.now()-wkTimer.startTs)/1000)) : '00:00'}</span>
-        </div>
-        <button class="btn btn-primary btn-inline btn-sm" onclick="saveWorkout()">Terminer</button>
-      </div>
+    </header>
+    ${chipRow(SEANCE_CHIPS, mg, 'setSeanceGroup')}
+    <div class="wk-meta">
+      <label class="date-chip">${ICON_CAL}<input type="date" id="wk-date" value="${wkState.date}" max="${todayStr()}" aria-label="Date de la séance" onchange="wkState.date=this.value||todayStr();saveWkDraft()"></label>
+      <span class="wk-ref">${last ? `Réf. ${fmtVol(last.totalVolume)} kg <span id="session-delta"></span>` : 'Première fois'}</span>
     </div>
+    <div class="ex-list">${exos.map((ex, ei) => exCard(ex, ei, mg, last, draft)).join('')}</div>
+    <div class="spacer"></div>
+  `;
+  mountRunbar();
+  updateVols();
+  mountExMedia(wkState.openEx);
+}
 
-    <!-- RIGHT: Exercises -->
-    <div>
-      ${exos.map((ex, ei) => {
-        const name = ex.name;
-        const prevSets = last ? (last.exercises[ei]?.sets || []) : [];
-        const hint = progressionHint(mg, ex, last?.exercises[ei]);
+// Animation de l'exercice ouvert (une seule vidéo à la fois : légère pour le téléphone)
+function mountExMedia(ei) {
+  document.querySelectorAll('.ex-media').forEach(el => { if (el.id !== `ex-media-${ei}`) el.innerHTML = ''; });
+  if (ei == null) return;
+  const el = document.getElementById(`ex-media-${ei}`);
+  const name = curExos()[ei]?.name;
+  const vid = exoVideo(name);
+  if (!el || !vid || el.firstChild) return;
+  el.innerHTML = `<video src="${vid}" poster="${exoImg(name)}" autoplay muted loop playsinline preload="auto" aria-label="Démonstration : ${name.replace(/"/g, '')}"></video>`;
+  el.firstChild.play?.().catch(() => {});
+}
+
+// Une carte par exercice : ligne photo + nom + progression ; l'exercice ouvert montre ses séries.
+// Toutes les séries restent dans le DOM (brouillon, volumes et enregistrement les lisent).
+function exCard(ex, ei, mg, last, draft) {
+  const name = ex.name;
+  const open = wkState.openEx === ei;
+  const prevSets = lastSetsFor(name);
+  const hint = progressionHint(mg, ex, { sets: prevSets });
+  const safe = name.replace(/'/g, "\\'");
+  const prevW = prevSets.map(s => parseFloat(s.weight) || 0);
+  const lastTxt = prevW.some(Boolean)
+    ? (prevW.every(w => w === prevW[0])
+        ? `Dernière fois : ${String(prevW[0]).replace('.', ',')} kg × ${prevSets.map(s => s.reps || '–').join(', ')}`
+        : `Dernière fois : ${prevSets.map(s => `${String(s.weight || 0).replace('.', ',')}×${s.reps || '–'}`).join(' · ')}`)
+    : '';
+  const pr = (S.prs || {})[name]?.date === todayStr();
+  return `
+  <article class="ex-card${open ? ' open' : ''}" id="ex-${ei}">
+    <button class="ex-row" onclick="openEx(${ei})" aria-expanded="${open}">
+      ${exoThumbHTML(name)}
+      <span class="ex-row-b">
+        <span class="ex-row-t">${name}${pr ? ' <span class="pr-badge" aria-label="Record du jour">🏆</span>' : ''}</span>
+        <span class="ex-row-s" id="ex-sub-${ei}">${ex.sets} × ${ex.reps} · repos ${ex.rest}</span>
+        <span class="prog"><i id="ex-prog-${ei}" style="width:0%"></i></span>
+      </span>
+    </button>
+    <div class="ex-body">
+      <div class="ex-media" id="ex-media-${ei}"></div>
+      <div class="ex-tools">
+        <span class="pill">${ex.sets} × ${ex.reps}</span>
+        <span class="pill">Repos ${ex.rest}</span>
+        ${hint ? `<span class="pill pill-ink">+${String(hint.inc).replace('.', ',')} kg conseillé</span>` : ''}
+      </div>
+      <div class="ex-last"><span>${lastTxt || 'Première fois sur cet exercice'}</span>
+        <button class="tool-btn" onclick="copyExName(this,'${safe}')" aria-label="Copier le nom de l'exercice">${ICON_COPY}</button></div>
+      ${Array.from({ length: ex.sets }, (_, si) => {
+        const pv = prevSets[si] || prevSets[prevSets.length - 1] || {};
+        const dv = draft?.inputs?.[`${ei}-${si}`];
+        const onIn = si === 0 ? `autoFillFromS1(${ei})` : 'updateVols()';
         return `
-        <div class="ex-block" id="ex-${ei}">
-          <div class="ex-head">
-            <div>
-              <div class="ex-name">${name}<button class="ex-copy" onclick="copyExName(this,'${name.replace(/'/g,"\\'")}')" aria-label="Copier le nom">⧉</button>${(S.prs||{})[name]?.date===todayStr()?'<span class="pr-badge">🏆</span>':''}${hint?`<span class="ex-hint">+${hint.inc} kg</span>`:''}</div>
-              <div class="ex-sub">${ex.sets}×${ex.reps} · ${ex.rest}</div>
-            </div>
-            <button class="copy-pill" onclick="copyFirstSet(${ei})">S1→tous</button>
-          </div>
-          ${Array.from({length:ex.sets},(_,si)=>{
-            const pv = prevSets[si]||{weight:'',reps:''};
-            const dv = draft?.inputs?.[`${ei}-${si}`];
-            // Champs vides par défaut : on ne pré-remplit QUE depuis le brouillon en cours.
-            // L'ancienne perf reste visible en placeholder gris subtil (référence, non saisie).
-            const wVal = dv?.w ?? '';
-            const rVal = dv?.r ?? '';
-            return `
-            <div class="set-row" id="set-row-${ei}-${si}">
-              <span class="set-num">S${si+1}</span>
-              <div class="inp-pill">
-                <button class="adj-btn" onclick="adj(${ei},${si},'weight',-2.5)">−</button>
-                <input type="number" class="set-input" inputmode="decimal" step="0.5"
-                  id="w-${ei}-${si}" value="${wVal}" placeholder="${hint?hint.weight:(pv.weight||'—')}"
-                  oninput="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}" onchange="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}">
-                <span class="set-unit-lbl">kg</span>
-                <button class="adj-btn" onclick="adj(${ei},${si},'weight',2.5)">+</button>
-              </div>
-              <span class="set-x">×</span>
-              <div class="inp-pill">
-                <button class="adj-btn" onclick="adj(${ei},${si},'reps',-1)">−</button>
-                <input type="number" class="set-input" inputmode="numeric" step="1"
-                  id="r-${ei}-${si}" value="${rVal}" placeholder="${pv.reps||'—'}"
-                  oninput="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}" onchange="${si===0?`autoFillFromS1(${ei})`:'updateVols()'}">
-                <span class="set-unit-lbl">rep</span>
-                <button class="adj-btn" onclick="adj(${ei},${si},'reps',1)">+</button>
-              </div>
-              <span class="set-vol" id="sv-${ei}-${si}">—</span>
-              <button class="set-check-btn" id="chk-${ei}-${si}" onclick="validateSet(${ei},${si})">○</button>
-            </div>`;
-          }).join('')}
-          <div class="ex-total" id="ex-vol-${ei}">0 kg</div>
+        <div class="set-card" id="set-row-${ei}-${si}">
+          <span class="set-n"><span class="set-n-l">Série </span>${si + 1}</span>
+          <label class="fld"><input type="number" class="set-input" inputmode="decimal" step="0.5" id="w-${ei}-${si}"
+            value="${dv?.w ?? ''}" placeholder="${hint ? hint.weight : (pv.weight || '')}" aria-label="Poids série ${si + 1}" oninput="${onIn}"><small>kg</small></label>
+          <label class="fld"><input type="number" class="set-input" inputmode="numeric" step="1" id="r-${ei}-${si}"
+            value="${dv?.r ?? ''}" placeholder="${pv.reps || ''}" aria-label="Reps série ${si + 1}" oninput="${onIn}"><small>reps</small></label>
+          <button class="set-ok" id="chk-${ei}-${si}" onclick="validateSet(${ei},${si})" aria-pressed="false" aria-label="Valider la série ${si + 1}">${ICON_CHECK}</button>
         </div>`;
       }).join('')}
-      <div class="spacer"></div>
+      <button class="ex-s1" onclick="copyFirstSet(${ei})">Recopier la série 1 sur les suivantes</button>
     </div>
+  </article>`;
+}
 
-  </div>
-  `;
-  updateVols();
-  // Restore notes from draft
-  if (draft?.notes) {
-    const notesEl = document.getElementById('wk-notes');
-    if (notesEl) notesEl.value = draft.notes;
+function exoThumbHTML(name) {
+  const src = exoImg(name);
+  return `<span class="th">${src ? `<img src="${src}" alt="" loading="lazy" decoding="async">` : ICON_DUMBBELL}</span>`;
+}
+
+function curExos() { return WORKOUT_PLAN[wkState.muscleGroup]?.[wkState.weekType] || []; }
+function exIsDone(ei, exos = curExos()) {
+  return Array.from({ length: exos[ei].sets }, (_, si) => wkState.doneSets[`${ei}-${si}`]).every(Boolean);
+}
+// Premier exercice pas terminé (null si tout est fait)
+function firstOpenEx(exos = curExos()) {
+  const i = exos.findIndex((_, ei) => !exIsDone(ei, exos));
+  return i === -1 ? null : i;
+}
+
+function openEx(ei, force = false) {
+  const same = wkState.openEx === ei && !force;
+  document.querySelectorAll('.ex-card.open').forEach(c => {
+    c.classList.remove('open');
+    c.querySelector('.ex-row')?.setAttribute('aria-expanded', 'false');
+  });
+  wkState.openEx = same ? null : ei;
+  mountExMedia(wkState.openEx);
+  if (!same) {
+    const card = document.getElementById(`ex-${ei}`);
+    card?.classList.add('open');
+    card?.querySelector('.ex-row')?.setAttribute('aria-expanded', 'true');
+    setTimeout(() => card?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   }
+  refreshSetStates();
 }
 
-function setWorkoutMuscle(k) { wkState.muscleGroup = k; renderWorkoutForm(); }
-function setWorkoutWeek(wt)  { wkState.weekType = wt;   renderWorkoutForm(); }
-
-function adj(ei, si, field, step) {
-  const el = document.getElementById(`${field==='weight'?'w':'r'}-${ei}-${si}`);
-  if (!el) return;
-  if (field==='weight') el.value = Math.max(0, Math.round(((parseFloat(el.value)||0) + step)*10)/10);
-  else el.value = Math.max(1, (parseInt(el.value)||0) + step);
-  haptic([4]);
-  updateVols();
+// Changer de groupe ou de variante efface la saisie d'une séance commencée : on demande d'abord.
+function confirmLeaveDraft(mg, wt) {
+  const d = activeWkDraft();
+  if (!d || (d.mg === mg && d.wt === wt)) return true;
+  return confirm(`Ta séance ${sessionTitle(d.mg, d.wt)} est en cours. La quitter efface ce que tu as saisi. Continuer ?`);
 }
 
-function exSetCount(ei) { return WORKOUT_PLAN[wkState.muscleGroup]?.[wkState.weekType]?.[ei]?.sets || 0; }
+function setWorkoutMuscle(k) {
+  if (k === wkState.muscleGroup) return;
+  const wt = k === nextPPLSession()[0] ? nextPPLSession()[1] : variantForGroup(k);
+  if (!confirmLeaveDraft(k, wt)) return;
+  if (activeWkDraft()) clearWkDraft();
+  wkState.muscleGroup = k; wkState.weekType = wt;
+  renderWorkoutForm();
+}
 
+function exSetCount(ei) { return curExos()[ei]?.sets || 0; }
+
+// Saisir la série 1 recopie ses valeurs sur les séries suivantes pas encore faites
 function autoFillFromS1(ei) {
   const w0 = document.getElementById(`w-${ei}-0`)?.value || '';
   const r0 = document.getElementById(`r-${ei}-0`)?.value || '';
   for (let si = 1; si < exSetCount(ei); si++) {
+    if (wkState.doneSets[`${ei}-${si}`]) continue;
     const we = document.getElementById(`w-${ei}-${si}`);
     const re = document.getElementById(`r-${ei}-${si}`);
     if (we) we.value = w0;
@@ -974,93 +1097,159 @@ function autoFillFromS1(ei) {
   }
   updateVols();
 }
+function copyFirstSet(ei) { autoFillFromS1(ei); haptic([4]); }
 
+// ✓ : valide la série (en reprenant la valeur proposée en gris si le champ est vide),
+// lance le repos de l'exercice, puis ouvre l'exercice suivant quand toutes ses séries sont faites.
 function validateSet(ei, si) {
   const key = `${ei}-${si}`;
-  wkState.doneSets[key] = !wkState.doneSets[key];
-  const row = document.getElementById(`set-row-${ei}-${si}`);
-  const btn = document.getElementById(`chk-${ei}-${si}`);
-  if (wkState.doneSets[key]) {
-    row?.classList.add('done');
-    if (btn) { btn.textContent = '✓'; btn.classList.add('checked'); }
-  } else {
-    row?.classList.remove('done');
-    if (btn) { btn.textContent = '○'; btn.classList.remove('checked'); }
-  }
-  haptic([4]);
-}
-
-function copyFirstSet(ei) {
-  const w0 = document.getElementById(`w-${ei}-0`)?.value||'';
-  const r0 = document.getElementById(`r-${ei}-0`)?.value||'';
-  for (let si=1;si<exSetCount(ei);si++) {
-    const we=document.getElementById(`w-${ei}-${si}`), re=document.getElementById(`r-${ei}-${si}`);
-    if(we) we.value=w0; if(re) re.value=r0;
-  }
+  const exos = curExos();
+  if (wkState.doneSets[key]) { wkState.doneSets[key] = false; haptic([4]); updateVols(); return; }
+  const we = document.getElementById(`w-${ei}-${si}`);
+  const re = document.getElementById(`r-${ei}-${si}`);
+  if (!we.value && we.placeholder) we.value = we.placeholder;
+  if (!re.value && re.placeholder) re.value = re.placeholder;
+  if (!(parseFloat(we.value) > 0)) { we.focus(); showToast('Entre le poids de la série'); return; }
+  if (!(parseInt(re.value) > 0))   { re.focus(); showToast('Entre le nombre de reps'); return; }
+  wkState.doneSets[key] = true;
+  haptic([10, 20, 10]);
+  if (!wkTimer.startTs) startWkTimer();
   updateVols();
+  const next = firstOpenEx(exos);
+  if (next === null) { stopTimer(); showToast('Toutes les séries sont faites · tu peux terminer'); return; }
+  startRestTimer(restSeconds(exos[ei].rest));
+  if (exIsDone(ei, exos)) setTimeout(() => openEx(next, true), 350);
 }
 
 function copyExName(btn, name) {
-  const done = () => { showToast(`« ${name} » copié`); if(btn){ btn.textContent='✓'; setTimeout(()=>{ btn.textContent='⧉'; }, 1200); } };
+  const icon = btn?.innerHTML;
+  const done = () => { showToast(`« ${name} » copié`); if (btn) { btn.textContent = '✓'; setTimeout(() => { btn.innerHTML = icon; }, 1200); } };
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(name).then(done).catch(()=>fallbackCopy(name, done));
+    navigator.clipboard.writeText(name).then(done).catch(() => fallbackCopy(name, done));
   } else { fallbackCopy(name, done); }
 }
 function fallbackCopy(text, done) {
   const ta = document.createElement('textarea');
-  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
   document.body.appendChild(ta); ta.focus(); ta.select();
-  try { document.execCommand('copy'); done(); } catch(e){}
+  try { document.execCommand('copy'); done(); } catch (e) {}
   document.body.removeChild(ta);
 }
 
 function updateVols() {
-  const exos = WORKOUT_PLAN[wkState.muscleGroup][wkState.weekType];
+  const exos = curExos();
   let total = 0;
-  exos.forEach((ex,ei)=>{
-    let ev=0;
-    for(let si=0;si<ex.sets;si++){
-      const w=parseFloat(document.getElementById(`w-${ei}-${si}`)?.value)||0;
-      const r=parseInt(document.getElementById(`r-${ei}-${si}`)?.value)||0;
-      const v=w*r; ev+=v;
-      // Auto-validate: vert si kg ET reps remplis, reset sinon
-      const key=`${ei}-${si}`;
-      const row=document.getElementById(`set-row-${ei}-${si}`);
-      const btn=document.getElementById(`chk-${ei}-${si}`);
-      const filled = w>0 && r>0;
-      if(filled && !wkState.doneSets[key]){
-        wkState.doneSets[key]=true;
-        row?.classList.add('done');
-        if(btn){btn.textContent='✓';btn.classList.add('checked');}
-      } else if(!filled && wkState.doneSets[key]){
-        wkState.doneSets[key]=false;
-        row?.classList.remove('done');
-        if(btn){btn.textContent='○';btn.classList.remove('checked');}
-      }
-      const el=document.getElementById(`sv-${ei}-${si}`);
-      if(el){
-        if(v>0){
-          const prev=wkState.prevExercises[ei]?.sets[si];
-          const prevVol=(parseFloat(prev?.weight)||0)*(parseInt(prev?.reps)||0);
-          const d=prevVol>0?(v>prevVol?`<span style="color:var(--green);font-size:9px">↑</span>`:v<prevVol?`<span style="color:var(--red);font-size:9px">↓</span>`:''):'';
-          el.innerHTML=`${fmtVol(v)} kg${d}`;
-        } else el.textContent='—';
-      }
+  exos.forEach((ex, ei) => {
+    let ev = 0, done = 0;
+    for (let si = 0; si < ex.sets; si++) {
+      const w = parseFloat(document.getElementById(`w-${ei}-${si}`)?.value) || 0;
+      const r = parseInt(document.getElementById(`r-${ei}-${si}`)?.value) || 0;
+      if (wkState.doneSets[`${ei}-${si}`]) { done++; ev += w * r; }   // volume des séries faites uniquement
     }
-    const el=document.getElementById(`ex-vol-${ei}`);
-    if(el) el.textContent = fmtVol(ev)+' kg';
-    total+=ev;
+    total += ev;
+    const bar = document.getElementById(`ex-prog-${ei}`);
+    if (bar) bar.style.width = `${(done / ex.sets * 100).toFixed(1)}%`;
+    const sub = document.getElementById(`ex-sub-${ei}`);
+    if (sub) sub.textContent = done === ex.sets ? `${ex.sets} séries · ${fmtVol(ev)} kg · fait`
+      : done ? `${done} sur ${ex.sets} séries · ${fmtVol(ev)} kg`
+      : `${ex.sets} × ${ex.reps} · repos ${ex.rest}`;
   });
-  const te=document.getElementById('session-total');
-  if(te) te.textContent=fmtVol(total);
-  const last=getLastSession(wkState.muscleGroup, wkState.weekType);
-  const de=document.getElementById('session-delta');
-  if(de&&last&&total>0){
-    const d=((total-last.totalVolume)/last.totalVolume*100);
-    de.innerHTML=`<span class="${d>=0?'up':'down'}">${d>=0?'↑':'↓'} ${Math.abs(d).toFixed(1)}%</span>`;
-  }
+  wkState.total = total;
+  const te = document.getElementById('session-total');
+  if (te) te.textContent = fmtVol(total);
+  const pe = document.getElementById('rb-prog');
+  if (pe) pe.textContent = seanceProgressLabel();
+  const last = getLastSession(wkState.muscleGroup, wkState.weekType);
+  const de = document.getElementById('session-delta');
+  if (de) de.textContent = (last && total > 0) ? `· ${total >= last.totalVolume ? '+' : '−'}${Math.abs((total - last.totalVolume) / last.totalVolume * 100).toFixed(0)} %` : '';
+  refreshSetStates();
   saveWkDraft();
 }
+
+// Séries faites (fond gris + ✓ noir) et série en cours (contour noir) de l'exercice ouvert
+function refreshSetStates() {
+  curExos().forEach((ex, ei) => {
+    let curFound = false;
+    for (let si = 0; si < ex.sets; si++) {
+      const row = document.getElementById(`set-row-${ei}-${si}`);
+      if (!row) continue;
+      const done = !!wkState.doneSets[`${ei}-${si}`];
+      const cur = !done && !curFound && wkState.openEx === ei;
+      if (cur) curFound = true;
+      row.classList.toggle('done', done);
+      row.classList.toggle('cur', cur);
+      document.getElementById(`chk-${ei}-${si}`)?.setAttribute('aria-pressed', String(done));
+      // Couleur de la série vs la dernière fois : vert = plus lourd (ou pas de référence), orange = même poids, rouge = moins lourd.
+      // Rouge et orange s'affichent dès la saisie (contour du champ poids) ; la série validée prend la couleur pleine.
+      const tone = setTone(ei, si);
+      ['t-up', 't-same', 't-down'].forEach(c => row.classList.toggle(c, (tone || 'up') === c.slice(2) && (done || !!tone)));
+      const wf = document.getElementById(`w-${ei}-${si}`)?.closest('.fld');
+      if (wf) ['t-up', 't-same', 't-down'].forEach(c => wf.classList.toggle(c, !done && tone === c.slice(2)));
+    }
+  });
+}
+
+function setTone(ei, si) {
+  const w = parseFloat(document.getElementById(`w-${ei}-${si}`)?.value) || 0;
+  const prev = wkState.prevSets?.[ei] || [];
+  const pw = parseFloat((prev[si] || prev[prev.length - 1])?.weight) || 0;
+  if (!w || !pw) return null;
+  return w > pw ? 'up' : w === pw ? 'same' : 'down';
+}
+
+function seanceProgressLabel() {
+  const exos = curExos();
+  const n = exos.filter((_, ei) => exIsDone(ei, exos)).length;
+  return `${n} exo${n > 1 ? 's' : ''} sur ${exos.length}`;
+}
+
+// ── Barre de séance : remplace la barre d'onglets pendant la muscu (chrono, repos, Terminer)
+function mountRunbar() {
+  document.body.classList.add('in-seance');
+  let bar = document.getElementById('runbar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'runbar'; bar.className = 'runbar';
+    document.body.appendChild(bar);
+  }
+  renderRunbar();
+}
+function unmountRunbar() {
+  document.body.classList.remove('in-seance');
+  document.getElementById('runbar')?.remove();
+}
+function renderRunbar() {
+  const bar = document.getElementById('runbar');
+  if (!bar) return;
+  if (timerState.active) {
+    bar.innerHTML = `
+      <div class="rb-l">
+        <svg class="rb-ring" viewBox="0 0 36 36" aria-hidden="true">
+          <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3"/>
+          <circle id="rest-ring" cx="18" cy="18" r="15" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"
+            stroke-dasharray="94.25" stroke-dashoffset="0" transform="rotate(-90 18 18)"/>
+        </svg>
+        <div class="rb-t"><b id="rest-count" aria-live="off">${formatTimerTime(restRemaining())}</b><small>Repos</small></div>
+      </div>
+      <div class="rb-r">
+        <button class="rb-ghost" onclick="stopTimer()">Passer</button>
+        <button class="rb-btn" onclick="addRest(30)">+30 s</button>
+      </div>`;
+    updateRestUI();
+    return;
+  }
+  const started = !!wkTimer.startTs || Object.values(wkState.doneSets).some(Boolean);
+  bar.innerHTML = `
+    <button class="rb-l rb-timer${started && !wkTimer.running ? ' paused' : ''}" id="timer-toggle-btn" onclick="${wkTimer.startTs ? 'toggleWkTimer()' : 'startWkTimer();renderRunbar()'}" aria-label="Chrono de séance : pause ou reprise">
+      <div class="rb-t"><b id="session-timer">${wkTimer.startTs ? formatDur(Math.floor((Date.now() - wkTimer.startTs) / 1000)) : '00:00'}</b>
+        <small><span id="rb-prog">${seanceProgressLabel()}</span> · <span id="session-total">${fmtVol(wkState.total || 0)}</span> kg</small></div>
+    </button>
+    ${started
+      ? `<button class="rb-btn" onclick="saveWorkout()">Terminer</button>`
+      : `<button class="rb-btn" onclick="startWkTimer();renderRunbar()">Démarrer</button>`}`;
+}
+
+function leaveSeance() { saveWkDraft(); navigate('dashboard'); }
 
 let _savingWorkout = false;
 function saveWorkout() {
@@ -1080,6 +1269,8 @@ function saveWorkout() {
   const totalVolume = calcSessionVol(exercises);
   const duration = wkTimer.startTs ? Math.floor((Date.now() - wkTimer.startTs) / 1000) : 0;
   stopWkTimer();
+  stopTimer();
+  wkState.openKey = null;
   S.weekType = wt;
   S.workouts.push({ id:uid(), date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes, duration });
 
@@ -1114,79 +1305,34 @@ function saveWorkout() {
 // 5b. CHRONO REPOS
 // ============================================================
 
-let timerState = { active: false, remaining: 90, interval: null };
-const TIMER_DURATION = 90;
+let timerState = { active: false, endTs: 0, total: 90, interval: null };
 
-function startRestTimer() {
-  if (timerState.interval) clearInterval(timerState.interval);
-  timerState.remaining = TIMER_DURATION;
-  timerState.active    = true;
-  renderTimerBanner();
-  timerState.interval = setInterval(() => {
-    timerState.remaining--;
-    if (timerState.remaining <= 0) {
-      clearInterval(timerState.interval);
-      timerState.interval = null;
-      timerState.active   = false;
-      onTimerEnd();
-    } else {
-      updateTimerBanner();
-    }
-  }, 1000);
+function startRestTimer(sec = 90) {
+  clearInterval(timerState.interval);
+  timerState = { active: true, endTs: Date.now() + sec * 1000, total: sec, interval: setInterval(tickRest, 250) };
+  renderRunbar();
 }
-
+function restRemaining() { return Math.max(0, Math.ceil((timerState.endTs - Date.now()) / 1000)); }
+function tickRest() {
+  if (restRemaining() <= 0) { stopTimer(); onTimerEnd(); }
+  else updateRestUI();
+}
+function addRest(sec) { timerState.endTs += sec * 1000; timerState.total += sec; haptic([4]); updateRestUI(); }
 function stopTimer() {
-  if (timerState.interval) clearInterval(timerState.interval);
+  clearInterval(timerState.interval);
   timerState.interval = null;
-  timerState.active   = false;
-  const el = document.getElementById('timer-banner');
-  if (el) el.classList.remove('active', 'timer-urgent');
+  timerState.active = false;
+  renderRunbar();
 }
-
-function renderTimerBanner() {
-  let el = document.getElementById('timer-banner');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'timer-banner';
-    el.className = 'timer-banner';
-    document.body.appendChild(el);
-  }
-  el.classList.remove('timer-urgent');
-  const C = 2 * Math.PI * 15.9;
-  el.innerHTML = `
-    <div class="timer-left">
-      <div class="timer-lbl">REPOS</div>
-      <div class="timer-count" id="timer-count">${formatTimerTime(timerState.remaining)}</div>
-    </div>
-    <div class="timer-ring-wrap">
-      <svg class="timer-ring" viewBox="0 0 36 36">
-        <circle class="timer-ring-bg"   cx="18" cy="18" r="15.9" fill="none" stroke-width="2"/>
-        <circle class="timer-ring-fill" id="timer-ring-fill" cx="18" cy="18" r="15.9" fill="none" stroke-width="2"
-          stroke-dasharray="${C.toFixed(1)}"
-          stroke-dashoffset="0"
-          transform="rotate(-90 18 18)"/>
-      </svg>
-    </div>
-    <button class="timer-close" onclick="stopTimer()">✕</button>
-  `;
-  el.classList.add('active');
-}
-
-function updateTimerBanner() {
-  const countEl = document.getElementById('timer-count');
-  if (countEl) countEl.textContent = formatTimerTime(timerState.remaining);
-  const ring = document.getElementById('timer-ring-fill');
-  if (ring) {
-    const C = 2 * Math.PI * 15.9;
-    ring.style.strokeDashoffset = (C * (1 - timerState.remaining / TIMER_DURATION)).toFixed(2);
-  }
-  const banner = document.getElementById('timer-banner');
-  if (banner && timerState.remaining <= 10) banner.classList.add('timer-urgent');
+function updateRestUI() {
+  const left = restRemaining();
+  const c = document.getElementById('rest-count');
+  if (c) c.textContent = formatTimerTime(left);
+  const ring = document.getElementById('rest-ring');
+  if (ring) ring.style.strokeDashoffset = (94.25 * (1 - left / timerState.total)).toFixed(2);
 }
 
 function onTimerEnd() {
-  const el = document.getElementById('timer-banner');
-  if (el) el.classList.remove('active', 'timer-urgent');
   try { navigator.vibrate([200, 100, 200]); } catch {}
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1199,7 +1345,7 @@ function onTimerEnd() {
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.6);
   } catch {}
-  showToast('💪 C\'est parti !');
+  showToast('Repos terminé · série suivante');
 }
 
 function formatTimerTime(s) {
@@ -1621,6 +1767,9 @@ function destroyNutriCharts() {
 }
 
 function renderNutrition() {
+  // Le poids vit désormais dans Corps : ses actions (logWeight/deleteWeight) rappellent renderNutrition
+  if (S.view === 'body') { renderBody(); return; }
+  if (nutriTab === 'weight') nutriTab = 'today';
   const today    = nutriDate;
   const entries  = (S.nutrition || []).filter(n => n.date === today);
   const todayCal  = Math.ceil(entries.reduce((s, n) => s + (n.calories || 0), 0));
@@ -1636,17 +1785,15 @@ function renderNutrition() {
   const waterMl  = (S.hydration || {})[today] || 0;
   const waterPct = Math.min((waterMl / NUTRI_TARGETS.water) * 100, 100);
 
-  document.getElementById('app').innerHTML = `
+  document.getElementById('app').innerHTML = viewHead('Nutrition') + `
     <div class="tab-row">
       <button class="tab-btn ${nutriTab==='today' ?'active':''}" onclick="setNutriTab('today')">Aujourd'hui</button>
       <button class="tab-btn ${nutriTab==='plan'  ?'active':''}" onclick="setNutriTab('plan')">Plan</button>
       <button class="tab-btn ${nutriTab==='stats' ?'active':''}" onclick="setNutriTab('stats')">Stats</button>
-      <button class="tab-btn ${nutriTab==='weight'?'active':''}" onclick="setNutriTab('weight')">Poids</button>
     </div>
     ${nutriTab === 'today'  ? _nutriToday(todayCal, todayProt, todayCarbs, todayFat, calPct, protPct, carbsPct, fatPct, effectiveCal, burned, waterMl, waterPct, entries) : ''}
     ${nutriTab === 'plan'   ? _nutriPlan() : ''}
     ${nutriTab === 'stats'  ? _nutriStats() : ''}
-    ${nutriTab === 'weight' ? _nutriWeight() : ''}
     <div class="spacer"></div>
   `;
   requestAnimationFrame(buildNutriCharts);
@@ -2013,7 +2160,7 @@ function _nutriWeight() {
       </div>
       <div class="stat-box">
         <div class="stat-lbl">Évolution</div>
-        <div class="stat-num" style="color:${diff!==null?(diff>=0?'var(--green)':'var(--red)'):'var(--t1)'}">
+        <div class="stat-num" style="color:var(--t1)">
           ${diff!==null?(diff>0?'+':'')+diff:'—'}<span class="stat-unit"> kg</span>
         </div>
         <div class="stat-sub">${weights.length>1?weights.length+' mesures':'Première mesure'}</div>
@@ -2182,7 +2329,7 @@ function buildNutriCharts() {
     const data = days7.map(d=>(S.nutrition||[]).filter(n=>n.date===d).reduce((s,n)=>s+n.calories,0)||null);
     nutriCharts.cal = new Chart(cc, {
       type:'bar',
-      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#FF6B3580', borderColor:'#FF6B35', borderWidth:0, borderRadius:4 }]},
+      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#0A0A0A80', borderColor:'#0A0A0A', borderWidth:0, borderRadius:4 }]},
       options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
         scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
           y:{grid:{color:grid}, suggestedMax:NUTRI_TARGETS.calories+200, ticks:{callback:v=>v>=1000?(v/1000).toFixed(1)+'k':v}} }
@@ -2195,7 +2342,7 @@ function buildNutriCharts() {
     const data = days7.map(d=>(S.nutrition||[]).filter(n=>n.date===d).reduce((s,n)=>s+n.protein,0)||null);
     nutriCharts.prot = new Chart(pc, {
       type:'bar',
-      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#00D0FF80', borderColor:'#00D0FF', borderWidth:0, borderRadius:4 }]},
+      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#0A0A0A80', borderColor:'#0A0A0A', borderWidth:0, borderRadius:4 }]},
       options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
         scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
           y:{grid:{color:grid}, suggestedMax:NUTRI_TARGETS.protein+20, ticks:{callback:v=>v+'g'}} }
@@ -2208,7 +2355,7 @@ function buildNutriCharts() {
     const data = days7.map(d=>(S.nutrition||[]).filter(n=>n.date===d).reduce((s,n)=>s+(n.carbs||0),0)||null);
     nutriCharts.carbs = new Chart(cbc, {
       type:'bar',
-      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#F59E0B80', borderColor:'#F59E0B', borderWidth:0, borderRadius:4 }]},
+      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#0A0A0A80', borderColor:'#0A0A0A', borderWidth:0, borderRadius:4 }]},
       options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
         scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
           y:{grid:{color:grid}, suggestedMax:NUTRI_TARGETS.carbs+40, ticks:{callback:v=>v+'g'}} }
@@ -2221,7 +2368,7 @@ function buildNutriCharts() {
     const data = days7.map(d=>(S.nutrition||[]).filter(n=>n.date===d).reduce((s,n)=>s+(n.fat||0),0)||null);
     nutriCharts.fat = new Chart(fc, {
       type:'bar',
-      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#EF444480', borderColor:'#EF4444', borderWidth:0, borderRadius:4 }]},
+      data:{ labels:dayLbls, datasets:[{ data, backgroundColor:'#0A0A0A80', borderColor:'#0A0A0A', borderWidth:0, borderRadius:4 }]},
       options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
         scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
           y:{grid:{color:grid}, suggestedMax:NUTRI_TARGETS.fat+15, ticks:{callback:v=>v+'g'}} }
@@ -2237,8 +2384,8 @@ function buildNutriCharts() {
       const ml = (S.hydration||{})[d] || 0;
       return ml > 0 ? Math.round((ml / NUTRI_TARGETS.water) * 100) : null;
     });
-    const hwColors = hwData.map(v => v === null ? 'transparent' : v >= 100 ? '#00FF8099' : v >= 70 ? '#06B6D499' : '#FF6B3599');
-    const hwBorders = hwData.map(v => v === null ? 'transparent' : v >= 100 ? '#00FF80' : v >= 70 ? '#06B6D4' : '#FF6B35');
+    const hwColors = hwData.map(v => v === null ? 'transparent' : v >= 100 ? '#0A0A0A99' : v >= 70 ? '#0A0A0A99' : '#0A0A0A99');
+    const hwBorders = hwData.map(v => v === null ? 'transparent' : v >= 100 ? '#0A0A0A' : v >= 70 ? '#0A0A0A' : '#0A0A0A');
     nutriCharts.water = new Chart(hwc, {
       type: 'bar',
       data: { labels: hwLbls, datasets: [{ data: hwData, backgroundColor: hwColors, borderColor: hwBorders, borderWidth: 0, borderRadius: 3 }] },
@@ -2264,11 +2411,11 @@ function buildNutriCharts() {
       const wmax  = Math.max(...wvals) + 1;
       nutriCharts.weight = new Chart(wc, {
         type:'line',
-        data:{ labels:wlbls, datasets:[{ data:wvals, borderColor:'#00FF80', backgroundColor:'rgba(0,255,128,.06)',
-          fill:true, tension:.3, pointRadius:3, pointBackgroundColor:'#00FF80', spanGaps:true }]},
+        data:{ labels:wlbls, datasets:[{ data:wvals, borderColor:'#0A0A0A', backgroundColor:'rgba(10,10,10,.04)',
+          fill:true, tension:.3, pointRadius:3, pointBackgroundColor:'#0A0A0A', spanGaps:true }]},
         options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
           scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
-            y:{grid:{color:grid}, min:wmin, max:wmax, ticks:{callback:v=>v+' kg'}} }
+            y:{grid:{color:grid}, min:wmin, max:wmax, ticks:{callback:v=>(Math.round(v*10)/10)+' kg'}} }
         }
       });
     }
@@ -2282,17 +2429,13 @@ function buildNutriCharts() {
 let runTab = 'run';
 
 function renderRun() {
-  document.getElementById('app').innerHTML = `
-    <div class="tab-row">
-      <button class="tab-btn ${runTab==='run'?'active':''}" onclick="setRunTab('run')">🏃 Course</button>
-      <button class="tab-btn ${runTab==='ride'?'active':''}" onclick="setRunTab('ride')">🚴 Vélo</button>
-    </div>
+  document.getElementById('app').innerHTML = seanceHead() + `
     ${runTab === 'run' ? _runForm() : _rideForm()}
     <div class="spacer"></div>
   `;
 }
 
-function setRunTab(tab) { runTab = tab; renderRun(); }
+function setRunTab(tab) { runTab = tab; seanceMode = tab; renderRun(); }
 
 function _runForm() {
   return `
@@ -2483,7 +2626,7 @@ function renderHistory() {
     groups[k].items.push(item);
   });
 
-  document.getElementById('app').innerHTML = `
+  document.getElementById('app').innerHTML = progressHead() + `
     <div class="tab-row">
       <button class="tab-btn ${histTab==='workout'?'active':''}" onclick="setHistTab('workout')">Muscu (${S.workouts.length})</button>
       <button class="tab-btn ${histTab==='run'?'active':''}" onclick="setHistTab('run')">Course (${S.runs.length})</button>
@@ -2500,8 +2643,8 @@ function renderHistory() {
           <div class="hist-item" onclick="openSessionDetail('${item.id}')">
             <div class="hist-icon" style="background:${groupColor(item.muscleGroup)}">${groupShort(item.muscleGroup)}</div>
             <div class="hist-info">
-              <div class="hist-title">${groupLabel(item.muscleGroup)} · ${item.weekType}</div>
-              <div class="hist-sub">${formatDate(item.date)} · ${item.exercises.length} exercices</div>
+              <div class="hist-title">${sessionTitle(item.muscleGroup, item.weekType)}</div>
+              <div class="hist-sub">${/^[AB][12]$/.test(item.weekType) ? `Sem. ${item.weekType[0]} · ` : ''}${formatDate(item.date)} · ${item.exercises.length} exos</div>
             </div>
             <div class="hist-right">
               <div class="hist-vol">${fmtVol(item.totalVolume)} kg</div>
@@ -2513,7 +2656,7 @@ function renderHistory() {
           </div>`;
         })() : histTab==='run' ? `
           <div class="hist-item" onclick="openRunDetail('${item.id}')">
-            <div class="hist-icon" style="background:#00FFD4">KM</div>
+            <div class="hist-icon" style="background:#6E6E6E">KM</div>
             <div class="hist-info">
               <div class="hist-title">${item.distance.toFixed(1)} km${item.elev>0?` · ↑${item.elev}m`:''}</div>
               <div class="hist-sub">${formatDate(item.date)} · ${fmtPace(item.pace)}/km · ${FEEL_LABELS[(item.feeling||3)-1]}</div>
@@ -2526,7 +2669,7 @@ function renderHistory() {
           </div>
         ` : `
           <div class="hist-item" onclick="openRideDetail('${item.id}')">
-            <div class="hist-icon" style="background:#A78BFA">🚴</div>
+            <div class="hist-icon" style="background:#8E8E8E">🚴</div>
             <div class="hist-info">
               <div class="hist-title">${item.km.toFixed(1)} km${item.elev>0?` · ↑${item.elev}m`:''}</div>
               <div class="hist-sub">${formatDate(item.date)} · ${item.speed>0?item.speed.toFixed(1)+' km/h':''} · ${FEEL_LABELS[(item.feeling||3)-1]}</div>
@@ -2550,7 +2693,7 @@ function openRideDetail(id) {
   showModal(`
     <div class="modal-head">
       <div>
-        <div class="t3" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">🚴 Vélo</div>
+        <div class="t3" style="font-size:13px;font-weight:500;margin-bottom:3px">🚴 Vélo</div>
         <div class="modal-title">${r.km.toFixed(2)} km</div>
         <div class="t3" style="font-size:12px;margin-top:2px">${formatDate(r.date)}</div>
       </div>
@@ -2603,7 +2746,7 @@ function openSessionDetail(id) {
   showModal(`
     <div class="modal-head">
       <div>
-        <div class="t3" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">${groupLabel(s.muscleGroup)} · ${s.weekType}</div>
+        <div class="t3" style="font-size:13px;font-weight:500;margin-bottom:3px">${sessionTitle(s.muscleGroup, s.weekType)}${/^[AB][12]$/.test(s.weekType) ? ' · semaine ' + s.weekType[0] : ''}</div>
         <div class="modal-title">${fmtVol(s.totalVolume)} kg</div>
         <div class="t3" style="font-size:12px;margin-top:2px">${formatDate(s.date)}</div>
       </div>
@@ -2626,7 +2769,7 @@ function openRunDetail(id) {
   showModal(`
     <div class="modal-head">
       <div>
-        <div class="t3" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">Course</div>
+        <div class="t3" style="font-size:13px;font-weight:500;margin-bottom:3px">Course</div>
         <div class="modal-title">${r.distance.toFixed(2)} km</div>
         <div class="t3" style="font-size:12px;margin-top:2px">${formatDate(r.date)}</div>
       </div>
@@ -2721,7 +2864,7 @@ function renderStats() {
   const bestVol = (() => { const wks=[...new Set(S.workouts.map(w=>w.weekKey))]; return wks.length?Math.round(Math.max(...wks.map(wk=>totalVol(wk)))):0; })();
   const avgPace = (() => { const ps=S.runs.filter(r=>r.pace>0).map(r=>r.pace); return ps.length?fmtPace(ps.reduce((s,p)=>s+p,0)/ps.length):'--:--'; })();
 
-  document.getElementById('app').innerHTML = `
+  document.getElementById('app').innerHTML = progressHead() + `
     <div class="period-row">
       <button class="period-btn ${period===2?'active':''}" onclick="setPeriod(2)">2 sem.</button>
       <button class="period-btn ${period===4?'active':''}" onclick="setPeriod(4)">1 mois</button>
@@ -2891,7 +3034,7 @@ function renderProfile() {
   const goalKg    = g.kg || 70;
   const initial   = p.name ? p.name[0].toUpperCase() : null;
 
-  document.getElementById('app').innerHTML = `
+  document.getElementById('app').innerHTML = profileHead() + `
     <!-- NOM -->
     <div class="prof-header">
       <input id="p-name" class="prof-name-input" type="text"
@@ -2933,7 +3076,7 @@ function renderProfile() {
       </div>
       <div class="prof-legend">
         <span class="prof-legend-item">
-          <span class="prof-legend-dash" style="border-color:#22C55E"></span>Ligne cible
+          <span class="prof-legend-dash" style="border-color:#0A0A0A"></span>Ligne cible
         </span>
         <span class="prof-legend-item">
           <span class="prof-legend-solid"></span>Réel
@@ -2946,7 +3089,7 @@ function renderProfile() {
     <div class="prof-settings-card">
       <div class="prof-row">
         <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:#FF6B35"></span>
+          <span class="prof-row-dot" style="background:#0A0A0A"></span>
           <span class="prof-row-label">Calories / jour</span>
         </div>
         <div class="prof-row-right">
@@ -2970,7 +3113,7 @@ function renderProfile() {
       <div class="prof-row-divider"></div>
       <div class="prof-row">
         <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:#F59E0B"></span>
+          <span class="prof-row-dot" style="background:#0A0A0A"></span>
           <span class="prof-row-label">Glucides / jour</span>
         </div>
         <div class="prof-row-right">
@@ -2982,7 +3125,7 @@ function renderProfile() {
       <div class="prof-row-divider"></div>
       <div class="prof-row">
         <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:#EF4444"></span>
+          <span class="prof-row-dot" style="background:#0A0A0A"></span>
           <span class="prof-row-label">Lipides / jour</span>
         </div>
         <div class="prof-row-right">
@@ -2994,7 +3137,7 @@ function renderProfile() {
       <div class="prof-row-divider"></div>
       <div class="prof-row">
         <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:#06B6D4"></span>
+          <span class="prof-row-dot" style="background:#0A0A0A"></span>
           <span class="prof-row-label">Eau / jour</span>
         </div>
         <div class="prof-row-right">
@@ -3025,7 +3168,7 @@ function renderProfile() {
     <div class="prof-settings-card" style="padding:20px 18px">
       <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
         ${currentUser.photoURL
-          ? `<img src="${currentUser.photoURL}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--green);box-shadow:0 0 0 4px rgba(52,199,89,.15)">`
+          ? `<img src="${currentUser.photoURL}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--green);box-shadow:0 0 0 4px rgba(10,10,10,.06)">`
           : `<div style="width:72px;height:72px;border-radius:50%;background:var(--c-dos);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;font-weight:700">${(currentUser.displayName||'?')[0].toUpperCase()}</div>`}
         <div>
           <div style="font-size:16px;font-weight:600;color:var(--t1)">${currentUser.displayName||'Connecté'}</div>
@@ -3095,8 +3238,8 @@ function buildWeightChart() {
   gradReal.addColorStop(0, dark ? 'rgba(224,224,224,.18)' : 'rgba(20,20,20,.12)');
   gradReal.addColorStop(1, dark ? 'rgba(224,224,224,0)'   : 'rgba(20,20,20,0)');
   const gradTarget = wgc.createLinearGradient(0, 0, 0, h);
-  gradTarget.addColorStop(0, 'rgba(34,197,94,.10)');
-  gradTarget.addColorStop(1, 'rgba(34,197,94,0)');
+  gradTarget.addColorStop(0, 'rgba(10,10,10,.08)');
+  gradTarget.addColorStop(1, 'rgba(10,10,10,0)');
 
   const labels = [], targetLine = [], actualLine = [];
   const d0 = new Date(startDate);
@@ -3126,7 +3269,7 @@ function buildWeightChart() {
       {
         label: 'Ligne cible',
         data: targetLine,
-        borderColor: '#22C55E',
+        borderColor: '#0A0A0A',
         borderWidth: 1.5,
         borderDash: [5, 6],
         pointRadius: 0,
@@ -3163,7 +3306,7 @@ function buildWeightChart() {
         y: {
           grid: { display: false },
           border: { display: false },
-          ticks: { maxTicksLimit: 4, callback: v => v + ' kg', color: tickColor, font: { size: 10 } },
+          ticks: { maxTicksLimit: 4, callback: v => (Math.round(v*10)/10) + ' kg', color: tickColor, font: { size: 10 } },
           min: yMin, max: yMax,
         }
       }
@@ -3251,7 +3394,7 @@ function buildCharts() {
   if(rc) charts.run = new Chart(rc, {
     type:'bar',
     data:{ labels, datasets:[{ data: wks.map(wk=>{ const k=totalKm(wk); return k>0?+k.toFixed(1):null; }),
-      backgroundColor:'#00FFD470', borderColor:'#00FFD4', borderWidth:0, borderRadius:4 }]},
+      backgroundColor:'#6E6E6E70', borderColor:'#6E6E6E', borderWidth:0, borderRadius:4 }]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}},
       scales:{x:{grid:{display:false},ticks:{maxRotation:0}}, y:{suggestedMax:RUN_GOAL_KM+2,grid:{color:grid},ticks:{callback:v=>v+' km'}}}
@@ -3269,12 +3412,12 @@ function buildCharts() {
       type: 'line',
       data: { labels: wdLbls, datasets: [
         { label: 'Eau (L)', data: wdData,
-          borderColor: '#00FF80', borderWidth: 2,
-          backgroundColor: darkMode ? 'rgba(0,255,128,.08)' : 'rgba(0,255,128,.12)',
+          borderColor: '#0A0A0A', borderWidth: 2,
+          backgroundColor: darkMode ? 'rgba(10,10,10,.05)' : 'rgba(10,10,10,.06)',
           fill: true, tension: .35, spanGaps: true,
-          pointRadius: 4, pointBackgroundColor: '#00FF80', pointBorderColor: 'transparent' },
+          pointRadius: 4, pointBackgroundColor: '#0A0A0A', pointBorderColor: 'transparent' },
         { label: 'Objectif', data: days30.map(() => goalL),
-          borderColor: '#00FF8040', borderDash: [4,4], borderWidth: 1.5,
+          borderColor: '#0A0A0A40', borderDash: [4,4], borderWidth: 1.5,
           pointRadius: 0, fill: false, tension: 0 }
       ]},
       options: { responsive: true, maintainAspectRatio: false,
@@ -3301,10 +3444,139 @@ function closeModal() { document.getElementById('modal-overlay').classList.add('
 let _toast;
 function showToast(msg) {
   let el = document.getElementById('toast');
-  if(!el){ el=document.createElement('div'); el.id='toast'; el.style.cssText=`position:fixed;bottom:calc(var(--nav-h)+14px);left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:var(--r-sm);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;z-index:300;white-space:nowrap;max-width:90vw;text-align:center;transition:opacity .3s,transform .3s;`; document.body.appendChild(el); }
+  if(!el){ el=document.createElement('div'); el.id='toast'; el.style.cssText=`position:fixed;bottom:calc(var(--nav-h)+14px);left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:var(--r-sm);font-size:13px;font-weight:600;z-index:300;white-space:nowrap;max-width:90vw;text-align:center;transition:opacity .3s,transform .3s;`; document.body.appendChild(el); }
   el.textContent=msg; el.style.opacity='1'; el.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(_toast);
   _toast=setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(-50%) translateY(8px)'; },2600);
+}
+
+// ============================================================
+// 9c. COQUE : EN-TÊTES DE VUE, PASTILLES, ONGLETS REGROUPÉS
+// ============================================================
+
+let seanceMode  = 'muscu';     // Séance : 'muscu' | 'run' | 'ride'
+let progressTab = 'history';   // Progrès : 'history' | 'stats'
+
+const VIEW_RENDERERS = {
+  dashboard: () => renderDashboard(),
+  workout:   () => renderSeance(),
+  nutrition: () => renderNutrition(),
+  body:      () => renderBody(),
+  progress:  () => renderProgress(),
+  profile:   () => renderProfile()
+};
+
+const ICON_BACK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+const ICON_CHECK    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ICON_CAL      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>';
+const ICON_COPY     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>';
+const ICON_DUMBBELL = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 10v12M23 10v12M5 13v6M27 13v6M9 16h14"/></svg>';
+const ICON_FLAME    = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M16 4c1.5 4 7 6.5 7 13a7 7 0 0 1-14 0c0-4 2.5-5.5 2.5-9.5 2 1.3 3 3 4 4.5 0-2.8.5-5.5.5-8z"/></svg>';
+const ICON_EGG      = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 4c5 0 9 8 9 14a9 9 0 0 1-18 0c0-6 4-14 9-14z"/><circle cx="16" cy="19" r="3.5"/></svg>';
+const ICON_DROP     = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M16 4c4 5.5 8 9.5 8 15a8 8 0 0 1-16 0c0-5.5 4-9.5 8-15z"/></svg>';
+const ICON_SCALE    = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="5" y="5" width="22" height="22" rx="6"/><path d="M11 13a7 7 0 0 1 10 0M16 13l2-3"/></svg>';
+const ICON_RUN      = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="19" cy="6" r="2.5"/><path d="M12 14l4-4 4 3 3 1M16 10l-2 7 5 4v6M14 17l-4 5H6"/></svg>';
+const ICON_PERSON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
+
+function viewHead(title, { kicker = '', left = '', right = '' } = {}) {
+  return `
+    <header class="view-head">
+      <div class="view-head-l">
+        ${left}
+        <div>${kicker ? `<div class="view-kicker">${kicker}</div>` : ''}<h1 class="view-title">${title}</h1></div>
+      </div>
+      ${right ? `<div class="view-head-r">${right}</div>` : ''}
+    </header>`;
+}
+
+function chipRow(items, active, fn) {
+  return `<div class="chip-row" role="tablist">${items.map(([k, l]) =>
+    `<button class="chip ${k === active ? 'active' : ''}" role="tab" aria-selected="${k === active}" onclick="${fn}('${k}')">${l}</button>`
+  ).join('')}</div>`;
+}
+
+// Pastille profil : photo Google si connecté, sinon initiale du prénom (ou pictogramme)
+function avatarBtn() {
+  const photo   = currentUser?.photoURL;
+  const initial = (S.profile?.name || '').trim().charAt(0).toUpperCase();
+  const inner   = photo ? `<img src="${photo}" alt="">` : (initial || ICON_PERSON);
+  return `<button class="av-btn" id="av-btn" onclick="navigate('profile')" aria-label="Profil et réglages">${inner}</button>`;
+}
+
+function dashHead() {
+  const d = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  return viewHead("Aujourd'hui", { kicker: d.charAt(0).toUpperCase() + d.slice(1), right: avatarBtn() });
+}
+
+const SEANCE_CHIPS = [['push', 'Push'], ['pull', 'Pull'], ['legs', 'Legs'], ['cardio', 'Cardio']];
+
+// En-tête de la vue Cardio (la muscu a son propre en-tête dans renderWorkoutForm)
+function seanceHead() {
+  return viewHead('Cardio', { kicker: 'Séance' })
+    + chipRow(SEANCE_CHIPS, 'cardio', 'setSeanceGroup')
+    + chipRow([['run', 'Course'], ['ride', 'Vélo']], seanceMode, 'setSeanceMode');
+}
+
+function setSeanceGroup(k) {
+  if (k === 'cardio') { setSeanceMode(runTab === 'ride' ? 'ride' : 'run'); return; }
+  if (seanceMode !== 'muscu') {
+    if (!confirmLeaveDraft(k, k === wkState.muscleGroup ? wkState.weekType : variantForGroup(k))) return;
+    seanceMode = 'muscu';
+    if (k !== wkState.muscleGroup) { if (activeWkDraft()) clearWkDraft(); wkState.muscleGroup = k; }
+    renderSeance();
+    return;
+  }
+  setWorkoutMuscle(k);
+}
+
+function progressHead() {
+  return viewHead('Progrès') + chipRow([['history', 'Historique'], ['stats', 'Stats']], progressTab, 'setProgressTab');
+}
+
+function profileHead() {
+  return viewHead('Profil', { left: `<button class="icon-btn" onclick="navigate('dashboard')" aria-label="Retour">${ICON_BACK}</button>` });
+}
+
+function renderSeance() {
+  if (seanceMode === 'muscu') renderWorkout();
+  else { unmountRunbar(); renderRun(); }
+}
+
+function setSeanceMode(mode) {
+  if (mode === seanceMode) return;
+  if (seanceMode === 'muscu') saveWkDraft();   // garde la saisie en cours avant de passer au cardio
+  seanceMode = mode;
+  if (mode !== 'muscu') runTab = mode;
+  renderSeance();
+  document.getElementById('app').scrollTop = 0;
+}
+
+function renderProgress() { progressTab === 'stats' ? renderStats() : renderHistory(); }
+
+function setProgressTab(tab) {
+  if (tab === progressTab) return;
+  progressTab = tab;
+  destroyCharts();
+  renderProgress();
+  document.getElementById('app').scrollTop = 0;
+}
+
+// Corps : pour l'instant le suivi du poids (déplacé depuis Nutrition). Mesures et photos arrivent à l'étape 3.
+function renderBody() {
+  document.getElementById('app').innerHTML = viewHead('Corps') + _nutriWeight() + '<div class="spacer"></div>';
+  requestAnimationFrame(buildNutriCharts);
+}
+
+// L'app peut rester ouverte en arrière-plan d'un jour à l'autre (PWA iOS) :
+// au retour, on recale les dates « du jour » pour ne pas enregistrer sur la veille.
+let _lastDay = todayStr();
+function checkDayRollover() {
+  const t = todayStr();
+  if (t === _lastDay) return;
+  if (nutriDate === _lastDay) nutriDate = t;
+  _lastDay = t;
+  if (S.view === 'workout' && seanceMode === 'muscu' && hasActiveWkDraft()) return;  // séance en cours : on garde sa date
+  navigate(S.view);
 }
 
 // ============================================================
@@ -3360,7 +3632,7 @@ function initPullToRefresh() {
     if (ind) { ind.style.opacity = '0'; ind.style.transform = 'translateX(-50%) translateY(0)'; }
     if (dy > 60) {
       haptic([10, 30, 10]);
-      if (db && syncCode) {
+      if (db && currentUser) {
         pullFromCloud();
         showToast('Synchronisation…');
       } else {
@@ -3371,7 +3643,7 @@ function initPullToRefresh() {
 }
 
 function initSwipe() {
-  const VIEWS = ['dashboard','workout','run','nutrition','history','stats','profile'];
+  const VIEWS = ['dashboard','workout','nutrition','body','progress'];
   let sx = 0, sy = 0, st = 0;
   const el = document.getElementById('app');
   el.addEventListener('touchstart', e => { sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now(); }, {passive:true});
@@ -3386,12 +3658,18 @@ function initSwipe() {
 }
 
 function navigate(view) {
+  // Anciennes vues regroupées : Course/Vélo → Séance, Historique/Stats → Progrès
+  if (view === 'run')     { seanceMode = runTab === 'ride' ? 'ride' : 'run'; view = 'workout'; }
+  if (view === 'history') { progressTab = 'history'; view = 'progress'; }
+  if (view === 'stats')   { progressTab = 'stats';   view = 'progress'; }
+  if (!VIEW_RENDERERS[view]) view = 'dashboard';
   S.view = view;
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
-  if(view!=='stats')      destroyCharts();
-  if(view!=='nutrition')  destroyNutriCharts();
+  unmountRunbar();
+  destroyCharts();
+  destroyNutriCharts();
   if(view!=='workout')    pauseWkTimer();
-  ({ dashboard:renderDashboard, workout:renderWorkout, run:renderRun, history:renderHistory, stats:renderStats, nutrition:renderNutrition, profile:renderProfile })[view]?.();
+  VIEW_RENDERERS[view]();
   const app = document.getElementById('app');
   app.scrollTop = 0;
   const first = app.firstElementChild;
@@ -3401,28 +3679,12 @@ function navigate(view) {
 function initEvents() {
   document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>{navigate(b.dataset.view);closeMenu();}));
 
-  document.getElementById('btn-theme').addEventListener('click',()=>{
-    const isLight = document.documentElement.dataset.theme==='light';
-    const next = isLight ? 'dark' : 'light';
-    document.documentElement.dataset.theme=next; S.theme=next; save();
-    document.getElementById('icon-sun').style.display  = next==='dark'?'none':'block';
-    document.getElementById('icon-moon').style.display = next==='dark'?'block':'none';
-    document.getElementById('meta-theme').content = next==='dark'?'#08090C':'#ffffff';
-    if(S.view==='stats'){ destroyCharts(); renderStats(); }
-  });
-
-  document.getElementById('btn-week-toggle').addEventListener('click',()=>{
-    S.weekType = S.weekType==='A'?'B':'A'; save(); updateWeekBadge();
-    if(S.view==='workout') renderWorkout();
-    else if(S.view==='dashboard') renderDashboard();
-    showToast(`Semaine ${S.weekType}`);
-  });
-
   document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target.id==='modal-overlay') closeModal(); });
 
   // Sauvegarde du brouillon de séance dès que l'app se ferme / passe en arrière-plan
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') { if (S.view === 'workout') saveWkDraft(); flushPush(); }
+    else checkDayRollover();
   });
   window.addEventListener('pagehide', () => { if (S.view === 'workout') saveWkDraft(); flushPush(); });
 }
@@ -3435,11 +3697,8 @@ function updateWeekBadge() {
 }
 
 function applyTheme() {
-  document.documentElement.dataset.theme=S.theme;
-  const dark=S.theme==='dark';
-  document.getElementById('icon-sun').style.display  = dark?'none':'block';
-  document.getElementById('icon-moon').style.display = dark?'block':'none';
-  document.getElementById('meta-theme').content = dark?'#08090C':'#ffffff';
+  document.documentElement.dataset.theme = 'light';
+  const m = document.getElementById('meta-theme'); if (m) m.content = '#ffffff';
 }
 
 // ============================================================
@@ -3479,7 +3738,7 @@ function scheduleNotification() {
 function fireTestNotif() {
   closeModal();
   const [g, v] = nextPPLSession();
-  const title = `Séance ${WORKOUT_PLAN[g].label} ${v} 💪`;
+  const title = `Séance ${sessionTitle(g, v)} · semaine ${v[0]} 💪`;
   const body  = `${WORKOUT_PLAN[g][v].length} exercices · PPL — C'est parti !`;
   new Notification(title, { body, icon: './icon.png', badge: './icon.png' });
   showToast('Notification test envoyée ✓');
@@ -3552,7 +3811,7 @@ function applyOneTimeFixes() {
 }
 
 function init() {
-  loadState(); applyOneTimeFixes(); S.weekType = autoWeekType();
+  loadState(); applyOneTimeFixes(); S.weekType = weekLetter();
   if (hasActiveWkDraft()) S.view = 'workout'; // reprendre une séance en cours après rechargement
   applyTheme(); updateWeekBadge(); initEvents();
   navigate(S.view||'dashboard'); registerSW();

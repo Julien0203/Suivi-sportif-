@@ -29,17 +29,19 @@ App de suivi musculation & course à pied (PWA perso, en français).
 - Vues rendues en string HTML injectée dans `<main id="app">` (pas de framework de templating)
 - Constantes en SCREAMING_SNAKE_CASE, fonctions en camelCase
 - Sections d'`app.js` séparées par des bannières `// ====` numérotées — garder cette structure
-- Semaines A/B pour alterner les programmes de muscu (`weekType`)
+- Programme PPL : 6 séances différentes par semaine (Push/Pull/Legs 1 puis 2) et semaines A/B aux exercices différents. La semaine A/B est déduite de la date (`weekLetter()`), la séance du jour suit la dernière faite dans la semaine (`nextPPLSession()`). Clés de séance `A1 A2 B1 B2` stockées dans `weekType` ; dernière perf retrouvée par nom d'exercice (`lastSetsFor()`)
 
 ## Design system
-- Police : **Inter** (Google Fonts)
-- Theming light/dark via `data-theme` sur `<html>` + variables CSS
-- Couleurs par groupe musculaire définies dans `WORKOUT_PLAN` (ex. bras `#FF375F`)
-- Style iOS / mobile-first : bottom-nav, modals, haptic feedback, pull-to-refresh
+- Voir `DESIGN.md` (système visuel) et `PRODUCT.md` (cible, principes). Design v5 « Monochrome » : noir et blanc strict, univers SCAPE
+- Police système Apple (SF Pro via `-apple-system`), plus de Google Fonts
+- Thème clair uniquement pour l'instant (`applyTheme()` force `light`)
+- Barre d'onglets en pilule noire flottante, 5 onglets : Accueil, Séance (Muscu/Course/Vélo), Nutrition, Corps, Progrès (Historique/Stats). Profil via la pastille ronde de l'accueil ; plus de barre du haut
+- Chaque vue commence par `viewHead()` ; sous-navigation par `chipRow()`
+- Pas de couleur par groupe dans l'UI : les couleurs de `WORKOUT_PLAN` sont des gris réservés aux graphiques
 
 ## Contraintes
 - **Mobile-first** absolu (app utilisée sur téléphone, installée en PWA)
 - **Pas de build, pas de dépendances npm** — tout en CDN ou vanilla
 - Après modif de `app.js`/`style.css`/`index.html` : penser à bumper la version
-  du cache dans `sw.js` (`const CACHE = 'sport-crm-vXX'`) sinon le SW sert l'ancienne version
+  du cache dans `sw.js` (`const CACHE = 'sport-crm-vXX'`) ET `app.js?v=N` dans `index.html`, sinon le SW sert l'ancienne version
 - Garder le fichier `app.js` monolithique (choix assumé pour ce projet perso)
