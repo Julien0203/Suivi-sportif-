@@ -47,6 +47,7 @@ App de suivi musculation & course à pied (PWA perso, en français).
 - Brouillon de séance : 72 h, séries validées et chrono conservés, date d'origine gardée ; réouverture > 2 h → proposition d'enregistrer (`checkForgottenOnOpen()`)
 - Enregistrement : seules les séries validées, sauf confirmation pour les séries remplies non validées
 - Séance modifiable en cours (`sessionExos()` : remplacement / « faire plus tard », stocké dans le brouillon `override`) — toujours passer par `sessionExos()` / `curExos()`, jamais `WORKOUT_PLAN[mg][wt]` directement
+- Récupération musculaire (accueil, `recoveryCard()` / `muscleRecovery()`) : estimation par muscle à partir des séries validées (secondaires ×0,5 via `REC_SECONDARY`), récup 24 h + 3 h/série (+12 h gros muscles), séances cumulées ; heure exacte via `endTs` enregistré à la séance (sinon 18 h)
 - Records : comparés au 1RM estimé (Epley), en direct (`markRecords()`) et à l'enregistrement (`S.prs`)
 - Notifications via le service worker uniquement (`showLocalNotif()`, iOS 16.4+ app installée), permission demandée sur geste ; séance à 100 % non enregistrée → notif en quittant
 

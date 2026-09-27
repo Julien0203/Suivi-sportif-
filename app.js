@@ -845,6 +845,8 @@ function renderDashboard() {
       <img class="banner-img" src="img/hero/${plan[0].img}.jpg" alt="" decoding="async">
     </section>`}
 
+    ${recoveryCard(rest ? tg : g, rest ? tv : v, rest)}
+
     <div class="sec-row"><h2>Corps</h2><button class="sec-link" onclick="navigate('body')">Voir</button></div>
     <div class="stack">
       <button class="lcard" onclick="navigate('body')">
@@ -889,6 +891,7 @@ function renderDashboard() {
     </div>
     <div class="spacer"></div>
   `;
+  initRecPager();
 }
 
 function dashDateLabel() {
@@ -1571,7 +1574,7 @@ function saveWorkout(validatedOnly = false) {
   stopTimer();
   wkState.openKey = null;
   S.weekType = wt;
-  S.workouts.push({ id:uid(), date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes, duration });
+  S.workouts.push({ id:uid(), date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes, duration, endTs: date === todayStr() ? Date.now() : null });
 
   // Détection PRs
   if (!S.prs) S.prs = {};
@@ -3995,6 +3998,159 @@ function buildCharts() {
 }
 
 // ============================================================
+// 8c. RÉCUPÉRATION MUSCULAIRE (Accueil)
+// ============================================================
+// Estimation, pas une mesure : chaque séance fatigue les muscles travaillés selon les séries
+// validées (muscle principal ×1, muscles secondaires ×0,5), puis la fatigue redescend
+// linéairement. Temps de récup = 24 h + 3 h par série + 12 h pour les gros muscles (max 84 h).
+// Fatigue de départ = séries / 12 (12 séries = muscle vidé). Les séances se cumulent.
+
+const BIG_MUSCLES = ['Pecs', 'Dos', 'Quadriceps', 'Ischios', 'Fessiers'];
+// Muscles secondaires selon le mouvement (slug de l'exercice)
+const REC_SECONDARY = [
+  [/^(dc-|di-|dips)/,                          { Triceps: .5, 'Épaules': .5 }],
+  [/^(de-|arnold)/,                            { Triceps: .5 }],
+  [/^(tractions|tv-|th-|rowing-)/,             { Biceps: .5 }],
+  [/^(squat-|presse-|hack-squat)/,             { Fessiers: .5 }],
+  [/^(sdt)/,                                   { Fessiers: .5, Dos: .3 }],
+  [/^(hip-thrust)/,                            { Ischios: .3 }]
+];
+const REC_READY = 90;   // % à partir duquel un muscle est « rétabli »
+let recIdx = 0;         // muscle affiché dans le carrousel
+
+// Heure de fin d'une séance : exacte si enregistrée (endTs), sinon 18 h le jour de la séance
+function workoutEndTs(w) {
+  if (w.endTs) return w.endTs;
+  const [y, m, d] = w.date.split('-').map(Number);
+  return new Date(y, m - 1, d, 18).getTime();
+}
+
+// Séries reçues par muscle pour une séance { Pecs: 12, Triceps: 3, … }
+function workoutMuscleLoad(w) {
+  const load = {};
+  (w.exercises || []).forEach(ex => {
+    const n = (ex.sets || []).filter(s => (s.reps || 0) > 0).length;
+    const m = exoMuscle(ex.name);
+    if (!n || !m) return;
+    load[m] = (load[m] || 0) + n;
+    const slug = EXO_MEDIA[ex.name] || '';
+    const sec = REC_SECONDARY.find(([re]) => re.test(slug));
+    if (sec) Object.entries(sec[1]).forEach(([mm, f]) => { load[mm] = (load[mm] || 0) + n * f; });
+  });
+  return load;
+}
+
+// Récupération de chaque muscle à l'instant `at` → { Pecs: { pct, readyInH, lastTs }, … }
+function muscleRecovery(at = Date.now()) {
+  const fat = {}, events = {};
+  MUSCLES.forEach(m => { fat[m] = 0; events[m] = []; });
+  S.workouts.forEach(w => {
+    const end = workoutEndTs(w);
+    if (end > at || at - end > 5 * 864e5) return;
+    Object.entries(workoutMuscleLoad(w)).forEach(([m, sets]) => {
+      if (!(m in fat)) return;
+      const T  = Math.min(84, 24 + 3 * sets + (BIG_MUSCLES.includes(m) ? 12 : 0));
+      const f0 = Math.min(1, sets / 12);
+      events[m].push({ end, T, f0 });
+    });
+  });
+  const fatigueAt = (m, t) => Math.min(1, events[m].reduce((s, e) => s + e.f0 * Math.max(0, 1 - (t - e.end) / 36e5 / e.T), 0));
+  const out = {};
+  MUSCLES.forEach(m => {
+    const pct = Math.round((1 - fatigueAt(m, at)) * 100);
+    let readyInH = 0;
+    if (pct < REC_READY) {
+      readyInH = 1;
+      while (readyInH < 120 && (1 - fatigueAt(m, at + readyInH * 36e5)) * 100 < REC_READY) readyInH++;
+    }
+    const lastTs = events[m].length ? Math.max(...events[m].map(e => e.end)) : null;
+    out[m] = { pct, readyInH, lastTs };
+  });
+  return out;
+}
+
+function recStatus(pct) {
+  if (pct >= REC_READY) return { cls: 'ok',   lbl: 'Rétabli' };
+  if (pct >= 60)        return { cls: 'mid',  lbl: 'En récupération' };
+  return                       { cls: 'low',  lbl: 'Fatigué' };
+}
+
+function recWhen(r) {
+  if (r.pct >= REC_READY) {
+    if (!r.lastTs) return 'Groupe musculaire frais';
+    const d = Math.floor((Date.now() - r.lastTs) / 864e5);
+    return d < 1 ? 'Rétabli depuis peu' : `Travaillé il y a ${d} j`;
+  }
+  const h = r.readyInH;
+  return h < 24 ? `Prêt dans ~${h} h` : `Prêt dans ~${Math.round(h / 24 * 2) / 2} j`.replace('.', ',');
+}
+
+// Muscles de la prochaine séance (pour les afficher en premier)
+function sessionMuscles(g, v) {
+  const set = new Set();
+  (WORKOUT_PLAN[g]?.[v] || []).forEach(e => { const m = exoMuscle(e.name); if (m) set.add(m); });
+  return [...set];
+}
+
+// Arc de 240° ouvert vers le bas (comme une jauge)
+function recGauge(pct, cls) {
+  const R = 80, C = 2 * Math.PI * R, arc = C * 240 / 360;
+  const on = arc * Math.max(0, Math.min(100, pct)) / 100;
+  return `<svg class="rec-gauge" viewBox="0 0 200 172" aria-hidden="true">
+    <circle cx="100" cy="100" r="${R}" class="rec-track" stroke-dasharray="${arc.toFixed(1)} ${C.toFixed(1)}" transform="rotate(150 100 100)"/>
+    <circle cx="100" cy="100" r="${R}" class="rec-val ${cls}" stroke-dasharray="${on.toFixed(1)} ${C.toFixed(1)}" transform="rotate(150 100 100)"/>
+  </svg>`;
+}
+
+function recoveryCard(g, v, rest) {
+  const rec  = muscleRecovery();
+  const next = sessionMuscles(g, v);
+  const order = [...next, ...MUSCLES.filter(m => !next.includes(m)).sort((a, b) => rec[a].pct - rec[b].pct)];
+  const tired = next.filter(m => rec[m].pct < REC_READY);
+  const title = sessionTitle(g, v);
+  const note = !next.length ? ''
+    : !tired.length ? `Tout est prêt pour ${rest ? 'demain' : title}.`
+    : `${tired.join(', ')} encore en récupération pour ${title}.`;
+  if (recIdx >= order.length) recIdx = 0;
+  return `
+    <div class="sec-row"><h2>Récupération</h2><span class="sec-note">Estimation</span></div>
+    <div class="card rec-card">
+      <div class="rec-pager" id="rec-pager" onscroll="onRecScroll(this)">
+        ${order.map(m => {
+          const r = rec[m], st = recStatus(r.pct);
+          return `<div class="rec-slide">
+            <div class="rec-name">${m}${next.includes(m) ? '<span class="rec-tag">Prochaine séance</span>' : ''}</div>
+            <div class="rec-dial">
+              ${recGauge(r.pct, st.cls)}
+              <div class="rec-mid"><b>${r.pct}<small>%</small></b><span class="rec-st ${st.cls}">${st.lbl}</span></div>
+            </div>
+            <div class="rec-when">${recWhen(r)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="rec-dots" role="tablist" aria-label="Muscles">
+        ${order.map((m, i) => `<button class="rec-dot${i === recIdx ? ' on' : ''} ${recStatus(rec[m].pct).cls}" aria-label="${m}" onclick="goRecSlide(${i})"></button>`).join('')}
+      </div>
+      ${note ? `<div class="rec-note">${note}</div>` : ''}
+    </div>`;
+}
+
+function initRecPager() {
+  const p = document.getElementById('rec-pager');
+  if (p && recIdx) p.scrollLeft = recIdx * p.clientWidth;
+}
+function onRecScroll(p) {
+  const i = Math.round(p.scrollLeft / Math.max(1, p.clientWidth));
+  if (i === recIdx) return;
+  recIdx = i;
+  document.querySelectorAll('.rec-dot').forEach((d, k) => d.classList.toggle('on', k === i));
+}
+function goRecSlide(i) {
+  const p = document.getElementById('rec-pager');
+  if (p) p.scrollTo({ left: i * p.clientWidth, behavior: 'smooth' });
+}
+
+// ============================================================
 // 9. MODAL & TOAST
 // ============================================================
 
@@ -4261,6 +4417,7 @@ function initSwipe() {
   el.addEventListener('touchstart', e => { sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now(); }, {passive:true});
   el.addEventListener('touchend', e => {
     if (document.body.classList.contains('menu-open')) return;
+    if (e.target.closest?.('.rec-pager')) return;   // carrousel de récupération : glisser change de muscle
     const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
     if (Date.now()-st>400 || Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*2) return;
     const idx=VIEWS.indexOf(S.view||'dashboard');

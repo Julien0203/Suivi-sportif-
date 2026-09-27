@@ -1980,3 +1980,32 @@ body.in-seance .bottom-nav { display: none; }
 .sum-next { font-size: 13px; color: var(--t2); }
 .sum-next b { color: var(--t1); }
 @media (max-width: 360px) { .sum-tiles b { font-size: 16px; } .tool-chip { padding: 0 10px; } }
+
+/* ============================================================
+   34. RÉCUPÉRATION MUSCULAIRE (Accueil)
+   ============================================================ */
+.rec-card { padding: 16px 0 14px; overflow: hidden; }
+.rec-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.rec-pager::-webkit-scrollbar { display: none; }
+.rec-slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; padding: 0 16px; }
+.rec-name { font-size: 20px; font-weight: 700; letter-spacing: -.02em; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; text-align: center; }
+.rec-tag { font-size: 11px; font-weight: 600; letter-spacing: 0; color: var(--t2); background: var(--surface2); border-radius: 20px; padding: 3px 8px; }
+.rec-dial { position: relative; width: min(220px, 100%); margin-top: 4px; }
+.rec-gauge { display: block; width: 100%; height: auto; }
+.rec-track, .rec-val { fill: none; stroke-width: 14; stroke-linecap: round; }
+.rec-track { stroke: var(--track); }
+.rec-val { transition: stroke-dasharray .6s cubic-bezier(0.16, 1, 0.3, 1); }
+.rec-val.ok { stroke: var(--set-up); } .rec-val.mid { stroke: var(--set-same); } .rec-val.low { stroke: var(--set-down); }
+.rec-mid { position: absolute; inset: 0 0 12% 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.rec-mid b { font-size: 44px; font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.rec-mid b small { font-size: 22px; font-weight: 600; margin-left: 1px; }
+.rec-st { font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.rec-st::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.rec-st.ok::before { background: var(--set-up); } .rec-st.mid::before { background: var(--set-same); } .rec-st.low::before { background: var(--set-down); }
+.rec-when { font-size: 13px; color: var(--t2); margin-top: -6px; text-align: center; }
+.rec-dots { display: flex; justify-content: center; flex-wrap: wrap; gap: 2px; margin-top: 12px; padding: 0 12px; }
+.rec-dot { width: 18px; height: 22px; border: 0; background: none; padding: 0; display: grid; place-items: center; cursor: pointer; }
+.rec-dot::after { content: ''; width: 6px; height: 6px; border-radius: 6px; background: var(--t4); transition: width .18s cubic-bezier(0.16, 1, 0.3, 1), background .18s; }
+.rec-dot.on::after { width: 16px; background: var(--ink); }
+.rec-note { margin: 10px 16px 0; padding-top: 10px; border-top: 1px solid var(--border); font-size: 13px; color: var(--t2); text-align: center; line-height: 1.4; }
+@media (prefers-reduced-motion: reduce) { .rec-val, .rec-dot::after { transition: none; } }
