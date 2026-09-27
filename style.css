@@ -2009,3 +2009,90 @@ body.in-seance .bottom-nav { display: none; }
 .rec-dot.on::after { width: 16px; background: var(--ink); }
 .rec-note { margin: 10px 16px 0; padding-top: 10px; border-top: 1px solid var(--border); font-size: 13px; color: var(--t2); text-align: center; line-height: 1.4; }
 @media (prefers-reduced-motion: reduce) { .rec-val, .rec-dot::after { transition: none; } }
+
+/* Séries par muscle cette semaine (Accueil) */
+.sets-card { padding: 8px 16px 12px; }
+.sets-row { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; grid-template-areas: "m bar n" "m st st"; align-items: center; gap: 2px 10px; width: 100%; padding: 8px 0; border: 0; border-bottom: 1px solid var(--border); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.sets-m { grid-area: m; font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sets-bar { grid-area: bar; position: relative; height: 10px; border-radius: 10px; background: var(--track); overflow: hidden; }
+.sets-zone { position: absolute; top: 0; bottom: 0; background: rgba(0, 230, 118, .22); }
+.sets-tick { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--surface); z-index: 2; }
+.sets-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 10px; }
+.sets-plan { background: repeating-linear-gradient(-45deg, #BDBDBD 0 3px, #D6D6D6 3px 6px); }
+.sets-done { background: var(--ink); }
+.sets-n { grid-area: n; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 46px; text-align: right; }
+.sets-n b { font-weight: 700; font-size: 15px; }
+.sets-n small { color: var(--t3); font-size: 12px; }
+.sets-st { grid-area: st; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; color: var(--t2); }
+.sets-st::before { content: ''; width: 7px; height: 7px; border-radius: 50%; }
+.sets-st.ok::before { background: var(--set-up); } .sets-st.low::before { background: var(--set-same); } .sets-st.high::before { background: var(--t4); }
+.sets-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--t2); padding-top: 10px; }
+.sets-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.sets-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.sets-legend i.d { background: var(--ink); }
+.sets-legend i.p { background: repeating-linear-gradient(-45deg, #BDBDBD 0 3px, #D6D6D6 3px 6px); }
+.sets-legend i.z { background: rgba(0, 230, 118, .35); }
+.sets-legend-n { color: var(--t3); }
+@media (max-width: 360px) { .sets-row { grid-template-columns: 78px minmax(0, 1fr) auto; gap: 2px 8px; } .sets-m { font-size: 13px; } }
+.sets-card { padding-top: 12px; }
+.sets-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; margin-bottom: 4px; border-radius: 12px; background: var(--surface2); }
+.sets-tab { position: relative; height: 32px; border: 0; border-radius: 9px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--t2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: background .16s cubic-bezier(0.16, 1, 0.3, 1), color .16s; }
+.sets-tab.on { background: var(--ink); color: #fff; }
+.sets-tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--set-same); }
+.sets-card .sets-row:last-of-type { border-bottom: 0; }
+
+/* ============================================================
+   35. PROGRÈS · BILAN (ex-Stats)
+   ============================================================ */
+.bl-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; margin-bottom: 12px; border-radius: 12px; background: var(--surface2); }
+.bl-seg button { height: 34px; border: 0; border-radius: 9px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--t2); cursor: pointer; }
+.bl-seg button.active { background: var(--ink); color: #fff; }
+.bl-hero { padding: 18px 16px 16px; }
+.bl-hero-k { font-size: 12px; font-weight: 500; color: rgba(255,255,255,.6); }
+.bl-hero-h { font-size: 24px; font-weight: 700; letter-spacing: -.03em; line-height: 1.15; margin: 6px 0 6px; }
+.bl-hero-s { font-size: 14px; line-height: 1.4; color: rgba(255,255,255,.72); margin: 0 0 14px; }
+.bl-hero-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.bl-hero-tiles > div { background: rgba(255,255,255,.08); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bl-hero-tiles small { font-size: 11px; color: rgba(255,255,255,.6); font-weight: 500; }
+.bl-hero-tiles b { font-size: 22px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bl-hero-tiles b em { font-style: normal; font-size: 13px; font-weight: 500; color: rgba(255,255,255,.6); margin-left: 1px; }
+.bl-hero-tiles span { font-size: 11px; line-height: 1.3; color: rgba(255,255,255,.6); }
+
+.bl-reg { padding: 14px 16px; }
+.bl-weeks { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 3px; height: 64px; align-items: end; }
+.bl-wk { height: 100%; display: flex; align-items: flex-end; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.bl-wk i { display: block; width: 100%; background: #BDBDBD; border-radius: 4px; }
+.bl-wk.full i { background: var(--ink); }
+.bl-wk.cur { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.bl-weeks-x { display: flex; justify-content: space-between; font-size: 11px; color: var(--t3); margin-top: 6px; }
+.bl-facts { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.bl-facts div { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--t2); }
+.bl-facts b { font-size: 17px; font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; min-width: 34px; }
+
+.bl-ex { width: 100%; background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.bl-ex + .bl-ex { border-top: 1px solid var(--border); }
+.bl-ex-r { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.bl-ex-r .evo-spark { width: 56px; height: 22px; }
+.bl-rec { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+.bl-rec b { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bl-rec small { font-size: 11.5px; font-weight: 600; color: #00703F; }
+.bl-empty { font-size: 13px; color: var(--t2); margin: 8px 0; line-height: 1.4; }
+
+.bl-vol { padding: 14px 16px; }
+.bl-vol-head b { font-size: 24px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.bl-vol-head b small { font-size: 13px; font-weight: 500; color: var(--t2); }
+.bl-vol-head span { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12px; color: var(--t2); margin-top: 2px; }
+.bl-chart { height: 170px; margin-top: 10px; }
+
+.bl-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bl-nums > div { background: var(--surface); box-shadow: var(--sh-2); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.bl-nums small { font-size: 11.5px; color: var(--t2); font-weight: 500; }
+.bl-nums b { font-size: 20px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bl-nums b em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--t2); }
+@media (max-width: 360px) {
+  .bl-hero-h { font-size: 21px; }
+  .bl-hero-tiles > div { padding: 8px; }
+  .bl-hero-tiles b { font-size: 19px; }
+  .bl-ex-r .evo-spark { display: none; }
+}
+.bl-chart { position: relative; overflow: hidden; }

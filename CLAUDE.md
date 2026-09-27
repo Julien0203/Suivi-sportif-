@@ -35,7 +35,7 @@ App de suivi musculation & course à pied (PWA perso, en français).
 - Voir `DESIGN.md` (système visuel) et `PRODUCT.md` (cible, principes). Design v5 « Monochrome » : noir et blanc strict, univers SCAPE
 - Police système Apple (SF Pro via `-apple-system`), plus de Google Fonts
 - Thème clair uniquement pour l'instant (`applyTheme()` force `light`)
-- Barre d'onglets en pilule noire flottante, 4 onglets : Accueil, Séance (musculation), Corps, Progrès (Évolution/Historique/Stats). Évolution = volume et indice de force par muscle (`renderEvolution()`, correspondance exercice → muscle dans `SLUG_MUSCLE`). Profil via la pastille ronde de l'accueil ; plus de barre du haut. Barre d'onglets glissable (bulle qui suit le doigt, `initNavGesture()`)
+- Barre d'onglets en pilule noire flottante, 4 onglets : Accueil, Séance (musculation), Corps, Progrès (Évolution/Historique/Bilan — `renderStats()`, verdict + régularité + exercices en progrès/à surveiller + records). Évolution = volume et indice de force par muscle (`renderEvolution()`, correspondance exercice → muscle dans `SLUG_MUSCLE`). Profil via la pastille ronde de l'accueil ; plus de barre du haut. Barre d'onglets glissable (bulle qui suit le doigt, `initNavGesture()`)
 - Nutrition et course/vélo retirés de l'interface à la demande de Julien (il ne s'en sert pas) : le code et les données (`S.nutrition`, `S.runs`, `S.rides`) restent, les vues `nutrition`/`run` redirigent vers Accueil/Séance
 - Chaque vue commence par `viewHead()` ; sous-navigation par `chipRow()`
 - Pas de couleur par groupe dans l'UI : les couleurs de `WORKOUT_PLAN` sont des gris réservés aux graphiques
@@ -44,10 +44,12 @@ App de suivi musculation & course à pied (PWA perso, en français).
 - Sauvegarde locale immédiate (`save()` horodaté) + synchro Firestore qui n'écrase jamais un local plus récent (`pullFromCloud`)
 - Connexion Google : popup, repli sur redirection (PWA iPhone) ; état visible sur l'accueil (`syncChip()`, `syncBanner()`)
 - Sauvegardes de secours IndexedDB (`tempo-backups`, 10 copies, après chaque séance + 1/jour), restauration auto si le stockage est vidé (`initBackups()`), liste dans Profil
+- Ouverture de l'app : toujours sur l'Accueil (`init()`), sauf rechargement iOS en pleine séance (brouillon modifié il y a < 10 min, `wkDraftAgeMin()`) → Séance
 - Brouillon de séance : 72 h, séries validées et chrono conservés, date d'origine gardée ; réouverture > 2 h → proposition d'enregistrer (`checkForgottenOnOpen()`)
 - Enregistrement : seules les séries validées, sauf confirmation pour les séries remplies non validées
 - Séance modifiable en cours (`sessionExos()` : remplacement / « faire plus tard », stocké dans le brouillon `override`) — toujours passer par `sessionExos()` / `curExos()`, jamais `WORKOUT_PLAN[mg][wt]` directement
 - Récupération musculaire (accueil, `recoveryCard()` / `muscleRecovery()`) : estimation par muscle à partir des séries validées (secondaires ×0,5 via `REC_SECONDARY`), récup 24 h + 3 h/série (+12 h gros muscles), séances cumulées ; heure exacte via `endTs` enregistré à la séance (sinon 18 h)
+- Séries par muscle cette semaine (accueil, `weekSetsCard()` / `weekMuscleSets()`) : séries validées + restant prévu des séances pas encore faites, zone 10-20 (`SETS_ZONE`), indirectes comptées ½, mini-onglets par famille (`SETS_FAMILIES`) ; une ligne ouvre l'Évolution du muscle
 - Records : comparés au 1RM estimé (Epley), en direct (`markRecords()`) et à l'enregistrement (`S.prs`)
 - Notifications via le service worker uniquement (`showLocalNotif()`, iOS 16.4+ app installée), permission demandée sur geste ; séance à 100 % non enregistrée → notif en quittant
 

@@ -716,27 +716,6 @@ function estimateOneRM(w, r) {
   return Math.round(w * (1 + r / 30));
 }
 
-function getBestSet(muscleGroup) {
-  let best = null;
-  S.workouts.filter(w => w.muscleGroup === muscleGroup).forEach(s => {
-    s.exercises.forEach(ex => {
-      ex.sets.forEach(set => {
-        const orm = estimateOneRM(set.weight, set.reps);
-        if (orm > (best?.orm || 0))
-          best = { orm, weight: set.weight, reps: set.reps, exercise: ex.name, date: s.date };
-      });
-    });
-  });
-  return best;
-}
-
-function getMuscleProgression(muscleGroup) {
-  const wks    = weeksFor(8);
-  const recent = wks.slice(4).reduce((s, wk) => s + (volByMuscle(wk)[muscleGroup] || 0), 0);
-  const prev   = wks.slice(0, 4).reduce((s, wk) => s + (volByMuscle(wk)[muscleGroup] || 0), 0);
-  return { recent, prev, pct: prev > 0 ? (recent - prev) / prev * 100 : null };
-}
-
 function fillFromLast(ei) {
   const prev = wkState.prevExercises[ei];
   if (!prev) return;
@@ -846,6 +825,7 @@ function renderDashboard() {
     </section>`}
 
     ${recoveryCard(rest ? tg : g, rest ? tv : v, rest)}
+    ${weekSetsCard(rest ? tg : g)}
 
     <div class="sec-row"><h2>Corps</h2><button class="sec-link" onclick="navigate('body')">Voir</button></div>
     <div class="stack">
@@ -1002,6 +982,10 @@ function hasActiveWkDraft() {
     if (Date.now() - (d._ts || 0) > 4 * 60 * 60 * 1000) return false;
     return Object.values(d.inputs || {}).some(v => v.w || v.r);
   } catch { return false; }
+}
+
+function wkDraftAgeMin() {
+  try { return (Date.now() - (JSON.parse(localStorage.getItem(WK_DRAFT_KEY))?._ts || 0)) / 60000; } catch { return Infinity; }
 }
 
 function renderWorkout() {
@@ -3229,193 +3213,220 @@ function deleteWorkout(id) { if(!confirm('Supprimer ?')) return; S.workouts=S.wo
 function deleteRun(id)     { if(!confirm('Supprimer ?')) return; S.runs=S.runs.filter(r=>r.id!==id); save(); closeModal(); renderHistory(); }
 
 // ============================================================
-// 8. STATISTIQUES
+// 8. BILAN (Progrès · Bilan, ex-Stats)
 // ============================================================
 
 let charts = {};
-let period = 4;
+let period = 13;   // Bilan : 4 (1 mois), 13 (3 mois) ou 26 (6 mois) semaines
 
-function buildKiviatSVG() {
-  const N = MUSCLE_KEYS.length;
-  const W = 320, H = 280, CX = 140, CY = 140, R = 90, LEVELS = 5;
-  const dark = document.documentElement.dataset.theme !== 'light';
-  const angles = MUSCLE_KEYS.map((_, i) => (2 * Math.PI * i / N) - Math.PI / 2);
-  const colors = MUSCLE_KEYS.map(k => WORKOUT_PLAN[k].color);
-  const labels = MUSCLE_KEYS.map(k => WORKOUT_PLAN[k].label);
-  const rv = MUSCLE_KEYS.map(k => getMuscleProgression(k).recent);
-  const pv = MUSCLE_KEYS.map(k => getMuscleProgression(k).prev);
-  const maxVal = Math.max(...rv, ...pv, 1);
+// Séances possibles sur la période : 6 par semaine pleine ; semaine en cours = jours écoulés hors dimanche
+function plannedSessions(weeks) {
+  const dow = new Date().getDay();                    // 0 = dimanche
+  const thisWeek = dow === 0 ? 6 : Math.min(6, dow);
+  return 6 * (weeks - 1) + thisWeek;
+}
 
-  const px = (i, val) => CX + (val / maxVal) * R * Math.cos(angles[i]);
-  const py = (i, val) => CY + (val / maxVal) * R * Math.sin(angles[i]);
-  const gx = (i, lv)  => CX + (lv / LEVELS) * R * Math.cos(angles[i]);
-  const gy = (i, lv)  => CY + (lv / LEVELS) * R * Math.sin(angles[i]);
+// Progression par exercice sur la période + records + stagnation (sur tout l'historique)
+function bilanExercises(from, hist = exoHistory()) {
+  const recent6w = lastWeekKeys(6)[0];
+  const rows = [], records = [], stalled = [];
+  Object.entries(hist).forEach(([n, h]) => {
+    const pts = h.filter(x => x.e1rm > 0);
+    if (!pts.length) return;
+    // Records : séance qui bat tout ce qui précède (pas la toute première fois)
+    let best = 0;
+    pts.forEach((x, i) => {
+      if (i > 0 && x.e1rm > best + 0.01 && x.weekKey >= from) records.push({ n, date: x.date, e1rm: x.e1rm, gain: x.e1rm - best });
+      best = Math.max(best, x.e1rm);
+    });
+    const inP = pts.filter(x => x.weekKey >= from);
+    if (inP.length >= 2) {
+      const first = inP[0].e1rm, last = inP[inP.length - 1].e1rm;
+      rows.push({ n, first, last, gainKg: last - first, pct: (last - first) / first * 100, series: inP.map(x => x.e1rm), date: inP[inP.length - 1].date });
+    }
+    // Stagnation : exercice toujours pratiqué, 3 dernières séances sans battre le meilleur d'avant
+    if (pts.length >= 4 && pts[pts.length - 1].weekKey >= recent6w) {
+      const before = Math.max(...pts.slice(0, -3).map(x => x.e1rm));
+      const last3 = pts.slice(-3);
+      if (Math.max(...last3.map(x => x.e1rm)) <= before + 0.01) stalled.push({ n, best: before, last: last3[2].e1rm, since: last3[0].date });
+    }
+  });
+  records.sort((a, b) => b.date.localeCompare(a.date));
+  return { rows, records, stalled };
+}
 
-  const gridColor  = dark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.07)';
-  const fillRecent = dark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
-  const strokeR    = dark ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.65)';
-
-  // Grid pentagons
-  const grid = Array.from({length: LEVELS}, (_, l) =>
-    `<polygon points="${MUSCLE_KEYS.map((_,i)=>`${gx(i,l+1)},${gy(i,l+1)}`).join(' ')}" fill="none" stroke="${gridColor}" stroke-width="1"/>`
-  ).join('');
-
-  // Colored axis lines
-  const axes = MUSCLE_KEYS.map((_, i) =>
-    `<line x1="${CX}" y1="${CY}" x2="${gx(i,LEVELS)}" y2="${gy(i,LEVELS)}" stroke="${colors[i]}" stroke-width="1.5" stroke-opacity=".45"/>`
-  ).join('');
-
-  // Colored sector fills (very subtle)
-  const sectors = MUSCLE_KEYS.map((_, i) => {
-    const a0 = angles[i] - Math.PI / N, a1 = angles[i] + Math.PI / N;
-    const x0 = CX + R * Math.cos(a0), y0 = CY + R * Math.sin(a0);
-    const x1 = CX + R * Math.cos(a1), y1 = CY + R * Math.sin(a1);
-    return `<polygon points="${CX},${CY} ${x0},${y0} ${x1},${y1}" fill="${colors[i]}" fill-opacity=".04"/>`;
-  }).join('');
-
-  // Polygons
-  const prevPoly   = MUSCLE_KEYS.map((_,i)=>`${px(i,pv[i])},${py(i,pv[i])}`).join(' ');
-  const recentPoly = MUSCLE_KEYS.map((_,i)=>`${px(i,rv[i])},${py(i,rv[i])}`).join(' ');
-
-  // Colored dots on recent polygon
-  const dots = MUSCLE_KEYS.map((_, i) =>
-    `<circle cx="${px(i,rv[i])}" cy="${py(i,rv[i])}" r="4.5" fill="${colors[i]}" stroke="${dark?'#0a0a0a':'#fff'}" stroke-width="1.5"/>`
-  ).join('');
-
-  // Labels — short names to avoid overflow
-  const shortLabels = { bras:'Bras', pec:'Pecto.', dos:'Dos', epaules:'Épau.', jambes:'Jambes' };
-  const lblEls = MUSCLE_KEYS.map((k, i) => {
-    const a = angles[i], lr = R + 18;
-    const x = CX + lr * Math.cos(a), y = CY + lr * Math.sin(a);
-    const anchor = Math.cos(a) > 0.1 ? 'start' : Math.cos(a) < -0.1 ? 'end' : 'middle';
-    return `<text x="${x}" y="${y}" text-anchor="${anchor}" dominant-baseline="middle" fill="${colors[i]}" font-size="11" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">${shortLabels[k]||labels[i]}</text>`;
-  }).join('');
-
-  return `<svg viewBox="-10 -10 ${W+30} ${H+20}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
-    ${sectors}${grid}${axes}
-    <polygon points="${prevPoly}" fill="rgba(140,140,140,.06)" stroke="rgba(140,140,140,.3)" stroke-width="1.5" stroke-dasharray="4 3"/>
-    <polygon points="${recentPoly}" fill="${fillRecent}" stroke="${strokeR}" stroke-width="2"/>
-    ${dots}${lblEls}
-  </svg>`;
+function hmFmt(sec) { const m = Math.round(sec / 60), h = Math.floor(m / 60); return h ? `${h} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; }
+function kgFmt(v) { return (Math.round(v * 2) / 2).toLocaleString('fr-FR'); }
+function bilanVerdict(forcePct, reg, n) {
+  if (!n) return { h: 'Pas encore de séance', s: 'Ton bilan se remplira dès ta première séance enregistrée.' };
+  const force = forcePct === null ? null : forcePct >= 2 ? 'up' : forcePct <= -2 ? 'down' : 'flat';
+  const h = force === 'up'   ? `Tu progresses : +${Math.round(forcePct)} % de force.`
+          : force === 'down' ? `Ta force recule de ${Math.abs(Math.round(forcePct))} %.`
+          : force === 'flat' ? 'Ta force est stable.'
+          : 'Continue, ta progression arrive.';
+  const s = reg >= 85 ? 'Régularité excellente, continue comme ça.'
+          : reg >= 65 ? 'Bonne régularité, quelques séances manquées.'
+          : 'Plusieurs séances manquées : la régularité fait la progression.';
+  return { h, s: force === null ? 'Il faut au moins deux séances par exercice pour mesurer la force. ' + s : s };
 }
 
 function renderStats() {
-  const bestVol = (() => { const wks=[...new Set(S.workouts.map(w=>w.weekKey))]; return wks.length?Math.round(Math.max(...wks.map(wk=>totalVol(wk)))):0; })();
-  const avgPace = (() => { const ps=S.runs.filter(r=>r.pace>0).map(r=>r.pace); return ps.length?fmtPace(ps.reduce((s,p)=>s+p,0)/ps.length):'--:--'; })();
+  const weeks = lastWeekKeys(period), from = weeks[0];
+  const prevFrom = lastWeekKeys(period * 2)[0];
+  const ws = S.workouts.filter(w => MUSCLE_KEYS.includes(w.muscleGroup));
+  const inP = ws.filter(w => (w.weekKey || getWeekKey(w.date)) >= from);
+  const prevP = ws.filter(w => { const k = w.weekKey || getWeekKey(w.date); return k >= prevFrom && k < from; });
+  const hist = exoHistory();
+  const ex = bilanExercises(from, hist);
+
+  // Force : médiane des progressions par exercice (robuste aux exercices peu faits)
+  const pcts = ex.rows.map(r => r.pct).sort((a, b) => a - b);
+  const forcePct = pcts.length ? pcts[Math.floor(pcts.length / 2)] : null;
+  const planned = plannedSessions(period);
+  const reg = Math.min(100, Math.round(inP.length / Math.max(1, planned) * 100));
+  const v = bilanVerdict(forcePct, reg, inP.length);
+
+  // Régularité : séances par semaine
+  const perWeek = weeks.map(k => ({ k, n: ws.filter(w => (w.weekKey || getWeekKey(w.date)) === k).length }));
+  const fullWeeks = perWeek.filter(p => p.n >= 6).length;
+  let streak = 0;
+  for (let i = perWeek.length - 1; i >= 0; i--) {
+    if (perWeek[i].n >= 6) streak++;
+    else if (i === perWeek.length - 1) continue;   // semaine en cours pas finie : ne casse pas la série
+    else break;
+  }
+
+  // Volume
+  const vol = list => list.reduce((t, w) => t + (w.totalVolume || 0), 0);
+  const volP = vol(inP), volPrev = vol(prevP);
+  const setsDone = inP.reduce((t, w) => t + (w.exercises || []).reduce((s, e) => s + (e.sets || []).filter(x => (x.reps || 0) > 0).length, 0), 0);
+  const durs = inP.filter(w => w.duration > 0).map(w => w.duration);
+  const totalH = durs.reduce((t, d) => t + d, 0) / 3600;
+
+  const up = ex.rows.filter(r => r.gainKg > 0.4).sort((a, b) => b.pct - a.pct).slice(0, 5);
+  const down = ex.rows.filter(r => r.pct <= -3).sort((a, b) => a.pct - b.pct);
+  const watch = [...down.map(r => ({ n: r.n, why: `${kgFmt(r.first)} → ${kgFmt(r.last)} kg sur la période`, tag: 'En baisse' })),
+                 ...ex.stalled.filter(s => !down.some(d => d.n === s.n)).map(s => ({ n: s.n, why: `Pas de record depuis le ${formatDate(s.since)} · meilleur ≈ ${kgFmt(s.best)} kg`, tag: 'Stagne' }))].slice(0, 5);
+  const perLbl = { 4: 'ce mois-ci', 13: 'en 3 mois', 26: 'en 6 mois' }[period];
+  const goMuscle = n => { const m = exoMuscle(n); return m ? `evoMuscle='${m}';setProgressTab('evolution')` : ''; };
+  const exRow = (r, right, sub) => `
+        <button class="evo-ex bl-ex" onclick="${goMuscle(r.n)}">
+          ${exoThumbHTML(r.n)}
+          <span class="evo-ex-b"><span class="evo-ex-n">${r.n}</span><span class="evo-ex-s">${sub}</span></span>
+          ${right}
+        </button>`;
 
   document.getElementById('app').innerHTML = progressHead() + `
-    <div class="period-row">
-      <button class="period-btn ${period===2?'active':''}" onclick="setPeriod(2)">2 sem.</button>
-      <button class="period-btn ${period===4?'active':''}" onclick="setPeriod(4)">1 mois</button>
-      <button class="period-btn ${period===12?'active':''}" onclick="setPeriod(12)">3 mois</button>
+    <div class="bl-seg" role="group" aria-label="Période">
+      ${[[4, '1 mois'], [13, '3 mois'], [26, '6 mois']].map(([n, l]) => `<button class="${period === n ? 'active' : ''}" aria-pressed="${period === n}" onclick="setPeriod(${n})">${l}</button>`).join('')}
     </div>
 
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="stat-lbl">Séances</div>
-        <div class="stat-num">${S.workouts.length}</div>
-        <div class="stat-sub">Musculation</div>
+    <section class="card card-dark bl-hero">
+      <div class="bl-hero-k">Ton bilan ${perLbl}</div>
+      <h2 class="bl-hero-h">${v.h}</h2>
+      <p class="bl-hero-s">${v.s}</p>
+      <div class="bl-hero-tiles">
+        <div><small>Séances</small><b>${inP.length}<em>/${planned}</em></b><span>${reg} % de régularité</span></div>
+        <div><small>Force</small><b>${forcePct === null ? '—' : `${forcePct > 0 ? '+' : forcePct < 0 ? '−' : ''}${Math.abs(Math.round(forcePct))}<em>%</em>`}</b><span>1RM estimé, médiane</span></div>
+        <div><small>Records</small><b>${ex.records.length}</b><span>sur ${new Set(ex.records.map(r => r.n)).size} exercice${new Set(ex.records.map(r => r.n)).size > 1 ? 's' : ''}</span></div>
       </div>
-      <div class="stat-box">
-        <div class="stat-lbl">Volume total</div>
-        <div class="stat-num">${(S.workouts.reduce((t,w)=>t+(w.totalVolume||0),0)/1000).toFixed(0)}<span class="stat-unit"> t</span></div>
-        <div class="stat-sub">Toutes séances</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-lbl">Meilleure sem.</div>
-        <div class="stat-num" style="font-size:22px">${(bestVol/1000).toFixed(1)}<span class="stat-unit"> t</span></div>
-        <div class="stat-sub">Volume muscu</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-lbl">Durée moy.</div>
-        <div class="stat-num" style="font-size:22px">${(() => { const d = S.workouts.filter(w => w.duration > 0); return d.length ? formatDur(Math.round(d.reduce((t, w) => t + w.duration, 0) / d.length)) : '—'; })()}</div>
-        <div class="stat-sub">Par séance</div>
-      </div>
-    </div>
+    </section>
 
-    <!-- KIVIAT RADAR SVG -->
-    <div class="card">
-      <div class="chart-lbl" style="margin-bottom:8px">
-        <span>Kiviat · Volume par muscle</span>
-        <div class="legend">
-          <span class="legend-lbl"><span class="legend-dot" style="background:var(--t1);opacity:.7"></span>4 sem.</span>
-          <span class="legend-lbl"><span class="legend-dot" style="background:var(--t4)"></span>préc.</span>
-        </div>
+    <div class="sec-row"><h2>Régularité</h2><span class="sec-note">séances par semaine</span></div>
+    <div class="card bl-reg">
+      <div class="bl-weeks" style="--n:${period}">
+        ${perWeek.map((p, i) => `<span class="bl-wk${p.n >= 6 ? ' full' : ''}${i === perWeek.length - 1 ? ' cur' : ''}" title="Semaine du ${formatDate(p.k)} : ${p.n}/6"><i style="height:${Math.max(4, Math.min(6, p.n) / 6 * 100)}%"></i></span>`).join('')}
       </div>
-      <div style="width:100%;height:260px">${buildKiviatSVG()}</div>
-    </div>
-
-    <!-- PROGRESSION PAR MUSCLE -->
-    <div class="card">
-      <div class="sect-row" style="margin-bottom:14px">
-        <span class="sect-lbl">Progression · 4 sem. vs précédentes</span>
-      </div>
-      <div class="prog-grid">
-        ${MUSCLE_KEYS.map(k => {
-          const m = WORKOUT_PLAN[k];
-          const pg = getMuscleProgression(k);
-          const cls = pg.pct === null ? 'prog-neu' : pg.pct > 0 ? 'prog-up' : pg.pct < 0 ? 'prog-down' : 'prog-neu';
-          const txt = pg.pct === null ? '—' : pg.pct > 0 ? `+${pg.pct.toFixed(0)}%` : `${pg.pct.toFixed(0)}%`;
-          return `<div class="prog-box">
-            <div class="prog-dot-row">
-              <div class="muscle-dot" style="background:${m.color}"></div>
-              <span class="prog-name">${m.label}</span>
-            </div>
-            <div class="prog-vol">${pg.recent>0?fmtVol(pg.recent):'0'}<span class="prog-unit"> kg</span></div>
-            <div class="prog-delta ${cls}">${txt}</div>
-          </div>`;
-        }).join('')}
+      <div class="bl-weeks-x"><span>${formatDate(from)}</span><span>Cette semaine</span></div>
+      <div class="bl-facts">
+        <div><b>${fullWeeks}</b><span>semaine${fullWeeks > 1 ? 's' : ''} complète${fullWeeks > 1 ? 's' : ''} (6/6) sur ${period}</span></div>
+        <div><b>${(inP.length / period).toFixed(1).replace('.', ',')}</b><span>séances par semaine en moyenne</span></div>
+        ${streak > 1 ? `<div><b>${streak}</b><span>semaines complètes d'affilée</span></div>` : ''}
       </div>
     </div>
 
-    <!-- RECORDS PERSONNELS -->
-    <div class="card">
-      <div class="sect-row" style="margin-bottom:14px">
-        <span class="sect-lbl">Records · 1RM estimé (Epley)</span>
-      </div>
-      <div class="pr-list">
-        ${MUSCLE_KEYS.map(k => {
-          const m = WORKOUT_PLAN[k];
-          const pr = getBestSet(k);
-          return `<div class="pr-row">
-            <div class="pr-dot" style="background:${m.color}"></div>
-            <div class="pr-info">
-              <div class="pr-musc">${m.label}</div>
-              ${pr ? `<div class="pr-ex">${pr.exercise}</div>` : ''}
-            </div>
-            <div>
-              <div class="pr-val">${pr ? `${pr.weight} kg × ${pr.reps}` : '—'}</div>
-              <div class="pr-sub">${pr ? `≈ ${pr.orm} kg 1RM · ${formatDate(pr.date)}` : 'Aucune séance'}</div>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
+    <div class="sec-row"><h2>Ce qui progresse</h2><span class="sec-note">1RM estimé</span></div>
+    <div class="card evo-list">
+      ${up.length ? up.map(r => exRow(r, `<span class="bl-ex-r">${sparkline(r.series, 56, 22)}${deltaPill(Math.round(r.gainKg * 2) / 2, 'kg')}</span>`, `${kgFmt(r.first)} → ${kgFmt(r.last)} kg`)).join('')
+        : `<p class="bl-empty">Rien encore : il faut au moins deux séances d'un même exercice sur la période.</p>`}
     </div>
 
+    ${watch.length ? `
+    <div class="sec-row"><h2>À surveiller</h2><span class="sec-note">change de plage de reps ou de variante</span></div>
+    <div class="card evo-list">
+      ${watch.map(w => exRow(w, `<span class="dpill ${w.tag === 'En baisse' ? 'down' : ''}">${w.tag}</span>`, w.why)).join('')}
+    </div>` : ''}
 
-    <div class="card">
-      <div class="chart-lbl">
-        <span>Volume par muscle</span>
-        <div class="legend">
-          ${MUSCLE_KEYS.map(k=>`<span class="legend-lbl"><span class="legend-dot" style="background:${WORKOUT_PLAN[k].color}"></span>${WORKOUT_PLAN[k].label}</span>`).join('')}
-        </div>
+    ${ex.records.length ? `
+    <div class="sec-row"><h2>Derniers records</h2><span class="sec-note">${ex.records.length} ${perLbl}</span></div>
+    <div class="card evo-list">
+      ${ex.records.slice(0, 5).map(r => exRow(r, `<span class="bl-rec"><b>${kgFmt(r.e1rm)} kg</b><small>+${kgFmt(r.gain)} kg</small></span>`, `🏆 ${formatDate(r.date)} · 1RM estimé`)).join('')}
+    </div>` : ''}
+
+    <div class="sec-row"><h2>Volume soulevé</h2><span class="sec-note">tonnes par semaine</span></div>
+    <div class="card bl-vol">
+      <div class="bl-vol-head">
+        <div><b>${(volP >= 100000 ? Math.round(volP / 1000).toLocaleString('fr-FR') : (volP / 1000).toFixed(1).replace('.', ','))} <small>t</small></b><span>${perLbl} · ${deltaPill(pctDelta(volP, volPrev))} vs période d'avant</span></div>
       </div>
-      <div class="chart-wrap"><canvas id="chart-muscle"></canvas></div>
+      <div class="bl-chart"><canvas id="chart-bilan" aria-label="Volume soulevé par semaine"></canvas></div>
     </div>
 
-    <div class="charts-pair">
-      <div class="card" style="margin-bottom:0">
-        <div class="chart-lbl"><span>Volume total</span></div>
-        <div class="chart-wrap chart-wrap-sm"><canvas id="chart-total"></canvas></div>
-      </div>
+    <div class="sec-row"><h2>En chiffres</h2></div>
+    <div class="bl-nums">
+      <div><small>Temps d'entraînement</small><b>${hmFmt(totalH * 3600)}</b></div>
+      <div><small>Durée moyenne</small><b>${durs.length ? hmFmt(durs.reduce((t, d) => t + d, 0) / durs.length) : '—'}</b></div>
+      <div><small>Séries validées</small><b>${setsDone.toLocaleString('fr-FR')}</b></div>
+      <div><small>Depuis le début</small><b>${ws.length} <em>séances</em></b></div>
     </div>
-
     <div class="spacer"></div>
   `;
-  requestAnimationFrame(buildCharts);
+  requestAnimationFrame(() => buildBilanChart(weeks, ws));
 }
 
-function setPeriod(n) { period=n; destroyCharts(); renderStats(); }
+function buildBilanChart(weeks, ws) {
+  const el = document.getElementById('chart-bilan');
+  if (!el || typeof Chart === 'undefined') return;
+  if (charts.bilan) { try { charts.bilan.destroy(); } catch {} }
+  const data = weeks.map(k => Math.round(ws.filter(w => (w.weekKey || getWeekKey(w.date)) === k).reduce((t, w) => t + (w.totalVolume || 0), 0) / 100) / 10);
+  const done = data.slice(0, -1).filter(x => x > 0);
+  const avg = done.length ? done.reduce((t, x) => t + x, 0) / done.length : 0;
+  const last = data.length - 1;
+  const font = { family: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif", size: 11 };
+  charts.bilan = new Chart(el.getContext('2d'), {
+    data: {
+      labels: weeks.map(k => { const d = new Date(k + 'T12:00:00'); return `${d.getDate()}/${d.getMonth() + 1}`; }),
+      datasets: [
+        { type: 'bar', label: 'Volume', data, order: 2,
+          backgroundColor: data.map((_, i) => i === last ? '#0A0A0A' : '#E4E4E4'),
+          borderRadius: 6, borderSkipped: false, maxBarThickness: 22, categoryPercentage: 0.72 },
+        ...(avg ? [{ type: 'line', label: 'Moyenne', data: data.map(() => Math.round(avg * 10) / 10), order: 1,
+          borderColor: '#0A0A0A', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0, fill: false }] : [])
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 350 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0A0A0A', titleColor: '#fff', bodyColor: '#E6E6E6', padding: 10, cornerRadius: 10,
+          displayColors: false, titleFont: { ...font, weight: '600' }, bodyFont: font,
+          callbacks: {
+            title: items => `Semaine du ${formatDate(weeks[items[0].dataIndex])}`,
+            label: ctx => `${ctx.dataset.label} : ${String(ctx.parsed.y).replace('.', ',')} t`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: '#737373', font, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } },
+        y: { beginAtZero: true, grid: { color: '#F0F0F0' }, border: { display: false },
+             ticks: { color: '#737373', font, maxTicksLimit: 4, callback: v => `${String(v).replace('.', ',')} t` } }
+      }
+    }
+  });
+}
+
+function setPeriod(n) { period = n; destroyCharts(); renderStats(); }
 
 // ============================================================
 // 8b. PROFIL & PARAMÈTRES
@@ -3998,7 +4009,7 @@ function buildCharts() {
 }
 
 // ============================================================
-// 8c. RÉCUPÉRATION MUSCULAIRE (Accueil)
+// 8c. RÉCUPÉRATION & SÉRIES PAR MUSCLE (Accueil)
 // ============================================================
 // Estimation, pas une mesure : chaque séance fatigue les muscles travaillés selon les séries
 // validées (muscle principal ×1, muscles secondaires ×0,5), puis la fatigue redescend
@@ -4135,6 +4146,70 @@ function recoveryCard(g, v, rest) {
     </div>`;
 }
 
+// Séries par muscle cette semaine : faites (séries validées) + restant prévu (séances pas encore faites).
+// Recommandation : 10 à 20 séries par muscle et par semaine pour l'hypertrophie ; les séries
+// indirectes (muscles secondaires) comptent pour ½, comme dans la récupération.
+const SETS_ZONE = [10, 20];
+const SETS_SCALE = 25;
+function weekMuscleSets() {
+  const done = {}, plan = {};
+  MUSCLES.forEach(m => { done[m] = 0; plan[m] = 0; });
+  doneThisWeek().forEach(w => Object.entries(workoutMuscleLoad(w)).forEach(([m, n]) => { if (m in done) done[m] += n; }));
+  weekSessions().filter(([g, v]) => !isSessionDone(g, v)).forEach(([g, v]) => {
+    const fake = { exercises: WORKOUT_PLAN[g][v].map(e => ({ name: e.name, sets: Array.from({ length: e.sets }, () => ({ reps: 1 })) })) };
+    Object.entries(workoutMuscleLoad(fake)).forEach(([m, n]) => { if (m in plan) plan[m] += n; });
+  });
+  return MUSCLES.map(m => ({ m, done: done[m], plan: plan[m], total: done[m] + plan[m] }));
+}
+function setsFmt(n) { return String(Math.round(n * 2) / 2).replace('.', ','); }
+// Mini-onglets par famille (abdos rangés avec Legs) : pas besoin de défiler
+const SETS_FAMILIES = [
+  ['push', 'Push', ['Pecs', 'Épaules', 'Triceps']],
+  ['pull', 'Pull', ['Dos', 'Biceps']],
+  ['legs', 'Legs', ['Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos']]
+];
+let setsFam = null;   // null = famille de la prochaine séance
+function setsState(total) { return total < SETS_ZONE[0] ? ['low', 'Trop peu'] : total > SETS_ZONE[1] ? ['high', 'Beaucoup'] : ['ok', 'Dans la zone']; }
+function weekSetsCard(nextGroup) {
+  if (!setsFam) setsFam = SETS_FAMILIES.some(f => f[0] === nextGroup) ? nextGroup : 'push';
+  return `
+    <div class="sec-row"><h2>Séries cette semaine</h2><span class="sec-note">objectif ${SETS_ZONE[0]}-${SETS_ZONE[1]}</span></div>
+    <div class="card sets-card" id="sets-card">${weekSetsInner()}</div>`;
+}
+function weekSetsInner() {
+  const rows = weekMuscleSets();
+  const byM = Object.fromEntries(rows.map(r => [r.m, r]));
+  const fam = SETS_FAMILIES.find(f => f[0] === setsFam) || SETS_FAMILIES[0];
+  const pos = n => Math.min(100, n / SETS_SCALE * 100).toFixed(1);
+  return `
+      <div class="sets-tabs" role="tablist">
+        ${SETS_FAMILIES.map(([k, l, ms]) => {
+          const low = ms.some(m => byM[m].total < SETS_ZONE[0]);
+          return `<button class="sets-tab${k === fam[0] ? ' on' : ''}" role="tab" aria-selected="${k === fam[0]}" onclick="setSetsFam('${k}')">${l}${low ? '<i class="sets-tab-dot" aria-label="muscle sous l’objectif"></i>' : ''}</button>`;
+        }).join('')}
+      </div>
+      ${fam[2].map(m => {
+        const r = byM[m], st = setsState(r.total);
+        return `<button class="sets-row" onclick="evoMuscle='${r.m}';progressTab='evolution';navigate('progress')" aria-label="${r.m} : ${setsFmt(r.done)} séries faites, ${setsFmt(r.total)} prévues">
+          <span class="sets-m">${r.m}</span>
+          <span class="sets-bar">
+            <span class="sets-zone" style="left:${pos(SETS_ZONE[0])}%;width:${(pos(SETS_ZONE[1]) - pos(SETS_ZONE[0])).toFixed(1)}%"></span>
+            <i class="sets-plan" style="width:${pos(r.total)}%"></i>
+            <i class="sets-done" style="width:${pos(r.done)}%"></i>
+            <span class="sets-tick" style="left:${pos(SETS_ZONE[0])}%"></span><span class="sets-tick" style="left:${pos(SETS_ZONE[1])}%"></span>
+          </span>
+          <span class="sets-n"><b>${setsFmt(r.done)}</b><small>/${setsFmt(r.total)}</small></span>
+          <span class="sets-st ${st[0]}">${st[1]}</span>
+        </button>`;
+      }).join('')}
+      <div class="sets-legend"><span><i class="d"></i>Faites</span><span><i class="p"></i>Prévues</span><span><i class="z"></i>Zone 10-20</span><span class="sets-legend-n">Indirectes = ½</span></div>`;
+}
+function setSetsFam(k) {
+  setsFam = k; haptic([4]);
+  const c = document.getElementById('sets-card');
+  if (c) c.innerHTML = weekSetsInner();
+}
+
 function initRecPager() {
   const p = document.getElementById('rec-pager');
   if (p && recIdx) p.scrollLeft = recIdx * p.clientWidth;
@@ -4250,7 +4325,7 @@ function setSeanceGroup(k) {
 }
 
 function progressHead() {
-  return viewHead('Progrès') + chipRow([['evolution', 'Évolution'], ['history', 'Historique'], ['stats', 'Stats']], progressTab, 'setProgressTab');
+  return viewHead('Progrès') + chipRow([['evolution', 'Évolution'], ['history', 'Historique'], ['stats', 'Bilan']], progressTab, 'setProgressTab');
 }
 
 function profileHead() {
@@ -4583,7 +4658,9 @@ function applyOneTimeFixes() {
 
 function init() {
   loadState(); applyOneTimeFixes(); S.weekType = weekLetter();
-  if (hasActiveWkDraft()) S.view = 'workout'; // reprendre une séance en cours après rechargement
+  // Ouverture de l'app : toujours sur l'accueil (le bloc « Séance en cours › Reprendre » y est).
+  // Seule exception : iOS a rechargé l'app en pleine séance (saisie il y a moins de 10 min) → on y retourne.
+  S.view = hasActiveWkDraft() && wkDraftAgeMin() < 10 ? 'workout' : 'dashboard';
   applyTheme(); updateWeekBadge(); initEvents();
   navigate(S.view||'dashboard'); registerSW();
   initSwipe(); initPullToRefresh(); initNavGesture();
