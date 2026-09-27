@@ -2605,7 +2605,7 @@ function _nutriWeight() {
   return `
     <div class="card">
       <div class="sect-lbl" style="margin-bottom:14px">Logger mon poids</div>
-      <div class="form-grid">
+      <div class="form-grid form-grid-date">
         <div class="form-group">
           <label class="form-lbl">Poids (kg)</label>
           <input type="number" class="form-inp" inputmode="decimal" step="0.1" id="w-weight"
