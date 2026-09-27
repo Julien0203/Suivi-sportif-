@@ -1080,6 +1080,7 @@ function renderWorkoutForm() {
       <span class="prog wk-prog"><i id="wk-prog-fill" style="width:0%"></i></span>
     </div>
     <div class="ex-list">${exos.map((ex, ei) => exCard(ex, ei, mg, last, draft)).join('')}</div>
+    <button class="cancel-seance" id="cancel-seance" onclick="askCancelSeance()" ${(wkTimer.startTs || draft) ? '' : 'hidden'}>Annuler la séance</button>
     <div class="spacer"></div>
   `;
   mountRunbar();
@@ -1273,6 +1274,8 @@ function updateVols() {
       : `${ex.sets} × ${ex.reps} · repos ${ex.rest}`;
   });
   wkState.total = total;
+  const cb = document.getElementById('cancel-seance');
+  if (cb) cb.hidden = !(wkTimer.startTs || Object.values(wkState.doneSets).some(Boolean));
   const te = document.getElementById('session-total');
   if (te) te.textContent = fmtVol(total);
   const pe = document.getElementById('rb-prog');
@@ -1355,6 +1358,8 @@ function unmountRunbar() {
   document.getElementById('runbar')?.remove();
 }
 function renderRunbar() {
+  const cb = document.getElementById('cancel-seance');
+  if (cb) cb.hidden = !(wkTimer.startTs || Object.values(wkState.doneSets || {}).some(Boolean));
   const bar = document.getElementById('runbar');
   if (!bar) return;
   if (timerState.active) {
@@ -1524,10 +1529,33 @@ function finishDraftSession() {
   _savingWorkout = false;
   saveWorkout(true);   // « telle quelle » = uniquement les séries validées
 }
-function discardDraftSession() {
-  if (!confirm('Supprimer cette séance ? Les séries saisies seront perdues.')) return;
-  clearWkDraft(); stopWkTimer(); wkState.muscleGroup = null; wkState.openKey = null;
-  closeModal(); navigate('dashboard'); showToast('Séance supprimée');
+function discardDraftSession() { askCancelSeance(draftInfo()); }
+
+// Annuler une séance en cours : fenêtre de confirmation (rien n'est effacé sans le 2e appui)
+function askCancelSeance(info) {
+  const d = info || (() => {
+    const p = seanceProgress();
+    return { mg: wkState.muscleGroup, wt: wkState.weekType, done: p.done, total: p.total, pct: p.pct, startTs: wkTimer.startTs };
+  })();
+  if (!d || !d.mg) return;
+  const mins = d.startTs ? Math.max(1, Math.round(((d.ts || Date.now()) - d.startTs) / 60000)) : 0;
+  showModal(`
+    <div class="modal-head"><div><div class="modal-title">Annuler la séance ?</div></div><button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button></div>
+    <div class="forgot-card">
+      <b>${sessionTitle(d.mg, d.wt)}</b>
+      <span>${d.done} série${d.done > 1 ? 's' : ''} validée${d.done > 1 ? 's' : ''} sur ${d.total}${mins ? ` · ${mins} min` : ''}</span>
+    </div>
+    <p class="cancel-warn">La séance ne sera pas enregistrée et les séries saisies seront effacées. Tu ne pourras pas revenir en arrière.</p>
+    <button class="btn btn-danger" onclick="confirmCancelSeance()">Annuler la séance</button>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="closeModal()">Continuer la séance</button>
+  `);
+}
+function confirmCancelSeance() {
+  clearWkDraft(); stopWkTimer(); stopTimer();
+  wkState.muscleGroup = null; wkState.openKey = null; wkState.doneSets = {};
+  closeModal(); navigate('dashboard');
+  haptic([20, 40, 20]);
+  showToast('Séance annulée');
 }
 
 // ============================================================
