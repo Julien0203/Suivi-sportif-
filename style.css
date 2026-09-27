@@ -1894,3 +1894,6 @@ body.in-seance .bottom-nav { display: none; }
 @media (prefers-reduced-motion: reduce) { .nav-lens, .bottom-nav.dragging .nav-lens { transition: none; } }
 .dash-top > div:first-child { min-width: 0; }
 @media (max-width: 360px) { .hello-q { display: none; } }
+/* Jour de repos : bandeau apaisé, illustration de la séance de demain en retrait */
+.banner-rest .banner-img { opacity: .45; }
+.banner-btn-ghost { background: rgba(255, 255, 255, .14); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25); }

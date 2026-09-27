@@ -29,7 +29,7 @@ App de suivi musculation & course à pied (PWA perso, en français).
 - Vues rendues en string HTML injectée dans `<main id="app">` (pas de framework de templating)
 - Constantes en SCREAMING_SNAKE_CASE, fonctions en camelCase
 - Sections d'`app.js` séparées par des bannières `// ====` numérotées — garder cette structure
-- Programme PPL : 6 séances différentes par semaine (Push/Pull/Legs 1 puis 2) et semaines A/B aux exercices différents. La semaine A/B est déduite de la date (`weekLetter()`), la séance du jour suit la dernière faite dans la semaine (`nextPPLSession()`). Clés de séance `A1 A2 B1 B2` stockées dans `weekType` ; dernière perf retrouvée par nom d'exercice (`lastSetsFor()`)
+- Programme PPL : 6 séances différentes par semaine (Push/Pull/Legs 1 puis 2) et semaines A/B aux exercices différents. La semaine A/B est déduite de la date (`weekLetter()`), la séance du jour suit la dernière faite dans la semaine (`nextPPLSession()`). Dimanche = repos (`REST_DAYS`) : l'accueil affiche le repos, la séance de demain et un bouton « Rattraper » si la semaine n'est pas bouclée. Clés de séance `A1 A2 B1 B2` stockées dans `weekType` ; dernière perf retrouvée par nom d'exercice (`lastSetsFor()`)
 
 ## Design system
 - Voir `DESIGN.md` (système visuel) et `PRODUCT.md` (cible, principes). Design v5 « Monochrome » : noir et blanc strict, univers SCAPE

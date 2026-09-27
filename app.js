@@ -139,6 +139,9 @@ const MUSCLE_KEYS = ['push', 'pull', 'legs'];
 // Rotation continue des 6 séances (Push A → Pull A → Legs A → Push B → Pull B → Legs B → …)
 // Semaine en cours : 6 séances à la suite. La lettre A/B se déduit de la date (parité de la semaine).
 const WEEK_SLOTS = [['push', 1], ['pull', 1], ['legs', 1], ['push', 2], ['pull', 2], ['legs', 2]];
+// Jours de repos (0 = dimanche) : 6 séances du lundi au samedi, repos le dimanche
+const REST_DAYS = [0];
+function isRestDay(date = new Date()) { return REST_DAYS.includes(date.getDay()); }
 const SESSION_KEYS = ['A1', 'A2', 'B1', 'B2'];
 
 // Illustrations : nom d'exercice → fichier (img/exos/<slug>.jpg image fixe, .mp4 animation en boucle).
@@ -692,7 +695,7 @@ function checkAndNotify() {
   const today = todayStr();
   const last  = JSON.parse(localStorage.getItem('notif_track') || '{}');
   const rnd   = arr => arr[Math.floor(Math.random() * arr.length)];
-  if (h >= 8 && h < 11 && last.morning !== today) {
+  if (h >= 8 && h < 11 && last.morning !== today && !isRestDay()) {
     const n = rnd(NOTIF_MORNING);
     showLocalNotif(n.title, n.body, 'rappel');
     localStorage.setItem('notif_track', JSON.stringify({ ...last, morning: today }));
@@ -792,7 +795,15 @@ function renderDashboard() {
   const recent = S.workouts.map(w => ({ ...w, kind: 'w' }))
     .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
 
-  const headline = weekN >= 6
+  // Jour de repos (sans séance en cours ni séance déjà faite aujourd'hui) : on affiche le repos,
+  // la séance de demain et, s'il en reste, la possibilité de rattraper une séance de la semaine
+  const rest = isRestDay() && !draft && !todayW;
+  const tomorrow = new Date(Date.now() + 864e5);
+  const [tg, tv] = weekSessions(weekLetter(tomorrow))[0];
+  const catchUp = rest && weekN < 6;
+  const headline = rest
+    ? `Jour de repos,<br><span>récupère bien.</span>`
+    : weekN >= 6
     ? `Semaine bouclée,<br><span>6 séances sur 6.</span>`
     : todayW
       ? `Séance faite,<br><span>prochaine : ${sessionTitle(g, v)}.</span>`
@@ -814,6 +825,16 @@ function renderDashboard() {
       ${week.map(d => `<div class="day${d.today ? ' on' : ''}${d.active ? ' done' : ''}"><small>${d.lbl}</small><b>${d.day}</b><i></i></div>`).join('')}
     </div>
 
+    ${rest ? `
+    <section class="banner banner-rest">
+      <div class="banner-txt">
+        <div class="banner-k">Demain · semaine ${tv[0]}</div>
+        <div class="banner-n">${sessionTitle(tg, tv)}</div>
+        <div class="banner-m">${WORKOUT_PLAN[tg].focus?.[tv] || ''}<br>${WORKOUT_PLAN[tg][tv].length} exercices · ${WORKOUT_PLAN[tg][tv].reduce((n, e) => n + e.sets, 0)} séries</div>
+        ${catchUp ? `<button class="banner-btn banner-btn-ghost" onclick="startSeance()">Rattraper ${sessionTitle(g, v)}</button>` : ''}
+      </div>
+      <img class="banner-img" src="img/hero/${WORKOUT_PLAN[tg][tv][0].img}.jpg" alt="" decoding="async">
+    </section>` : `
     <section class="banner">
       <div class="banner-txt">
         <div class="banner-k">${draft ? 'Séance en cours' : `Semaine ${v[0]} · ${rot} sur 6`}</div>
@@ -822,7 +843,7 @@ function renderDashboard() {
         <button class="banner-btn" onclick="startSeance()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>${draft ? 'Reprendre' : 'Démarrer'}</button>
       </div>
       <img class="banner-img" src="img/hero/${plan[0].img}.jpg" alt="" decoding="async">
-    </section>
+    </section>`}
 
     <div class="sec-row"><h2>Corps</h2><button class="sec-link" onclick="navigate('body')">Voir</button></div>
     <div class="stack">
