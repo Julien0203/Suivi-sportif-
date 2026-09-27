@@ -106,6 +106,7 @@ function loadState() {
   NUTRI_TARGETS = { calories: S.nutGoal?.cal || 2400, protein: S.nutGoal?.prot || 175, carbs: S.nutGoal?.carbs || 250, fat: S.nutGoal?.fat || 80, water: S.nutGoal?.water || 2500 };
 }
 function save() {
+  S._updatedAt = Date.now();            // horodatage : sert d'arbitre anti-écrasement au pull cloud
   localStorage.setItem('sport-crm-v2', JSON.stringify(S));
   schedulePush();
 }
@@ -118,6 +119,7 @@ let db          = null;
 let fbAuth      = null;
 let currentUser = null;
 let _syncTimer  = null;
+let _pendingPush = false;   // true tant qu'une modif locale n'a pas été poussée au cloud
 
 async function initFirebase() {
   try {
@@ -163,11 +165,16 @@ function _setSyncIcon(status) {
 }
 
 function schedulePush() {
+  _pendingPush = true;
   clearTimeout(_syncTimer);
   _syncTimer = setTimeout(pushToCloud, 2000);
 }
 
+// Pousse immédiatement s'il reste une modif locale en attente (fin de séance, mise en arrière-plan).
+function flushPush() { if (_pendingPush) pushToCloud(); }
+
 async function pushToCloud() {
+  clearTimeout(_syncTimer); _pendingPush = false;
   const ref = _syncRef(); if (!ref) return;
   _setSyncIcon('syncing');
   try {
@@ -175,7 +182,7 @@ async function pushToCloud() {
     delete data.view;
     await ref.set(data);
     _setSyncIcon('synced');
-  } catch(e) { _setSyncIcon('offline'); }
+  } catch(e) { _pendingPush = true; _setSyncIcon('offline'); }  // échec → on garde le flag pour réessayer
 }
 
 async function pullFromCloud() {
@@ -185,6 +192,15 @@ async function pullFromCloud() {
     const doc = await ref.get();
     if (doc.exists) {
       const remote = doc.data();
+      // Arbitrage anti-perte : si le local est plus récent que le cloud (séance pas encore poussée),
+      // on NE remplace PAS le local — on pousse le local vers le cloud à la place.
+      const localTs  = S._updatedAt || 0;
+      const remoteTs = remote._updatedAt || 0;
+      if (remoteTs < localTs) {
+        await pushToCloud();
+        _setSyncIcon('synced');
+        return;
+      }
       const view = S.view; const theme = S.theme;
       delete remote._syncAt;
       S = { ...DEFAULTS, ...remote, view, theme };
@@ -1083,6 +1099,7 @@ function saveWorkout() {
   });
 
   save();
+  flushPush();          // séance = donnée critique : on pousse au cloud tout de suite, sans attendre les 2 s
   clearWkDraft();
   haptic([40, 30, 80]);
   if (newPRs.length) {
@@ -3405,9 +3422,9 @@ function initEvents() {
 
   // Sauvegarde du brouillon de séance dès que l'app se ferme / passe en arrière-plan
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && S.view === 'workout') saveWkDraft();
+    if (document.visibilityState === 'hidden') { if (S.view === 'workout') saveWkDraft(); flushPush(); }
   });
-  window.addEventListener('pagehide', () => { if (S.view === 'workout') saveWkDraft(); });
+  window.addEventListener('pagehide', () => { if (S.view === 'workout') saveWkDraft(); flushPush(); });
 }
 
 function updateWeekBadge() {
