@@ -35,9 +35,18 @@ App de suivi musculation & course à pied (PWA perso, en français).
 - Voir `DESIGN.md` (système visuel) et `PRODUCT.md` (cible, principes). Design v5 « Monochrome » : noir et blanc strict, univers SCAPE
 - Police système Apple (SF Pro via `-apple-system`), plus de Google Fonts
 - Thème clair uniquement pour l'instant (`applyTheme()` force `light`)
-- Barre d'onglets en pilule noire flottante, 5 onglets : Accueil, Séance (Muscu/Course/Vélo), Nutrition, Corps, Progrès (Historique/Stats). Profil via la pastille ronde de l'accueil ; plus de barre du haut
+- Barre d'onglets en pilule noire flottante, 4 onglets : Accueil, Séance (musculation), Corps, Progrès (Évolution/Historique/Stats). Évolution = volume et indice de force par muscle (`renderEvolution()`, correspondance exercice → muscle dans `SLUG_MUSCLE`). Profil via la pastille ronde de l'accueil ; plus de barre du haut. Barre d'onglets glissable (bulle qui suit le doigt, `initNavGesture()`)
+- Nutrition et course/vélo retirés de l'interface à la demande de Julien (il ne s'en sert pas) : le code et les données (`S.nutrition`, `S.runs`, `S.rides`) restent, les vues `nutrition`/`run` redirigent vers Accueil/Séance
 - Chaque vue commence par `viewHead()` ; sous-navigation par `chipRow()`
 - Pas de couleur par groupe dans l'UI : les couleurs de `WORKOUT_PLAN` sont des gris réservés aux graphiques
+
+## Protection des données
+- Sauvegarde locale immédiate (`save()` horodaté) + synchro Firestore qui n'écrase jamais un local plus récent (`pullFromCloud`)
+- Connexion Google : popup, repli sur redirection (PWA iPhone) ; état visible sur l'accueil (`syncChip()`, `syncBanner()`)
+- Sauvegardes de secours IndexedDB (`tempo-backups`, 10 copies, après chaque séance + 1/jour), restauration auto si le stockage est vidé (`initBackups()`), liste dans Profil
+- Brouillon de séance : 72 h, séries validées et chrono conservés, date d'origine gardée ; réouverture > 2 h → proposition d'enregistrer (`checkForgottenOnOpen()`)
+- Enregistrement : seules les séries validées, sauf confirmation pour les séries remplies non validées
+- Notifications via le service worker uniquement (`showLocalNotif()`, iOS 16.4+ app installée), permission demandée sur geste ; séance à 100 % non enregistrée → notif en quittant
 
 ## Contraintes
 - **Mobile-first** absolu (app utilisée sur téléphone, installée en PWA)

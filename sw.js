@@ -1,4 +1,4 @@
-const CACHE = 'sport-crm-v54';
+const CACHE = 'sport-crm-v59';
 const ASSETS = [
   './index.html',
   './style.css',
@@ -52,4 +52,15 @@ self.addEventListener('fetch', e => {
       })
     );
   }
+});
+
+// Toucher une notification (séance oubliée, rappel) : ouvre ou ramène Tempo au premier plan
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const win = list.find(c => 'focus' in c);
+      return win ? win.focus() : self.clients.openWindow('./');
+    })
+  );
 });

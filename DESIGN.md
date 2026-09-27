@@ -39,7 +39,7 @@ Police système d'Apple (SF Pro) via `-apple-system`, repli Helvetica Neue / sys
 
 ## Composants
 
-- **Barre d'onglets** : pilule noire flottante (58 px, rayon plein), 5 icônes blanches sans libellé, trait blanc sous l'onglet actif. Onglets : Accueil, Séance, Nutrition, Corps, Progrès. Le profil s'ouvre par la pastille ronde en haut de l'accueil.
+- **Barre d'onglets** : pilule noire flottante (58 px, rayon plein), 4 icônes blanches sans libellé ; une capsule translucide sous l'onglet actif, qui grossit et suit le doigt quand on glisse sur la barre (comme Apple Music) — on change d'onglet en relâchant. Onglets : Accueil, Séance, Corps, Progrès. Le profil s'ouvre par la pastille ronde en haut de l'accueil.
 - **En-tête de vue** (`viewHead`) : grand titre à gauche, sur-titre facultatif (date), actions à droite. Plus de barre du haut.
 - **Pastilles** (`.chip`, `.tab-btn`, `.period-btn`) : rayon plein, 36 px ; inactive blanche avec contour fin, active noire texte blanc.
 - **Cartes** (`.card`) : blanches, rayon 18 px, ombre `--sh-2`, sans bordure. `.card-dark` pour le bloc principal d'un écran (fond noir, bouton blanc).
@@ -59,8 +59,12 @@ Police système d'Apple (SF Pro) via `-apple-system`, repli Helvetica Neue / sys
 
 ## Écrans clés
 
-- **Accueil** : salutation + pastille profil, titre en deux tons (« Ta séance du jour, / Push 1. »), bandeau des 7 jours (jour actif noir, point sous les jours avec activité), bloc noir de la séance proposée (photo à droite, bouton blanc Démarrer/Reprendre), cartes Aujourd'hui (calories, protéines, eau avec +250 ml, poids), Cette semaine, Récent, Note du jour.
-- **Séance (muscu)** : la barre d'onglets est remplacée par la **barre de séance** (même pilule noire) : chrono + progression + Terminer, ou repos (anneau, Passer, +30 s). Une carte par exercice (photo, nom, séries, barre de progression) ; seul l'exercice en cours est déplié avec ses cartes de séries. Le ✓ valide la série (reprend la valeur grise proposée si le champ est vide) et lance le repos de l'exercice ; l'exercice terminé se replie et le suivant s'ouvre.
+- **Accueil** : salutation + pastille profil, titre en deux tons (« Ta séance du jour, / Push 1. »), bandeau des 7 jours (jour actif noir, point sous les jours avec activité), bloc noir de la séance proposée (photo à droite, bouton blanc Démarrer/Reprendre), carte Corps (poids), Cette semaine (les 6 séances), Récent, Note du jour.
+- **Séance (muscu)** : la barre d'onglets est remplacée par la **barre de séance** (même pilule noire) : chrono + progression + Terminer, ou repos (anneau, Passer, +30 s). En haut, la **progression de la séance** en % (séries validées / prévues), collée en haut pendant le défilement, verte à 100 % ; le % est repris dans la barre du bas. Une carte par exercice (illustration, nom, séries, barre de progression) ; seul l'exercice en cours est déplié avec ses cartes de séries. Le ✓ valide la série (reprend la valeur grise proposée si le champ est vide) et lance le repos de l'exercice ; l'exercice terminé se replie et le suivant s'ouvre.
+
+- **Progrès · Évolution** (onglet par défaut) : sélecteur de muscle (10 pastilles qui passent à la ligne), carte avec sélecteur de période (8 sem. / 12 sem. / 6 mois), deux indicateurs (volume des 4 dernières semaines vs les 4 précédentes, force), graphique Chart.js barres + courbe (barres grises, semaine en cours en noir ; courbe noire à points blancs), puis 1RM estimé par exercice et liste « Tous les muscles » avec mini-courbes. Pastilles d'écart `.dpill` : vert (hausse), rouge (baisse), gris (stable).
+  - Volume = tonnage hebdo (poids × reps). Tractions et dips : poids de corps (dernière pesée) + lest. Abdos : en répétitions.
+  - Force = indice : 1RM estimé (Epley) de chaque exercice vs ta 1re fois sur cet exercice, moyenné par semaine — comparable malgré l'alternance A/B.
 
 ## Mouvement
 

@@ -217,6 +217,89 @@ function save() {
 }
 
 // ============================================================
+// 2c. SAUVEGARDES DE SECOURS (sur le téléphone, IndexedDB)
+// ============================================================
+// 10 copies complètes des données, prises après chaque séance et une fois par jour.
+// Si iOS vide le stockage de l'app, la plus récente est restaurée automatiquement au démarrage.
+
+const BACKUP_KEEP = 10;
+function _idb() {
+  return new Promise((ok, ko) => {
+    if (!('indexedDB' in window)) return ko(new Error('indexedDB absent'));
+    const rq = indexedDB.open('tempo-backups', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('snaps', { keyPath: 'ts' });
+    rq.onsuccess = () => ok(rq.result);
+    rq.onerror = () => ko(rq.error);
+  });
+}
+async function listBackups() {
+  try {
+    const dbx = await _idb();
+    return await new Promise(ok => {
+      const rq = dbx.transaction('snaps').objectStore('snaps').getAll();
+      rq.onsuccess = () => ok((rq.result || []).sort((a, b) => b.ts - a.ts));
+      rq.onerror = () => ok([]);
+    });
+  } catch { return []; }
+}
+async function saveBackup(reason = 'auto') {
+  try {
+    const data = JSON.parse(JSON.stringify(S)); delete data.view;
+    const dbx = await _idb();
+    const tx = dbx.transaction('snaps', 'readwrite');
+    tx.objectStore('snaps').put({ ts: Date.now(), reason, workouts: (S.workouts || []).length, data });
+    await new Promise(ok => { tx.oncomplete = ok; tx.onerror = ok; });
+    const all = await listBackups();
+    if (all.length > BACKUP_KEEP) {
+      const tx2 = dbx.transaction('snaps', 'readwrite');
+      all.slice(BACKUP_KEEP).forEach(b => tx2.objectStore('snaps').delete(b.ts));
+    }
+    localStorage.setItem('tempo-last-backup', String(Date.now()));
+  } catch (e) { console.warn('[Sauvegarde]', e); }
+}
+function restoreData(data) {
+  const view = S.view;
+  S = { ...DEFAULTS, ...data, view, _updatedAt: Date.now() };
+  save();
+  navigate(S.view || 'dashboard');
+}
+async function restoreBackup(ts) {
+  const b = (await listBackups()).find(x => x.ts === ts);
+  if (!b) return;
+  if (!confirm(`Restaurer la sauvegarde du ${new Date(ts).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} (${b.workouts} séances) ? Tes données actuelles seront remplacées.`)) return;
+  await saveBackup('avant restauration');
+  restoreData(b.data);
+  closeModal();
+  showToast('Sauvegarde restaurée ✓');
+}
+async function showBackupsModal() {
+  const all = await listBackups();
+  showModal(`
+    <div class="modal-head"><div><div class="modal-title">Sauvegardes de secours</div></div><button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button></div>
+    <p class="t2" style="font-size:14px;line-height:1.5;margin-bottom:14px">Copies de tes données gardées sur ce téléphone, après chaque séance et une fois par jour.</p>
+    ${all.length ? `<div class="backup-list">${all.map(b => `
+      <div class="backup-row">
+        <div><b>${new Date(b.ts).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</b><span>${b.workouts} séances · ${b.reason}</span></div>
+        <button class="btn btn-ghost btn-sm btn-inline" onclick="restoreBackup(${b.ts})">Restaurer</button>
+      </div>`).join('')}</div>` : '<p class="t3">Aucune sauvegarde pour l’instant.</p>'}
+    <button class="btn btn-primary" style="margin-top:14px" onclick="saveBackup('manuelle').then(showBackupsModal)">Sauvegarder maintenant</button>
+  `);
+}
+// Au démarrage : stockage persistant, restauration si les données ont disparu, copie quotidienne
+async function initBackups() {
+  try { await navigator.storage?.persist?.(); } catch {}
+  const all = await listBackups();
+  const latest = all[0];
+  if (latest && !(S.workouts || []).length && latest.workouts > 0) {
+    restoreData(latest.data);
+    showToast(`Données restaurées depuis la sauvegarde du téléphone (${latest.workouts} séances)`);
+    return;
+  }
+  const last = parseInt(localStorage.getItem('tempo-last-backup') || '0', 10);
+  if ((S.workouts || []).length && Date.now() - last > 20 * 3600 * 1000) saveBackup('quotidienne');
+}
+
+// ============================================================
 // 2b. FIREBASE CLOUD SYNC — Google Auth
 // ============================================================
 
@@ -239,9 +322,13 @@ async function initFirebase() {
     // Écoute les changements de connexion
     fbAuth.onAuthStateChanged(user => {
       currentUser = user;
+      syncStatus = user ? 'synced' : 'off';
       _updateSyncBtn();
       if (user) pullFromCloud();
+      else if (S.view === 'dashboard') renderDashboard();
     });
+    // Retour d'une connexion par redirection (repli iPhone)
+    fbAuth.getRedirectResult().then(r => { if (r?.user) onSignedIn(r.user); }).catch(e => { if (e?.code) showToast('Connexion impossible : ' + e.code); });
   } catch(e) { console.warn('[Sync] Firebase init:', e); }
 }
 
@@ -252,6 +339,9 @@ function _syncRef() {
 function _updateSyncBtn() {
   const av = document.getElementById('av-btn');
   if (av) av.outerHTML = avatarBtn();
+  const chip = document.getElementById('sync-chip');
+  if (chip) chip.outerHTML = syncChip();
+  if (currentUser) document.querySelector('.sync-banner')?.remove();
   const btn = document.getElementById('sync-btn');
   if (!btn) return;
   if (currentUser?.photoURL) {
@@ -265,10 +355,28 @@ function _updateSyncBtn() {
   }
 }
 
+// État de la synchro cloud : 'off' (pas connecté) · 'syncing' · 'synced' · 'pending' · 'offline'
+let syncStatus = 'off';
 function _setSyncIcon(status) {
-  const btn = document.getElementById('sync-btn');
-  if (!btn || currentUser?.photoURL) return;
-  btn.dataset.status = status;
+  syncStatus = currentUser ? status : 'off';
+  const chip = document.getElementById('sync-chip');
+  if (chip) chip.outerHTML = syncChip();
+}
+function syncChip() {
+  if (!currentUser) return '';
+  const st = _pendingPush && syncStatus === 'synced' ? 'pending' : syncStatus;
+  const label = { synced: 'Synchronisé', syncing: 'Synchronisation…', pending: 'En attente de synchro', offline: 'Hors ligne · sauvegardé sur le téléphone' }[st] || 'Synchronisé';
+  return `<button class="sync-chip st-${st}" id="sync-chip" onclick="showSyncModal()" aria-label="${label}" title="${label}">${ICON_CLOUD}<i></i></button>`;
+}
+// Encart d'accueil tant que la sauvegarde cloud n'est pas active
+function syncBanner() {
+  if (currentUser || !db && typeof firebase === 'undefined') return currentUser ? '' : `
+    <div class="sync-banner"><div><b>Tes séances ne sont que sur ce téléphone</b><span>Active la sauvegarde cloud pour ne jamais les perdre.</span></div></div>`;
+  return `
+    <button class="sync-banner" onclick="signInWithGoogle()">
+      <div><b>Tes séances ne sont que sur ce téléphone</b><span>Active la sauvegarde cloud (compte Google) pour ne jamais les perdre.</span></div>
+      <span class="sync-banner-btn">Activer</span>
+    </button>`;
 }
 
 function schedulePush() {
@@ -342,19 +450,23 @@ async function signInWithGoogle() {
   try {
     showToast('Connexion Google…');
     const result = await fbAuth.signInWithPopup(provider);
-    if (result.user) {
-      currentUser = result.user;
-      _updateSyncBtn();
-      closeModal();
-      showToast('Connecté — ' + result.user.displayName);
-      await pullFromCloud();
-      navigate('profile');
-    }
+    if (result.user) await onSignedIn(result.user);
   } catch(e) {
-    if (e.code !== 'auth/popup-closed-by-user') {
-      showToast('Erreur connexion: ' + (e.message || e.code));
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    // Sur iPhone, l'app installée bloque souvent la fenêtre de connexion : on passe par une redirection
+    if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(e.code)) {
+      try { saveWkDraft(); flushPush(); await fbAuth.signInWithRedirect(provider); return; } catch (e2) { e = e2; }
     }
+    showToast('Connexion impossible : ' + (e.code || e.message) + ' · réessaie depuis Safari');
   }
+}
+async function onSignedIn(user) {
+  currentUser = user;
+  _updateSyncBtn();
+  closeModal();
+  showToast('Sauvegarde cloud activée ✓');
+  await pullFromCloud();
+  navigate(S.view || 'dashboard');
 }
 
 async function signOutUser() {
@@ -561,22 +673,18 @@ function saveDayNote() {
 // ── Notifications ────────────────────────────────────────────
 const NOTIF_MORNING = [
   { title: '💪 C\'est l\'heure de s\'entraîner !',   body: 'Une séance aujourd\'hui te rapproche de ton objectif.' },
-  { title: '🌅 Bonne journée, champion !',            body: 'N\'oublie pas ta nutrition et ta séance du jour.' },
-  { title: '🔥 Le feu ne s\'éteint pas !',            body: 'Pense à ta séance et tes protéines aujourd\'hui.' },
+  { title: '🌅 Bonne journée, champion !',            body: 'Ta séance du jour t\'attend, elle est déjà prête.' },
+  { title: '🔥 Le feu ne s\'éteint pas !',            body: 'Garde le rythme : une séance de plus cette semaine.' },
 ];
 const NOTIF_EVENING = [
-  { title: '🌙 Bilan de la journée ?',                body: 'Pense à logger ta séance et ta nutrition !' },
-  { title: '✅ Tu as tout fait aujourd\'hui ?',        body: 'Séance + nutrition = combo gagnant. Bien joué !' },
+  { title: '🌙 Bilan de la journée ?',                body: 'Pense à enregistrer ta séance si tu l\'as faite !' },
+  { title: '✅ Tu as tout fait aujourd\'hui ?',        body: 'Une séance de plus au compteur. Bien joué !' },
   { title: '💤 Bonne récupération ce soir !',         body: 'Le corps se renforce pendant le repos. Continue !' },
 ];
 
 function initNotifs() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    Notification.requestPermission().then(p => { if (p === 'granted') checkAndNotify(); });
-  } else if (Notification.permission === 'granted') {
-    checkAndNotify();
-  }
+  // iOS n'accepte la demande de permission qu'après un geste de l'utilisateur (bouton Activer)
+  if (notifPermission() === 'granted') checkAndNotify();
 }
 
 function checkAndNotify() {
@@ -586,12 +694,12 @@ function checkAndNotify() {
   const rnd   = arr => arr[Math.floor(Math.random() * arr.length)];
   if (h >= 8 && h < 11 && last.morning !== today) {
     const n = rnd(NOTIF_MORNING);
-    new Notification(n.title, { body: n.body, icon: './icon.png', badge: './icon.png' });
+    showLocalNotif(n.title, n.body, 'rappel');
     localStorage.setItem('notif_track', JSON.stringify({ ...last, morning: today }));
   }
   if (h >= 18 && h < 22 && last.evening !== today) {
     const n = rnd(NOTIF_EVENING);
-    new Notification(n.title, { body: n.body, icon: './icon.png', badge: './icon.png' });
+    showLocalNotif(n.title, n.body, 'rappel');
     localStorage.setItem('notif_track', JSON.stringify({ ...last, evening: today }));
   }
 }
@@ -681,10 +789,8 @@ function renderDashboard() {
   const km = totalKm(thisWeekKey());
   const streaks = getStreaks();
 
-  const recent = [
-    ...S.workouts.map(w => ({ ...w, kind: 'w' })),
-    ...S.runs.map(r => ({ ...r, kind: 'r' }))
-  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
+  const recent = S.workouts.map(w => ({ ...w, kind: 'w' }))
+    .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
 
   const headline = weekN >= 6
     ? `Semaine bouclée,<br><span>6 séances sur 6.</span>`
@@ -696,10 +802,11 @@ function renderDashboard() {
     <header class="dash-top">
       <div>
         <div class="view-kicker">${dashDateLabel()}</div>
-        <div class="dash-hello">Salut${first ? ' ' + first : ''}, prêt ?</div>
+        <div class="dash-hello">Salut${first ? ' ' + first : ''}<span class="hello-q">, prêt ?</span></div>
       </div>
-      ${avatarBtn()}
+      <div class="dash-top-r">${syncChip()}${avatarBtn()}</div>
     </header>
+    ${currentUser ? '' : syncBanner()}
 
     <h1 class="dash-h1">${headline}</h1>
 
@@ -717,31 +824,12 @@ function renderDashboard() {
       <img class="banner-img" src="img/hero/${plan[0].img}.jpg" alt="" decoding="async">
     </section>
 
-    <div class="sec-row"><h2>Aujourd'hui</h2><button class="sec-link" onclick="navigate('nutrition')">Nutrition</button></div>
+    <div class="sec-row"><h2>Corps</h2><button class="sec-link" onclick="navigate('body')">Voir</button></div>
     <div class="stack">
-      <button class="lcard" onclick="navigate('nutrition')">
-        <span class="th">${ICON_FLAME}</span>
-        <span class="lcard-b"><span class="lcard-t">Calories<em>${kcal.toLocaleString('fr-FR')}</em></span>
-          <span class="lcard-s">sur ${NUTRI_TARGETS.calories.toLocaleString('fr-FR')} kcal · reste ${Math.max(0, NUTRI_TARGETS.calories - kcal).toLocaleString('fr-FR')}</span>
-          <span class="prog"><i style="width:${pct(kcal, NUTRI_TARGETS.calories)}%"></i></span></span>
-      </button>
-      <button class="lcard" onclick="navigate('nutrition')">
-        <span class="th">${ICON_EGG}</span>
-        <span class="lcard-b"><span class="lcard-t">Protéines<em>${prot} g</em></span>
-          <span class="lcard-s">sur ${NUTRI_TARGETS.protein} g · reste ${Math.max(0, NUTRI_TARGETS.protein - prot)} g</span>
-          <span class="prog"><i style="width:${pct(prot, NUTRI_TARGETS.protein)}%"></i></span></span>
-      </button>
-      <div class="lcard">
-        <span class="th">${ICON_DROP}</span>
-        <span class="lcard-b"><span class="lcard-t">Eau<em>${(water / 1000).toFixed(2).replace('.', ',')} L</em></span>
-          <span class="lcard-s">sur ${(NUTRI_TARGETS.water / 1000).toFixed(1).replace('.', ',')} L</span>
-          <span class="prog"><i style="width:${pct(water, NUTRI_TARGETS.water)}%"></i></span></span>
-        <button class="lcard-act" onclick="dashWater(250)" aria-label="Ajouter 250 ml d'eau">+250 ml</button>
-      </div>
       <button class="lcard" onclick="navigate('body')">
         <span class="th">${ICON_SCALE}</span>
         <span class="lcard-b"><span class="lcard-t">Poids<em>${lastW ? String(lastW.weight).replace('.', ',') + ' kg' : '—'}</em></span>
-          <span class="lcard-s">${lastW ? `${formatDate(lastW.date)}${prevW ? ` · ${(lastW.weight - prevW.weight) > 0 ? '+' : ''}${(lastW.weight - prevW.weight).toFixed(1).replace('.', ',')} kg` : ''}` : 'Aucune pesée · touche pour te peser'}</span></span>
+          <span class="lcard-s">${lastW ? `${formatDate(lastW.date)}${prevW ? ` · ${(lastW.weight - prevW.weight) > 0 ? '+' : ''}${(lastW.weight - prevW.weight).toFixed(1).replace('.', ',')} kg` : ''}` : 'Touche pour te peser'}</span></span>
       </button>
     </div>
 
@@ -749,8 +837,6 @@ function renderDashboard() {
     <div class="card week-card">
       <div class="wk-line"><span>Séances · semaine ${weekLetter()}</span><b>${weekN} <small>/ 6</small></b></div>
       <span class="prog"><i style="width:${pct(weekN, 6)}%"></i></span>
-      <div class="wk-line"><span>Course</span><b>${km.toFixed(1).replace('.', ',')} <small>/ ${RUN_GOAL_KM} km</small></b></div>
-      <span class="prog"><i style="width:${pct(km, RUN_GOAL_KM)}%"></i></span>
       <div class="wk-groups">
         ${weekSessions().map(([k, vv]) => {
           const done = isSessionDone(k, vv);
@@ -845,7 +931,7 @@ function pauseWkTimer() {
 function stopWkTimer()  { pauseWkTimer(); wkTimer.startTs = null; }
 
 const WK_DRAFT_KEY = 'wk-draft';
-const WK_DRAFT_TTL = 12 * 60 * 60 * 1000; // 12h
+const WK_DRAFT_TTL = 72 * 60 * 60 * 1000; // 72 h : un brouillon oublié n'est plus effacé en silence (on propose de l'enregistrer)
 
 function saveWkDraft() {
   if (!wkState.muscleGroup) return;
@@ -903,7 +989,8 @@ function renderWorkout() {
   // Sinon, la séance de ce groupe prévue cette semaine.
   wkState.weekType = (draft && draft.mg === wkState.muscleGroup) ? draft.wt
                    : (wkState.muscleGroup === nextG ? nextV : variantForGroup(wkState.muscleGroup));
-  wkState.date     = todayStr();
+  // Séance reprise depuis un brouillon : on garde SA date (sinon une séance finie le lendemain serait mal datée)
+  wkState.date     = (draft && draft.mg === wkState.muscleGroup && draft.wt === wkState.weekType && draft.date) ? draft.date : todayStr();
   // Après un rechargement iOS en pleine séance : le chrono reprend là où il en était
   if (!wkTimer.startTs && draft?.startTs && draft.mg === wkState.muscleGroup && draft.wt === wkState.weekType) {
     wkTimer.startTs = draft.startTs;
@@ -960,6 +1047,16 @@ function renderWorkoutForm() {
     <div class="wk-meta">
       <label class="date-chip">${ICON_CAL}<input type="date" id="wk-date" value="${wkState.date}" max="${todayStr()}" aria-label="Date de la séance" onchange="wkState.date=this.value||todayStr();saveWkDraft()"></label>
       <span class="wk-ref">${last ? `Réf. ${fmtVol(last.totalVolume)} kg <span id="session-delta"></span>` : 'Première fois'}</span>
+    </div>
+    ${notifPermission() === 'default' && !localStorage.getItem('notif-hint-off') ? `
+    <div class="notif-hint" id="notif-hint">
+      <span>Sois prévenu si tu quittes l'app sans enregistrer ta séance.</span>
+      <button class="btn btn-primary btn-sm btn-inline" onclick="askNotifPermission()">Activer</button>
+      <button class="notif-hint-x" onclick="localStorage.setItem('notif-hint-off','1');document.getElementById('notif-hint')?.remove()" aria-label="Masquer">×</button>
+    </div>` : ''}
+    <div class="wk-progress" id="wk-progress" role="progressbar" aria-label="Progression de la séance" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="wk-progress-top"><span id="wk-prog-s">0 série sur ${exos.reduce((t, e) => t + e.sets, 0)}</span><b id="wk-pct">0 %</b></div>
+      <span class="prog wk-prog"><i id="wk-prog-fill" style="width:0%"></i></span>
     </div>
     <div class="ex-list">${exos.map((ex, ei) => exCard(ex, ei, mg, last, draft)).join('')}</div>
     <div class="spacer"></div>
@@ -1116,7 +1213,7 @@ function validateSet(ei, si) {
   if (!wkTimer.startTs) startWkTimer();
   updateVols();
   const next = firstOpenEx(exos);
-  if (next === null) { stopTimer(); showToast('Toutes les séries sont faites · tu peux terminer'); return; }
+  if (next === null) { stopTimer(); showToast('Séance complète · tu peux terminer'); return; }
   startRestTimer(restSeconds(exos[ei].rest));
   if (exIsDone(ei, exos)) setTimeout(() => openEx(next, true), 350);
 }
@@ -1159,6 +1256,7 @@ function updateVols() {
   if (te) te.textContent = fmtVol(total);
   const pe = document.getElementById('rb-prog');
   if (pe) pe.textContent = seanceProgressLabel();
+  updateSeanceProgress();
   const last = getLastSession(wkState.muscleGroup, wkState.weekType);
   const de = document.getElementById('session-delta');
   if (de) de.textContent = (last && total > 0) ? `· ${total >= last.totalVolume ? '+' : '−'}${Math.abs((total - last.totalVolume) / last.totalVolume * 100).toFixed(0)} %` : '';
@@ -1197,10 +1295,27 @@ function setTone(ei, si) {
   return w > pw ? 'up' : w === pw ? 'same' : 'down';
 }
 
-function seanceProgressLabel() {
+// Progression de la séance : séries validées / séries prévues
+function seanceProgress() {
   const exos = curExos();
-  const n = exos.filter((_, ei) => exIsDone(ei, exos)).length;
-  return `${n} exo${n > 1 ? 's' : ''} sur ${exos.length}`;
+  const total = exos.reduce((t, e) => t + e.sets, 0);
+  const done = exos.reduce((t, e, ei) => t + Array.from({ length: e.sets }, (_, si) => wkState.doneSets[`${ei}-${si}`]).filter(Boolean).length, 0);
+  return { done, total, pct: total ? Math.round(done / total * 100) : 0 };
+}
+function seanceProgressLabel() {
+  const p = seanceProgress();
+  return `${p.pct} % · ${p.done}/${p.total} séries`;
+}
+function updateSeanceProgress() {
+  const p = seanceProgress();
+  const fill = document.getElementById('wk-prog-fill');
+  if (!fill) return;
+  fill.style.width = `${p.pct}%`;
+  document.getElementById('wk-pct').textContent = `${p.pct} %`;
+  document.getElementById('wk-prog-s').textContent = p.done === p.total ? 'Toutes les séries sont faites' : `${p.done} série${p.done > 1 ? 's' : ''} sur ${p.total}`;
+  const box = document.getElementById('wk-progress');
+  box.setAttribute('aria-valuenow', p.pct);
+  box.classList.toggle('full', p.pct === 100);
 }
 
 // ── Barre de séance : remplace la barre d'onglets pendant la muscu (chrono, repos, Terminer)
@@ -1252,19 +1367,29 @@ function renderRunbar() {
 function leaveSeance() { saveWkDraft(); navigate('dashboard'); }
 
 let _savingWorkout = false;
-function saveWorkout() {
-  if (_savingWorkout) return; _savingWorkout = true;
-  setTimeout(() => { _savingWorkout = false; }, 3000);
+// validatedOnly : n'enregistre que les séries validées (✓). Sinon, s'il reste des séries remplies
+// mais pas validées (souvent recopiées depuis la série 1), on demande si elles ont été faites.
+function saveWorkout(validatedOnly = false) {
+  if (_savingWorkout) return;
   const mg   = wkState.muscleGroup;
   const wt   = wkState.weekType;
+  const exos = WORKOUT_PLAN[mg][wt];
+  const val  = (id, f) => f(document.getElementById(id)?.value) || 0;
+  const filledNotDone = exos.reduce((t, ex, ei) => t + Array.from({ length: ex.sets }, (_, si) =>
+    !wkState.doneSets[`${ei}-${si}`] && val(`w-${ei}-${si}`, parseFloat) > 0 && val(`r-${ei}-${si}`, parseInt) > 0).filter(Boolean).length, 0);
+  let keepUnvalidated = false;
+  if (!validatedOnly && filledNotDone) {
+    keepUnvalidated = confirm(`${filledNotDone} série${filledNotDone > 1 ? 's sont remplies' : ' est remplie'} mais pas validée${filledNotDone > 1 ? 's' : ''} (✓).\n\nOK : ${filledNotDone > 1 ? 'les' : 'la'} compter comme faite${filledNotDone > 1 ? 's' : ''}.\nAnnuler : ne garder que les séries validées.`);
+  }
+  _savingWorkout = true;
+  setTimeout(() => { _savingWorkout = false; }, 3000);
   const date = document.getElementById('wk-date')?.value || todayStr();
   const notes= document.getElementById('wk-notes')?.value||'';
-  const exos = WORKOUT_PLAN[mg][wt];
   const exercises = exos.map((ex,ei)=>({
-    name: ex.name, sets: Array.from({length:ex.sets},(_,si)=>({
-      weight: parseFloat(document.getElementById(`w-${ei}-${si}`)?.value)||0,
-      reps:   parseInt(document.getElementById(`r-${ei}-${si}`)?.value)||0
-    }))
+    name: ex.name, sets: Array.from({length:ex.sets},(_,si)=>{
+      const keep = wkState.doneSets[`${ei}-${si}`] || keepUnvalidated;
+      return keep ? { weight: val(`w-${ei}-${si}`, parseFloat), reps: val(`r-${ei}-${si}`, parseInt) } : { weight: 0, reps: 0 };
+    })
   }));
   const totalVolume = calcSessionVol(exercises);
   const duration = wkTimer.startTs ? Math.floor((Date.now() - wkTimer.startTs) / 1000) : 0;
@@ -1291,6 +1416,7 @@ function saveWorkout() {
 
   save();
   flushPush();          // séance = donnée critique : on pousse au cloud tout de suite, sans attendre les 2 s
+  saveBackup('séance');
   clearWkDraft();
   haptic([40, 30, 80]);
   if (newPRs.length) {
@@ -1299,6 +1425,88 @@ function saveWorkout() {
   showToast(`${WORKOUT_PLAN[mg].label} · ${fmtVol(totalVolume)} kg · ${formatDur(duration)}`);
   wkState.muscleGroup = null;
   navigate('dashboard');
+}
+
+// ============================================================
+// 5d. SÉANCE OUBLIÉE
+// ============================================================
+
+function notifPermission() {
+  if (typeof Notification === 'undefined' || !('serviceWorker' in navigator)) return 'unsupported';
+  return Notification.permission;
+}
+// Notification via le service worker (seule méthode affichée par iOS pour une app installée)
+async function showLocalNotif(title, body, tag) {
+  if (notifPermission() !== 'granted') return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification(title, { body, tag, icon: './icon.png', badge: './icon.png', renotify: true, data: { url: './' } });
+    return true;
+  } catch { return false; }
+}
+async function askNotifPermission() {
+  if (notifPermission() === 'unsupported') { showToast('Notifications indisponibles : installe Tempo sur l\'écran d\'accueil (iOS 16.4 ou plus)'); return; }
+  const p = await Notification.requestPermission();
+  showToast(p === 'granted' ? 'Notifications activées ✓' : 'Notifications refusées · Réglages › Tempo pour les autoriser');
+  document.getElementById('notif-hint')?.remove();
+  const btn = document.getElementById('notif-btn'); if (btn) btn.textContent = p === 'granted' ? 'Activées ✓' : 'Activer';
+}
+
+// Brouillon en cours avec au moins une série validée : { mg, wt, done, total, pct, startTs, ts, date }
+function draftInfo() {
+  try {
+    const d = JSON.parse(localStorage.getItem(WK_DRAFT_KEY) || 'null');
+    if (!d || !WORKOUT_PLAN[d.mg]?.[d.wt]) return null;
+    const total = WORKOUT_PLAN[d.mg][d.wt].reduce((t, e) => t + e.sets, 0);
+    const done = Array.isArray(d.done) ? d.done.length : Object.values(d.inputs || {}).filter(v => parseFloat(v.w) > 0 && parseInt(v.r) > 0).length;
+    if (!done) return null;
+    return { ...d, done, total, pct: Math.round(done / total * 100), ts: d._ts || Date.now() };
+  } catch { return null; }
+}
+
+// En quittant l'app : séance finie à 100 % mais pas enregistrée → notification
+function notifyForgottenOnLeave() {
+  if (S.view !== 'workout' || seanceMode !== 'muscu') return;
+  const p = seanceProgress();
+  if (p.total && p.pct === 100) {
+    showLocalNotif('Séance pas encore enregistrée', `${sessionTitle(wkState.muscleGroup, wkState.weekType)} est finie à 100 %. Ouvre Tempo et appuie sur Terminer pour l'enregistrer.`, 'seance-oubliee');
+  }
+}
+
+// À la réouverture (plus de 2 h après la dernière activité) : proposer d'enregistrer la séance restée en cours
+let _forgotPromptShown = false;
+function checkForgottenOnOpen() {
+  const d = draftInfo();
+  if (!d || _forgotPromptShown || Date.now() - d.ts < 2 * 3600 * 1000) return;
+  _forgotPromptShown = true;
+  const ago = Math.round((Date.now() - d.ts) / 3600000);
+  showModal(`
+    <div class="modal-head"><div><div class="modal-title">Séance pas enregistrée</div></div><button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button></div>
+    <div class="forgot-card">
+      <b>${sessionTitle(d.mg, d.wt)}</b>
+      <span>${formatDate(d.date || todayStr())} · dernière activité il y a ${ago} h</span>
+      <span class="prog wk-prog"><i style="width:${d.pct}%"></i></span>
+      <span>${d.done} séries sur ${d.total} · ${d.pct} %</span>
+    </div>
+    <button class="btn btn-primary" onclick="finishDraftSession()">Enregistrer la séance</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal();startSeance()">Reprendre</button>
+    <button class="btn btn-danger" style="margin-top:8px" onclick="discardDraftSession()">Supprimer</button>
+  `);
+}
+function finishDraftSession() {
+  const d = draftInfo(); if (!d) { closeModal(); return; }
+  closeModal();
+  seanceMode = 'muscu'; wkState.muscleGroup = d.mg; wkState.openKey = null;
+  navigate('workout');
+  // Durée = du début à la dernière activité (pas jusqu'à maintenant)
+  if (d.startTs) { wkTimer.startTs = Date.now() - Math.max(0, d.ts - d.startTs); }
+  _savingWorkout = false;
+  saveWorkout(true);   // « telle quelle » = uniquement les séries validées
+}
+function discardDraftSession() {
+  if (!confirm('Supprimer cette séance ? Les séries saisies seront perdues.')) return;
+  clearWkDraft(); stopWkTimer(); wkState.muscleGroup = null; wkState.openKey = null;
+  closeModal(); navigate('dashboard'); showToast('Séance supprimée');
 }
 
 // ============================================================
@@ -2612,11 +2820,8 @@ function saveRide() {
 let histTab = 'workout';
 
 function renderHistory() {
-  const items = histTab==='workout'
-    ? [...S.workouts].sort((a,b)=>b.date.localeCompare(a.date))
-    : histTab==='run'
-      ? [...S.runs].sort((a,b)=>b.date.localeCompare(a.date))
-      : [...(S.rides||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  histTab = 'workout';   // historique musculation uniquement (course/vélo retirés de l'interface)
+  const items = [...S.workouts].sort((a,b)=>b.date.localeCompare(a.date));
 
   const groups = {};
   items.forEach(item=>{
@@ -2627,11 +2832,6 @@ function renderHistory() {
   });
 
   document.getElementById('app').innerHTML = progressHead() + `
-    <div class="tab-row">
-      <button class="tab-btn ${histTab==='workout'?'active':''}" onclick="setHistTab('workout')">Muscu (${S.workouts.length})</button>
-      <button class="tab-btn ${histTab==='run'?'active':''}" onclick="setHistTab('run')">Course (${S.runs.length})</button>
-      <button class="tab-btn ${histTab==='ride'?'active':''}" onclick="setHistTab('ride')">Vélo (${(S.rides||[]).length})</button>
-    </div>
 
     ${Object.keys(groups).length===0
       ? `<div class="empty"><div class="empty-icon">—</div><h3>Aucune session</h3><p>Commence à logger tes entraînements.</p></div>`
@@ -2878,9 +3078,9 @@ function renderStats() {
         <div class="stat-sub">Musculation</div>
       </div>
       <div class="stat-box">
-        <div class="stat-lbl">Km total</div>
-        <div class="stat-num">${S.runs.reduce((s,r)=>s+r.distance,0).toFixed(0)}<span class="stat-unit"> km</span></div>
-        <div class="stat-sub">${S.runs.length} sorties</div>
+        <div class="stat-lbl">Volume total</div>
+        <div class="stat-num">${(S.workouts.reduce((t,w)=>t+(w.totalVolume||0),0)/1000).toFixed(0)}<span class="stat-unit"> t</span></div>
+        <div class="stat-sub">Toutes séances</div>
       </div>
       <div class="stat-box">
         <div class="stat-lbl">Meilleure sem.</div>
@@ -2888,9 +3088,9 @@ function renderStats() {
         <div class="stat-sub">Volume muscu</div>
       </div>
       <div class="stat-box">
-        <div class="stat-lbl">Allure moy.</div>
-        <div class="stat-num" style="font-size:22px">${avgPace}<span class="stat-unit">/km</span></div>
-        <div class="stat-sub">Toutes sorties</div>
+        <div class="stat-lbl">Durée moy.</div>
+        <div class="stat-num" style="font-size:22px">${(() => { const d = S.workouts.filter(w => w.duration > 0); return d.length ? formatDur(Math.round(d.reduce((t, w) => t + w.duration, 0) / d.length)) : '—'; })()}</div>
+        <div class="stat-sub">Par séance</div>
       </div>
     </div>
 
@@ -2953,38 +3153,6 @@ function renderStats() {
       </div>
     </div>
 
-    ${S.runs.length > 0 ? (() => {
-      const best = [...S.runs].filter(r=>r.pace>0).sort((a,b)=>a.pace-b.pace)[0];
-      const longest = [...S.runs].sort((a,b)=>b.distance-a.distance)[0];
-      const totalCal = S.runs.reduce((s,r)=>s+r.calories,0);
-      return `<div class="card">
-        <div class="sect-row" style="margin-bottom:14px">
-          <span class="sect-lbl">Running · records</span>
-        </div>
-        <div class="stats-grid" style="margin-bottom:0">
-          <div class="stat-box">
-            <div class="stat-lbl">Meilleure allure</div>
-            <div class="stat-num" style="font-size:22px">${fmtPace(best.pace)}<span class="stat-unit">/km</span></div>
-            <div class="stat-sub">${formatDate(best.date)}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-lbl">Plus longue sortie</div>
-            <div class="stat-num" style="font-size:22px">${longest.distance.toFixed(1)}<span class="stat-unit"> km</span></div>
-            <div class="stat-sub">${formatDate(longest.date)}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-lbl">Total km</div>
-            <div class="stat-num" style="font-size:22px">${S.runs.reduce((s,r)=>s+r.distance,0).toFixed(0)}<span class="stat-unit"> km</span></div>
-            <div class="stat-sub">${S.runs.length} sorties</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-lbl">Calories totales</div>
-            <div class="stat-num" style="font-size:22px">${(totalCal/1000).toFixed(1)}<span class="stat-unit">k</span></div>
-            <div class="stat-sub">kcal brûlées</div>
-          </div>
-        </div>
-      </div>`;
-    })() : ''}
 
     <div class="card">
       <div class="chart-lbl">
@@ -3001,19 +3169,8 @@ function renderStats() {
         <div class="chart-lbl"><span>Volume total</span></div>
         <div class="chart-wrap chart-wrap-sm"><canvas id="chart-total"></canvas></div>
       </div>
-      <div class="card" style="margin-bottom:0">
-        <div class="chart-lbl"><span>Course · km/sem.</span></div>
-        <div class="chart-wrap chart-wrap-sm"><canvas id="chart-run"></canvas></div>
-      </div>
     </div>
 
-    <div class="card" style="margin-top:16px">
-      <div class="chart-lbl">
-        <span>Hydratation · 30 jours</span>
-        <span style="font-size:11px;color:var(--t3)">Objectif ${(NUTRI_TARGETS.water/1000).toFixed(1)} L/j</span>
-      </div>
-      <div class="chart-wrap"><canvas id="chart-water-daily"></canvas></div>
-    </div>
     <div class="spacer"></div>
   `;
   requestAnimationFrame(buildCharts);
@@ -3085,84 +3242,6 @@ function renderProfile() {
     </div>
 
     <!-- SETTINGS GROUPS -->
-    <div class="prof-group-lbl">Nutrition</div>
-    <div class="prof-settings-card">
-      <div class="prof-row">
-        <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:#0A0A0A"></span>
-          <span class="prof-row-label">Calories / jour</span>
-        </div>
-        <div class="prof-row-right">
-          <input id="g-cal" class="prof-row-input" type="number"
-            value="${nut.cal||2400}" step="50" min="500" max="6000">
-          <span class="prof-row-unit">kcal</span>
-        </div>
-      </div>
-      <div class="prof-row-divider"></div>
-      <div class="prof-row">
-        <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:var(--blue)"></span>
-          <span class="prof-row-label">Protéines / jour</span>
-        </div>
-        <div class="prof-row-right">
-          <input id="g-prot" class="prof-row-input" type="number"
-            value="${nut.prot||175}" step="5" min="20" max="400">
-          <span class="prof-row-unit">g</span>
-        </div>
-      </div>
-      <div class="prof-row-divider"></div>
-      <div class="prof-row">
-        <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:#0A0A0A"></span>
-          <span class="prof-row-label">Glucides / jour</span>
-        </div>
-        <div class="prof-row-right">
-          <input id="g-carbs" class="prof-row-input" type="number"
-            value="${nut.carbs||250}" step="10" min="0" max="800">
-          <span class="prof-row-unit">g</span>
-        </div>
-      </div>
-      <div class="prof-row-divider"></div>
-      <div class="prof-row">
-        <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:#0A0A0A"></span>
-          <span class="prof-row-label">Lipides / jour</span>
-        </div>
-        <div class="prof-row-right">
-          <input id="g-fat" class="prof-row-input" type="number"
-            value="${nut.fat||80}" step="5" min="0" max="300">
-          <span class="prof-row-unit">g</span>
-        </div>
-      </div>
-      <div class="prof-row-divider"></div>
-      <div class="prof-row">
-        <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:#0A0A0A"></span>
-          <span class="prof-row-label">Eau / jour</span>
-        </div>
-        <div class="prof-row-right">
-          <input id="g-water" class="prof-row-input" type="number"
-            value="${nut.water||2500}" step="250" min="500" max="5000">
-          <span class="prof-row-unit">ml</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="prof-group-lbl">Course</div>
-    <div class="prof-settings-card">
-      <div class="prof-row">
-        <div class="prof-row-left">
-          <span class="prof-row-dot" style="background:var(--c-run)"></span>
-          <span class="prof-row-label">Objectif hebdomadaire</span>
-        </div>
-        <div class="prof-row-right">
-          <input id="g-km" class="prof-row-input" type="number"
-            value="${S.runGoal||15}" step="1" min="0" max="300">
-          <span class="prof-row-unit">km</span>
-        </div>
-      </div>
-    </div>
-
     <div class="prof-group-lbl">Cloud Sync</div>
     ${currentUser ? `
     <div class="prof-settings-card" style="padding:20px 18px">
@@ -3200,10 +3279,18 @@ function renderProfile() {
           <span class="prof-row-label">Rappel entraînement</span>
         </div>
         <div class="prof-row-right">
-          <button class="btn btn-ghost btn-sm" onclick="scheduleNotification()" id="notif-btn">
-            ${Notification?.permission === 'granted' ? 'Configuré ✓' : 'Activer'}
+          <button class="btn btn-ghost btn-sm" onclick="askNotifPermission()" id="notif-btn">
+            ${notifPermission() === 'granted' ? 'Activées ✓' : notifPermission() === 'unsupported' ? 'Indisponible' : 'Activer'}
           </button>
         </div>
+      </div>
+    </div>
+
+    <div class="prof-group-lbl">Sauvegardes</div>
+    <div class="prof-settings-card">
+      <div class="prof-row">
+        <div class="prof-row-left"><span class="prof-row-label">Sauvegardes de secours</span></div>
+        <div class="prof-row-right"><button class="btn btn-ghost btn-sm" onclick="showBackupsModal()">Voir</button></div>
       </div>
     </div>
 
@@ -3327,20 +3414,260 @@ function saveProfile() {
     startKg: isNaN(newStart) ? null : newStart,
     date:    document.getElementById('g-date')?.value || null,
   };
-  S.nutGoal = {
-    cal:   parseInt(document.getElementById('g-cal')?.value)   || 2400,
-    prot:  parseInt(document.getElementById('g-prot')?.value)  || 175,
-    carbs: parseInt(document.getElementById('g-carbs')?.value) || 250,
-    fat:   parseInt(document.getElementById('g-fat')?.value)   || 80,
-    water: parseInt(document.getElementById('g-water')?.value) || 2500,
-  };
-  S.runGoal = parseInt(document.getElementById('g-km')?.value) || 15;
+  // Objectifs nutrition / course : plus modifiables ici, on garde les valeurs enregistrées
+  const g = S.nutGoal || {};
+  const val = (id, cur, def) => parseInt(document.getElementById(id)?.value) || cur || def;
+  S.nutGoal = { cal: val('g-cal', g.cal, 2400), prot: val('g-prot', g.prot, 175), carbs: val('g-carbs', g.carbs, 250), fat: val('g-fat', g.fat, 80), water: val('g-water', g.water, 2500) };
+  S.runGoal = val('g-km', S.runGoal, 15);
   RUN_GOAL_KM  = S.runGoal;
   NUTRI_TARGETS = { calories: S.nutGoal.cal, protein: S.nutGoal.prot, carbs: S.nutGoal.carbs, fat: S.nutGoal.fat, water: S.nutGoal.water };
   save();
   showToast('Enregistré ✓');
   buildWeightChart();
 }
+
+// ============================================================
+// 8a. ÉVOLUTION PAR MUSCLE (Progrès · Évolution)
+// ============================================================
+// Volume = tonnage de la semaine (poids × reps) des exercices du muscle.
+// Charge = indice de force : 1RM estimé (Epley) de chaque exercice comparé à ta 1re fois
+// sur cet exercice, moyenné par semaine. Comparable même quand les exercices changent (semaines A/B).
+
+const MUSCLES = ['Pecs', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos'];
+const SLUG_MUSCLE = {
+  Pecs:       ['dc-barre', 'di-halteres', 'ecarte-vis-a-vis', 'di-machine', 'dips', 'ecarte-unilateral', 'dc-halteres', 'di-barre', 'ecarte-halteres', 'dc-smith', 'di-poulie'],
+  'Épaules':  ['de-halteres', 'lat-halteres', 'de-machine', 'lat-poulie', 'arnold', 'lat-machine', 'de-smith', 'lat-incline', 'oiseau-poulie', 'face-pull', 'y-raise'],
+  Triceps:    ['tri-corde', 'barre-front', 'tri-nuque-poulie', 'tri-poulie', 'tri-assis', 'tate-press'],
+  Dos:        ['tractions', 'rowing-barre', 'tirage-horizontal', 'tv-serre', 'rowing-hammer', 'pullover-poulie', 'tv-large', 'rowing-banc-incline', 'rowing-pronation', 'tv-inverse', 'th-large', 'tv-incline'],
+  Biceps:     ['curl-barre', 'curl-marteau', 'curl-incline', 'curl-pupitre', 'curl-alterne', 'curl-poulie', 'curl-marteau-pupitre', 'curl-concentre'],
+  Quadriceps: ['squat-barre', 'presse-45', 'leg-extension', 'hack-squat', 'squat-smith', 'presse-verticale'],
+  Ischios:    ['leg-curl-assis', 'sdt-roumain', 'leg-curl-allonge', 'sdt'],
+  Fessiers:   ['hip-thrust', 'ext-hanche'],
+  Mollets:    ['mollets-debout', 'mollets-assis-presse', 'mollets-presse', 'mollets-assis-barre'],
+  Abdos:      ['releve-genoux', 'crunch-machine', 'releve-chaise', 'situp-decline', 'crunch-sol']
+};
+const MUSCLE_OF_SLUG = {};
+Object.entries(SLUG_MUSCLE).forEach(([m, slugs]) => slugs.forEach(sl => { MUSCLE_OF_SLUG[sl] = m; }));
+// Ancien nom → nom actuel (pour qu'un même exercice garde une seule référence de force)
+const CANON_NAME = {};
+Object.entries(PREV_ALIASES).forEach(([cur, olds]) => olds.forEach(o => { CANON_NAME[o] = cur; }));
+function canonExo(name) { return CANON_NAME[name] || name; }
+function exoMuscle(name) { return MUSCLE_OF_SLUG[EXO_MEDIA[name]] || null; }
+function e1rm(w, r) { return (w > 0 && r > 0) ? w * (1 + Math.min(r, 20) / 30) : 0; }
+// Exercices au poids du corps : charge réelle = poids de corps (dernière pesée) + lest
+const BODYWEIGHT_SLUGS = ['tractions', 'dips'];
+// Muscles suivis en répétitions (exercices au poids du corps, le tonnage n'aurait pas de sens)
+const REPS_MUSCLES = ['Abdos'];
+function bodyWeight() { const w = [...(S.weights || [])].sort((a, b) => a.date.localeCompare(b.date)).at(-1); return w?.weight || 75; }
+
+let evoMuscle = 'Pecs';
+let evoWeeks  = 12;
+
+// Clés des N dernières semaines (lundi), de la plus ancienne à la plus récente
+function lastWeekKeys(n) {
+  return Array.from({ length: n }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (n - 1 - i) * 7); return getWeekKey(d); });
+}
+
+// Historique par exercice : [{ date, weekKey, e1rm, vol, reps }] trié par date
+function exoHistory() {
+  const map = {};
+  const bw = bodyWeight();
+  [...S.workouts].sort((a, b) => a.date.localeCompare(b.date)).forEach(w => {
+    (w.exercises || []).forEach(ex => {
+      const name = canonExo(ex.name);
+      const extra = BODYWEIGHT_SLUGS.includes(EXO_MEDIA[name]) ? bw : 0;
+      const sets = (ex.sets || []).map(st => ({ w: (parseFloat(st.weight) || 0) + extra, r: parseInt(st.reps) || 0 }));
+      const best = Math.max(0, ...sets.map(st => e1rm(st.w, st.r)));
+      const vol = sets.reduce((t, st) => t + st.w * st.r, 0);
+      const reps = sets.reduce((t, st) => t + st.r, 0);
+      if (!reps) return;
+      (map[name] = map[name] || []).push({ date: w.date, weekKey: w.weekKey || getWeekKey(w.date), e1rm: best, vol, reps });
+    });
+  });
+  return map;
+}
+
+// Séries hebdo d'un muscle : volume (t, ou reps si exercices au poids du corps) et indice de charge (% vs 1re fois)
+function muscleSeries(muscle, weeks, hist = exoHistory()) {
+  const keys = lastWeekKeys(weeks);
+  const exos = Object.keys(hist).filter(n => exoMuscle(n) === muscle);
+  const byWeek = keys.map(k => ({ key: k, vol: 0, reps: 0, idx: [] }));
+  exos.forEach(n => {
+    const h = hist[n];
+    const base = h.find(x => x.e1rm > 0)?.e1rm || 0;
+    h.forEach(x => {
+      const wk = byWeek.find(b => b.key === x.weekKey);
+      if (!wk) return;
+      wk.vol += x.vol; wk.reps += x.reps;
+      if (base && x.e1rm) wk.idx.push(x.e1rm / base * 100 - 100);
+    });
+  });
+  const useReps = REPS_MUSCLES.includes(muscle) || (byWeek.every(b => !b.vol) && byWeek.some(b => b.reps));
+  return {
+    keys, useReps, exos,
+    volume: byWeek.map(b => useReps ? b.reps : Math.round(b.vol / 100) / 10),       // tonnes, 1 décimale
+    charge: byWeek.map(b => b.idx.length ? Math.round(b.idx.reduce((t, v) => t + v, 0) / b.idx.length * 10) / 10 : null)
+  };
+}
+
+function pctDelta(a, b) { return b > 0 ? Math.round((a - b) / b * 100) : null; }
+function deltaPill(v, suffix = '%') {
+  if (v === null || v === undefined || isNaN(v)) return '<span class="dpill">—</span>';
+  const cls = v > 0 ? 'up' : v < 0 ? 'down' : '';
+  return `<span class="dpill ${cls}">${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('fr-FR')} ${suffix}</span>`;
+}
+// Résumé : volume des 4 dernières semaines vs les 4 précédentes, charge (dernier point vs premier de la période)
+function seriesSummary(sr) {
+  const v = sr.volume, n = v.length;
+  const last4 = v.slice(-4).reduce((t, x) => t + x, 0), prev4 = v.slice(-8, -4).reduce((t, x) => t + x, 0);
+  // Charge : dernier point connu, et son évolution sur 4 semaines (vs le dernier point d'il y a 4 semaines ou avant)
+  const c = sr.charge, lastI = c.map((x, i) => x === null ? -1 : i).reduce((a, b) => Math.max(a, b), -1);
+  let refI = -1; for (let i = lastI - 4; i >= 0; i--) { if (c[i] !== null) { refI = i; break; } }
+  return { last4, volDelta: pctDelta(last4, prev4), chargeNow: lastI >= 0 ? c[lastI] : null,
+           chargeDelta: (lastI >= 0 && refI >= 0) ? Math.round((c[lastI] - c[refI]) * 10) / 10 : null };
+}
+
+function sparkline(values, w = 76, h = 26) {
+  const pts = values.map((v, i) => [i, v]).filter(([, v]) => v !== null);
+  if (pts.length < 2) return `<svg class="evo-spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"></svg>`;
+  // Échelle sur l'étendue des valeurs (tendance lisible), avec une marge de 15 %
+  const hi = Math.max(...pts.map(p => p[1])), lo = Math.min(...pts.map(p => p[1])), pad = (hi - lo) * 0.15 || 1;
+  const max = hi + pad, min = Math.max(0, lo - pad);
+  const x = i => (i / (values.length - 1)) * (w - 4) + 2;
+  const y = v => h - 3 - ((v - min) / (max - min || 1)) * (h - 6);
+  const d = pts.map(([i, v], k) => `${k ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+  const [li, lv] = pts[pts.length - 1];
+  return `<svg class="evo-spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${x(li).toFixed(1)}" cy="${y(lv).toFixed(1)}" r="2.4" fill="#0A0A0A"/></svg>`;
+}
+
+function renderEvolution() {
+  const hist = exoHistory();
+  const sr = muscleSeries(evoMuscle, evoWeeks, hist);
+  const sum = seriesSummary(sr);
+  const unit = sr.useReps ? 'reps' : 't';
+  const hasData = sr.volume.some(v => v > 0);
+
+  // Exercices du muscle sur la période : 1RM estimé de la 1re à la dernière séance
+  const from = sr.keys[0];
+  const exRows = sr.exos.map(n => {
+    const h = hist[n].filter(x => x.weekKey >= from && x.e1rm > 0);
+    if (!h.length) return null;
+    return { n, first: h[0].e1rm, last: h[h.length - 1].e1rm, date: h[h.length - 1].date };
+  }).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+
+  const allRows = MUSCLES.map(m => ({ m, sr: muscleSeries(m, evoWeeks, hist) }))
+    .map(o => ({ ...o, sum: seriesSummary(o.sr) }))
+    .filter(o => o.sr.volume.some(v => v > 0));
+
+  document.getElementById('app').innerHTML = progressHead() + `
+    <div class="evo-muscles" role="tablist" aria-label="Groupe musculaire">
+      ${MUSCLES.map(m => `<button class="chip ${evoMuscle === m ? 'active' : ''}" role="tab" aria-selected="${evoMuscle === m}" onclick="setEvoMuscle('${m}')">${m}</button>`).join('')}
+    </div>
+
+    <section class="card evo-card">
+      <div class="evo-head">
+        <h2>${evoMuscle}</h2>
+        <div class="evo-seg" role="group" aria-label="Période">
+          ${[[8, '8 sem.'], [12, '12 sem.'], [26, '6 mois']].map(([n, l]) => `<button class="${evoWeeks === n ? 'active' : ''}" aria-pressed="${evoWeeks === n}" onclick="setEvoWeeks(${n})">${l}</button>`).join('')}
+        </div>
+      </div>
+      <div class="evo-kpis">
+        <div class="evo-kpi">
+          <span class="evo-kpi-l">Volume · 4 sem.</span>
+          <b>${sr.useReps ? Math.round(sum.last4).toLocaleString('fr-FR') : sum.last4.toFixed(1).replace('.', ',')} <small>${unit}</small></b>
+          ${deltaPill(sum.volDelta)}<span class="evo-kpi-s">vs 4 sem. avant</span>
+        </div>
+        <div class="evo-kpi">
+          <span class="evo-kpi-l">Force</span>
+          <b>${sum.chargeNow === null ? '—' : `${sum.chargeNow > 0 ? '+' : ''}${String(sum.chargeNow).replace('.', ',')} <small>%</small>`}</b>
+          ${deltaPill(sum.chargeDelta, 'pts')}<span class="evo-kpi-s">en 4 semaines</span>
+        </div>
+      </div>
+      ${hasData ? `
+        <div class="evo-legend"><span><i class="lg-bar"></i>Volume (${unit})</span><span><i class="lg-line"></i>Charge (% vs 1re fois)</span></div>
+        <div class="evo-chart"><canvas id="chart-evo" aria-label="Évolution du volume et de la charge — ${evoMuscle}"></canvas></div>`
+      : `<div class="empty evo-empty"><h3>Pas encore de séance</h3><p>Les exercices « ${evoMuscle} » apparaîtront ici dès ta première séance enregistrée.</p></div>`}
+    </section>
+
+    ${exRows.length ? `
+    <div class="sec-row"><h2>Exercices · 1RM estimé</h2></div>
+    <div class="card evo-list">
+      ${exRows.map(r => `
+        <div class="evo-ex">
+          ${exoThumbHTML(r.n)}
+          <div class="evo-ex-b"><span class="evo-ex-n">${r.n}</span><span class="evo-ex-s">${Math.round(r.first)} → ${Math.round(r.last)} kg · ${r.date.slice(8, 10)}/${r.date.slice(5, 7)}</span></div>
+          ${deltaPill(pctDelta(r.last, r.first))}
+        </div>`).join('')}
+    </div>` : ''}
+
+    ${allRows.length ? `
+    <div class="sec-row"><h2>Tous les muscles</h2><span class="sec-note">volume · charge</span></div>
+    <div class="card evo-list">
+      ${allRows.map(o => `
+        <button class="evo-row${o.m === evoMuscle ? ' on' : ''}" onclick="setEvoMuscle('${o.m}')">
+          <span class="evo-row-n">${o.m}</span>
+          ${sparkline(o.sr.volume)}
+          <span class="evo-row-d">${deltaPill(o.sum.volDelta)}${deltaPill(o.sum.chargeDelta, 'pts')}</span>
+        </button>`).join('')}
+    </div>` : ''}
+    <div class="spacer"></div>
+  `;
+  if (hasData) requestAnimationFrame(() => buildEvoChart(sr, unit));
+}
+
+function buildEvoChart(sr, unit) {
+  const el = document.getElementById('chart-evo');
+  if (!el || typeof Chart === 'undefined') return;
+  if (charts.evo) { try { charts.evo.destroy(); } catch {} }
+  const labels = sr.keys.map(k => { const d = new Date(k + 'T12:00:00'); return `${d.getDate()}/${d.getMonth() + 1}`; });
+  const last = sr.volume.length - 1;
+  const font = { family: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif", size: 11 };
+  const fmtVolume = v => unit === 'reps' ? `${Math.round(v)} reps` : `${String(v).replace('.', ',')} t`;
+  charts.evo = new Chart(el.getContext('2d'), {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: 'Volume', data: sr.volume, yAxisID: 'y', order: 2,
+          backgroundColor: sr.volume.map((_, i) => i === last ? '#0A0A0A' : '#E4E4E4'),
+          hoverBackgroundColor: sr.volume.map((_, i) => i === last ? '#0A0A0A' : '#CFCFCF'),
+          borderRadius: 6, borderSkipped: false, maxBarThickness: 22, categoryPercentage: 0.72 },
+        { type: 'line', label: 'Charge', data: sr.charge, yAxisID: 'y1', order: 1, spanGaps: true,
+          borderColor: '#0A0A0A', borderWidth: 2.2, tension: 0.35, fill: false,
+          pointRadius: sr.charge.map((v, i) => v === null ? 0 : (i === sr.charge.map((x, j) => x === null ? -1 : j).reduce((a, b) => Math.max(a, b)) ? 4.5 : 2.5)),
+          pointBackgroundColor: '#fff', pointBorderColor: '#0A0A0A', pointBorderWidth: 2, pointHoverRadius: 5 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 350 },
+      interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 6, right: 2, left: 0, bottom: 0 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0A0A0A', titleColor: '#fff', bodyColor: '#E6E6E6', padding: 10, cornerRadius: 10,
+          displayColors: false, titleFont: { ...font, weight: '600' }, bodyFont: font,
+          callbacks: {
+            title: items => `Semaine du ${formatDate(sr.keys[items[0].dataIndex])}`,
+            label: ctx => ctx.dataset.label === 'Volume'
+              ? `Volume : ${fmtVolume(ctx.parsed.y)}`
+              : (ctx.parsed.y === null ? '' : `Charge : ${ctx.parsed.y > 0 ? '+' : ''}${String(ctx.parsed.y).replace('.', ',')} %`)
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: '#737373', font, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } },
+        y: { position: 'left', beginAtZero: true, grid: { color: '#F0F0F0' }, border: { display: false },
+             ticks: { color: '#737373', font, maxTicksLimit: 4, callback: v => unit === 'reps' ? v : `${String(v).replace('.', ',')} t` } },
+        y1: { position: 'right', grid: { display: false }, border: { display: false }, grace: '15%',
+              min: Math.min(0, Math.floor(Math.min(...sr.charge.filter(v => v !== null), 0) / 5) * 5),
+              ticks: { color: '#0A0A0A', font, maxTicksLimit: 4, callback: v => `${v > 0 ? '+' : ''}${Math.round(v)} %` } }
+      }
+    }
+  });
+}
+
+function setEvoMuscle(m) { evoMuscle = m; destroyCharts(); renderEvolution(); document.getElementById('app').scrollTop = 0; }
+function setEvoWeeks(n)  { evoWeeks = n;  destroyCharts(); renderEvolution(); }
 
 function destroyCharts() {
   Object.values(charts).forEach(c=>{ try{ c.destroy(); }catch{} });
@@ -3444,7 +3771,7 @@ function closeModal() { document.getElementById('modal-overlay').classList.add('
 let _toast;
 function showToast(msg) {
   let el = document.getElementById('toast');
-  if(!el){ el=document.createElement('div'); el.id='toast'; el.style.cssText=`position:fixed;bottom:calc(var(--nav-h)+14px);left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:var(--r-sm);font-size:13px;font-weight:600;z-index:300;white-space:nowrap;max-width:90vw;text-align:center;transition:opacity .3s,transform .3s;`; document.body.appendChild(el); }
+  if(!el){ el=document.createElement('div'); el.id='toast'; el.style.cssText=`position:fixed;bottom:calc(var(--nav-h) + 14px);left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:var(--r-sm);font-size:13px;font-weight:600;z-index:300;white-space:nowrap;max-width:90vw;text-align:center;transition:opacity .3s,transform .3s;`; document.body.appendChild(el); }
   el.textContent=msg; el.style.opacity='1'; el.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(_toast);
   _toast=setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(-50%) translateY(8px)'; },2600);
@@ -3455,12 +3782,11 @@ function showToast(msg) {
 // ============================================================
 
 let seanceMode  = 'muscu';     // Séance : 'muscu' | 'run' | 'ride'
-let progressTab = 'history';   // Progrès : 'history' | 'stats'
+let progressTab = 'evolution'; // Progrès : 'evolution' | 'history' | 'stats'
 
 const VIEW_RENDERERS = {
   dashboard: () => renderDashboard(),
   workout:   () => renderSeance(),
-  nutrition: () => renderNutrition(),
   body:      () => renderBody(),
   progress:  () => renderProgress(),
   profile:   () => renderProfile()
@@ -3476,6 +3802,7 @@ const ICON_EGG      = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor
 const ICON_DROP     = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M16 4c4 5.5 8 9.5 8 15a8 8 0 0 1-16 0c0-5.5 4-9.5 8-15z"/></svg>';
 const ICON_SCALE    = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="5" y="5" width="22" height="22" rx="6"/><path d="M11 13a7 7 0 0 1 10 0M16 13l2-3"/></svg>';
 const ICON_RUN      = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="19" cy="6" r="2.5"/><path d="M12 14l4-4 4 3 3 1M16 10l-2 7 5 4v6M14 17l-4 5H6"/></svg>';
+const ICON_CLOUD    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 9.6 4.2 4.2 0 0 0 7 18z"/></svg>';
 const ICON_PERSON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
 
 function viewHead(title, { kicker = '', left = '', right = '' } = {}) {
@@ -3508,7 +3835,7 @@ function dashHead() {
   return viewHead("Aujourd'hui", { kicker: d.charAt(0).toUpperCase() + d.slice(1), right: avatarBtn() });
 }
 
-const SEANCE_CHIPS = [['push', 'Push'], ['pull', 'Pull'], ['legs', 'Legs'], ['cardio', 'Cardio']];
+const SEANCE_CHIPS = [['push', 'Push'], ['pull', 'Pull'], ['legs', 'Legs']];
 
 // En-tête de la vue Cardio (la muscu a son propre en-tête dans renderWorkoutForm)
 function seanceHead() {
@@ -3518,7 +3845,6 @@ function seanceHead() {
 }
 
 function setSeanceGroup(k) {
-  if (k === 'cardio') { setSeanceMode(runTab === 'ride' ? 'ride' : 'run'); return; }
   if (seanceMode !== 'muscu') {
     if (!confirmLeaveDraft(k, k === wkState.muscleGroup ? wkState.weekType : variantForGroup(k))) return;
     seanceMode = 'muscu';
@@ -3530,17 +3856,15 @@ function setSeanceGroup(k) {
 }
 
 function progressHead() {
-  return viewHead('Progrès') + chipRow([['history', 'Historique'], ['stats', 'Stats']], progressTab, 'setProgressTab');
+  return viewHead('Progrès') + chipRow([['evolution', 'Évolution'], ['history', 'Historique'], ['stats', 'Stats']], progressTab, 'setProgressTab');
 }
 
 function profileHead() {
   return viewHead('Profil', { left: `<button class="icon-btn" onclick="navigate('dashboard')" aria-label="Retour">${ICON_BACK}</button>` });
 }
 
-function renderSeance() {
-  if (seanceMode === 'muscu') renderWorkout();
-  else { unmountRunbar(); renderRun(); }
-}
+// Séance = musculation uniquement (l'espace course/vélo a été retiré, les données restent en mémoire)
+function renderSeance() { seanceMode = 'muscu'; renderWorkout(); }
 
 function setSeanceMode(mode) {
   if (mode === seanceMode) return;
@@ -3551,7 +3875,7 @@ function setSeanceMode(mode) {
   document.getElementById('app').scrollTop = 0;
 }
 
-function renderProgress() { progressTab === 'stats' ? renderStats() : renderHistory(); }
+function renderProgress() { progressTab === 'stats' ? renderStats() : progressTab === 'history' ? renderHistory() : renderEvolution(); }
 
 function setProgressTab(tab) {
   if (tab === progressTab) return;
@@ -3642,8 +3966,58 @@ function initPullToRefresh() {
   }, { passive: true });
 }
 
+// Barre d'onglets glissable (comme Apple Music) : une bulle suit le doigt d'un onglet à l'autre,
+// l'onglet sous le doigt s'allume, et on y va en relâchant. Un simple tap marche toujours.
+let _navGestureAt = 0;
+function initNavGesture() {
+  const nav = document.getElementById('bottom-nav');
+  if (!nav || nav.querySelector('.nav-lens')) return;
+  const lens = document.createElement('span');
+  lens.className = 'nav-lens'; lens.setAttribute('aria-hidden', 'true');
+  nav.prepend(lens);
+  const items = () => [...nav.querySelectorAll('.nav-item')];
+  const lensW = () => lens.offsetWidth || 64;
+  const centerOf = el => { const r = el.getBoundingClientRect(), n = nav.getBoundingClientRect(); return r.left - n.left + r.width / 2; };
+  const setX = (cx, scale = 1) => { lens.style.transform = `translateX(${(cx - lensW() / 2).toFixed(1)}px) scale(${scale})`; };
+  window.moveNavLens = () => {
+    const a = nav.querySelector('.nav-item.active');
+    lens.style.opacity = a ? '1' : '0';
+    if (a) setX(centerOf(a));
+  };
+  let drag = null;
+  const follow = x => {
+    const n = nav.getBoundingClientRect(), list = items();
+    const min = centerOf(list[0]), max = centerOf(list[list.length - 1]);
+    const cx = Math.min(max, Math.max(min, x - n.left));
+    setX(cx, 1.14);
+    const hover = list.reduce((best, el) => Math.abs(centerOf(el) - cx) < Math.abs(centerOf(best) - cx) ? el : best, list[0]);
+    if (hover !== drag.hover) { list.forEach(el => el.classList.toggle('hover', el === hover)); drag.hover = hover; if (drag.started) haptic([6]); }
+    drag.started = true;
+  };
+  nav.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    drag = { id: e.pointerId, hover: null, started: false };
+    try { nav.setPointerCapture(e.pointerId); } catch {}
+    nav.classList.add('dragging'); lens.style.opacity = '1';
+    follow(e.clientX);
+  });
+  nav.addEventListener('pointermove', e => { if (drag && e.pointerId === drag.id) follow(e.clientX); });
+  const end = cancel => {
+    if (!drag) return;
+    const target = drag.hover; drag = null;
+    nav.classList.remove('dragging');
+    items().forEach(el => el.classList.remove('hover'));
+    if (!cancel && target) { _navGestureAt = Date.now(); if (target.dataset.view !== S.view) navigate(target.dataset.view); }
+    window.moveNavLens();
+  };
+  nav.addEventListener('pointerup', () => end(false));
+  nav.addEventListener('pointercancel', () => end(true));
+  window.addEventListener('resize', () => window.moveNavLens());
+  requestAnimationFrame(window.moveNavLens);
+}
+
 function initSwipe() {
-  const VIEWS = ['dashboard','workout','nutrition','body','progress'];
+  const VIEWS = ['dashboard','workout','body','progress'];
   let sx = 0, sy = 0, st = 0;
   const el = document.getElementById('app');
   el.addEventListener('touchstart', e => { sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now(); }, {passive:true});
@@ -3659,7 +4033,8 @@ function initSwipe() {
 
 function navigate(view) {
   // Anciennes vues regroupées : Course/Vélo → Séance, Historique/Stats → Progrès
-  if (view === 'run')     { seanceMode = runTab === 'ride' ? 'ride' : 'run'; view = 'workout'; }
+  if (view === 'run')       { view = 'workout'; }
+  if (view === 'nutrition') { view = 'dashboard'; }
   if (view === 'history') { progressTab = 'history'; view = 'progress'; }
   if (view === 'stats')   { progressTab = 'stats';   view = 'progress'; }
   if (!VIEW_RENDERERS[view]) view = 'dashboard';
@@ -3670,6 +4045,7 @@ function navigate(view) {
   destroyNutriCharts();
   if(view!=='workout')    pauseWkTimer();
   VIEW_RENDERERS[view]();
+  window.moveNavLens?.();
   const app = document.getElementById('app');
   app.scrollTop = 0;
   const first = app.firstElementChild;
@@ -3677,14 +4053,15 @@ function navigate(view) {
 }
 
 function initEvents() {
-  document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>{navigate(b.dataset.view);closeMenu();}));
+  // Tap / clavier ; ignoré juste après un glissé (déjà géré par initNavGesture)
+  document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>{ if (Date.now() - _navGestureAt < 500) return; navigate(b.dataset.view); closeMenu(); }));
 
   document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target.id==='modal-overlay') closeModal(); });
 
   // Sauvegarde du brouillon de séance dès que l'app se ferme / passe en arrière-plan
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') { if (S.view === 'workout') saveWkDraft(); flushPush(); }
-    else checkDayRollover();
+    if (document.visibilityState === 'hidden') { if (S.view === 'workout') saveWkDraft(); flushPush(); notifyForgottenOnLeave(); }
+    else { checkDayRollover(); checkForgottenOnOpen(); }
   });
   window.addEventListener('pagehide', () => { if (S.view === 'workout') saveWkDraft(); flushPush(); });
 }
@@ -3740,8 +4117,7 @@ function fireTestNotif() {
   const [g, v] = nextPPLSession();
   const title = `Séance ${sessionTitle(g, v)} · semaine ${v[0]} 💪`;
   const body  = `${WORKOUT_PLAN[g][v].length} exercices · PPL — C'est parti !`;
-  new Notification(title, { body, icon: './icon.png', badge: './icon.png' });
-  showToast('Notification test envoyée ✓');
+  showLocalNotif(title, body, 'test').then(ok => showToast(ok ? 'Notification test envoyée ✓' : 'Notifications non autorisées'));
 }
 
 // Correctifs ponctuels sur les données (chacun protégé par son flag, idempotents)
@@ -3815,9 +4191,11 @@ function init() {
   if (hasActiveWkDraft()) S.view = 'workout'; // reprendre une séance en cours après rechargement
   applyTheme(); updateWeekBadge(); initEvents();
   navigate(S.view||'dashboard'); registerSW();
-  initSwipe(); initPullToRefresh();
+  initSwipe(); initPullToRefresh(); initNavGesture();
   initFirebase(); // onAuthStateChanged gère le pull automatique
   initNotifs();
+  initBackups();
+  setTimeout(checkForgottenOnOpen, 800);
 }
 
 init();

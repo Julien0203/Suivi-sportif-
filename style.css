@@ -1747,3 +1747,150 @@ body.in-seance .bottom-nav { display: none; }
 .fld.t-down { box-shadow: inset 0 0 0 1px var(--set-down); }
 .fld:focus-within { box-shadow: 0 0 0 1px var(--ink); }
 .set-ok { border-width: 1px; }
+
+/* ============================================================
+   31. PROGRÈS · ÉVOLUTION PAR MUSCLE
+   ============================================================ */
+.evo-controls { display: flex; gap: 6px; margin-bottom: 10px; }
+.evo-muscles { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.evo-muscles .chip { flex: 0 0 auto; height: 34px; padding: 0 13px; }
+.evo-card { padding: 16px; }
+.evo-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.evo-head h2 { font-size: 22px; font-weight: 700; letter-spacing: -.03em; }
+.evo-period { font-size: 12px; color: var(--t2); white-space: nowrap; }
+.evo-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.evo-kpi { background: var(--surface2); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.evo-kpi-l { font-size: 11px; font-weight: 500; color: var(--t2); }
+.evo-kpi b { font-size: 22px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.evo-kpi b small { font-size: 12px; font-weight: 500; color: var(--t2); }
+.evo-kpi-s { font-size: 11px; color: var(--t3); }
+.evo-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11px; color: var(--t2); margin-bottom: 6px; }
+.evo-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lg-bar  { width: 10px; height: 10px; border-radius: 3px; background: #D6D6D6; box-shadow: inset -5px 0 0 #0A0A0A; }
+.lg-line { width: 16px; height: 2px; border-radius: 2px; background: #0A0A0A; position: relative; }
+.lg-line::after { content: ""; position: absolute; left: 5px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.6px #0A0A0A; }
+.evo-chart { position: relative; height: 220px; }
+.evo-empty { padding: 26px 10px; }
+
+.dpill {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: var(--r-pill);
+  background: var(--surface2); color: var(--t2); font-size: 11px; font-weight: 600; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dpill.up   { background: rgba(0, 230, 118, .18); color: #00703F; }
+.dpill.down { background: rgba(255, 59, 48, .12); color: #C8102E; }
+.sec-note { font-size: 12px; color: var(--t3); }
+
+.evo-list { padding: 6px 14px; }
+.evo-ex, .evo-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.evo-ex + .evo-ex, .evo-row + .evo-row { border-top: 1px solid var(--border); }
+.evo-ex .th { width: 44px; height: 44px; border-radius: 11px; }
+.evo-ex-b { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.evo-ex-n { font-size: 13px; font-weight: 600; line-height: 1.25; }
+.evo-ex-s { font-size: 12px; color: var(--t2); font-variant-numeric: tabular-nums; }
+.evo-row { width: 100%; background: none; border: none; text-align: left; color: inherit; cursor: pointer; }
+.evo-row-n { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; }
+.evo-row.on .evo-row-n { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.evo-spark { width: 76px; height: 26px; flex-shrink: 0; }
+.evo-row-d { display: flex; gap: 4px; flex-shrink: 0; }
+@media (max-width: 360px) { .evo-spark { width: 56px; } .evo-kpi b { font-size: 19px; } }
+.evo-seg { display: flex; gap: 2px; background: var(--surface2); border-radius: var(--r-pill); padding: 3px; flex-shrink: 0; }
+.evo-seg button { height: 28px; padding: 0 10px; border: none; border-radius: var(--r-pill); background: none; font-size: 12px; font-weight: 500; color: var(--t2); cursor: pointer; white-space: nowrap; }
+.evo-seg button.active { background: var(--ink); color: #fff; font-weight: 600; }
+.evo-head { align-items: center; }
+.evo-head h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 360px) { .evo-seg button { padding: 0 7px; font-size: 11px; } .evo-head h2 { font-size: 19px; } }
+.evo-head { flex-wrap: wrap; row-gap: 8px; }
+.evo-head h2 { overflow: visible; text-overflow: clip; flex: 1 1 auto; }
+
+/* Progression de la séance (collée en haut pendant le défilement) */
+.wk-progress {
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  margin: 0 -4px 14px; padding: 10px 4px 12px;
+  background: var(--bg);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.wk-progress-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wk-progress-top span { font-size: 13px; color: var(--t2); font-variant-numeric: tabular-nums; }
+.wk-progress-top b { font-size: 20px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.wk-prog { height: 10px; border-radius: 10px; }
+.wk-prog i { border-radius: 10px; transition: width .3s var(--ease), background .3s; }
+.wk-progress.full .wk-prog i { background: var(--set-up); }
+.wk-progress.full .wk-progress-top b { color: #00703F; }
+/* Fond qui couvre aussi la marge du haut et les côtés quand la barre est collée */
+.wk-progress::before {
+  content: ""; position: absolute; z-index: -1;
+  left: -24px; right: -24px; bottom: 0;
+  top: calc(-14px - env(safe-area-inset-top, 0px));
+  background: var(--bg);
+  box-shadow: 0 10px 14px -14px rgba(10, 10, 10, .35);
+}
+.wk-progress::before { left: -16px; right: -16px; }
+/* Toast : au-dessus de la barre du bas, sur plusieurs lignes si besoin, jamais plus large que l'écran */
+#toast {
+  top: auto !important; bottom: calc(var(--nav-h) + 14px) !important;
+  white-space: normal !important; width: max-content !important;
+  max-width: calc(100vw - 32px) !important; text-align: center !important; line-height: 1.35 !important;
+}
+.wk-progress { margin: 0 0 14px; padding: 10px 0 12px; }
+
+/* ============================================================
+   32. SYNCHRO, SAUVEGARDES, SÉANCE OUBLIÉE, BARRE GLISSABLE
+   ============================================================ */
+.dash-top-r { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.sync-chip {
+  position: relative; width: 40px; height: 40px; border-radius: 50%;
+  border: none; background: var(--surface2); color: var(--t1);
+  display: grid; place-items: center; cursor: pointer;
+}
+.sync-chip svg { width: 20px; height: 20px; }
+.sync-chip i { position: absolute; right: 7px; bottom: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--set-up); box-shadow: 0 0 0 2px var(--surface2); }
+.sync-chip.st-pending i, .sync-chip.st-syncing i { background: var(--set-same); }
+.sync-chip.st-offline i { background: var(--set-down); }
+.sync-banner {
+  width: 100%; display: flex; align-items: center; gap: 12px; margin: -2px 0 16px;
+  padding: 14px 14px 14px 16px; border: none; border-radius: 18px; text-align: left; cursor: pointer;
+  background: #FFF4E5; color: var(--t1); box-shadow: inset 0 0 0 1px rgba(255, 159, 10, .45);
+}
+.sync-banner > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sync-banner b { font-size: 14px; font-weight: 600; }
+.sync-banner span { font-size: 12.5px; color: var(--t2); line-height: 1.4; }
+.sync-banner .sync-banner-btn { flex-shrink: 0; height: 36px; padding: 0 14px; border-radius: var(--r-pill); background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; }
+
+.backup-list { display: flex; flex-direction: column; }
+.backup-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+.backup-row:first-child { border-top: none; }
+.backup-row div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.backup-row b { font-size: 14px; font-weight: 600; }
+.backup-row span { font-size: 12px; color: var(--t2); }
+
+.forgot-card { background: var(--surface2); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.forgot-card b { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
+.forgot-card span { font-size: 13px; color: var(--t2); font-variant-numeric: tabular-nums; }
+
+.notif-hint { display: flex; align-items: center; gap: 10px; margin: -4px 0 12px; padding: 10px 8px 10px 14px; border-radius: 14px; background: var(--surface2); }
+.notif-hint span { flex: 1; min-width: 0; font-size: 12.5px; color: var(--t2); line-height: 1.35; }
+.notif-hint-x { flex-shrink: 0; width: 30px; height: 30px; border: none; border-radius: 50%; background: none; color: var(--t3); font-size: 18px; cursor: pointer; }
+
+/* Barre d'onglets : bulle qui glisse sous l'onglet actif et suit le doigt */
+.bottom-nav { touch-action: none; user-select: none; -webkit-user-select: none; overflow: visible; }
+.nav-item::after { display: none; }
+.nav-item { z-index: 1; }
+.nav-lens {
+  position: absolute; left: 0; top: 50%; width: 66px; height: 44px; margin-top: -22px;
+  border-radius: var(--r-pill); background: rgba(255, 255, 255, .16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+  pointer-events: none; opacity: 0;
+  transition: transform .34s cubic-bezier(.2, .9, .25, 1), background .2s, opacity .2s, box-shadow .2s;
+}
+.bottom-nav.dragging .nav-lens {
+  transition: transform .09s linear, background .2s;
+  background: rgba(255, 255, 255, .26);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), 0 6px 18px rgba(0, 0, 0, .35);
+}
+.bottom-nav.dragging .nav-item svg { opacity: .5; }
+.bottom-nav.dragging .nav-item.hover svg { opacity: 1; transform: scale(1.12); }
+.nav-item svg { transition: opacity var(--fast), transform .18s var(--ease); }
+@media (prefers-reduced-motion: reduce) { .nav-lens, .bottom-nav.dragging .nav-lens { transition: none; } }
+.dash-top > div:first-child { min-width: 0; }
+@media (max-width: 360px) { .hello-q { display: none; } }

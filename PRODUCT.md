@@ -6,11 +6,11 @@ product
 
 ## Users
 
-Julien, seul utilisateur. Il utilise Tempo sur iPhone, installée en PWA, surtout à la salle de muscu : téléphone dans une main, entre deux séries, il veut voir la série suivante et la valider en quelques secondes. Le soir, au calme, il consulte ses progrès, sa nutrition et ses mensurations. Objectif du moment : recomposition corporelle (programme PPL 6 séances en rotation, 2400 kcal / 175 g de protéines).
+Julien, seul utilisateur. Il utilise Tempo sur iPhone, installée en PWA, surtout à la salle de muscu : téléphone dans une main, entre deux séries, il veut voir la série suivante et la valider en quelques secondes. Le soir, au calme, il consulte ses progrès, son poids et ses mensurations. Objectif du moment : recomposition corporelle (programme PPL de 6 séances par semaine, semaines A/B).
 
 ## Product Purpose
 
-Suivre l'entraînement (musculation PPL, course, vélo), la nutrition, le poids et les mensurations dans une seule app rapide et fiable. Le succès : ouvrir l'app et démarrer la séance du jour en un geste, ne jamais perdre une saisie, et voir clairement si la recompo avance.
+Suivre l'entraînement de musculation (PPL), le poids et les mensurations dans une seule app rapide et fiable. La nutrition et le cardio ont été retirés : Julien ne s'en sert pas. Le succès : ouvrir l'app et démarrer la séance du jour en un geste, ne jamais perdre une saisie, et voir clairement si la recompo avance.
 
 ## Brand Personality
 
