@@ -2096,3 +2096,17 @@ body.in-seance .bottom-nav { display: none; }
   .bl-ex-r .evo-spark { display: none; }
 }
 .bl-chart { position: relative; overflow: hidden; }
+
+/* ============================================================
+   36. RESSENTI D'EXERCICE (Séance)
+   ============================================================ */
+.ex-feel { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); align-items: center; gap: 6px; padding: 0 12px 12px; }
+.ex-feel[hidden] { display: none; }
+.ex-feel-l { font-size: 12px; font-weight: 600; color: var(--t2); padding-right: 2px; }
+.feel-btn { height: 34px; min-width: 0; border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface); font: inherit; font-size: 13px; font-weight: 600; color: var(--t1); cursor: pointer; white-space: nowrap; padding: 0 6px; transition: background .16s cubic-bezier(0.16, 1, 0.3, 1), border-color .16s; }
+.feel-btn.f-fail.on { background: rgba(255, 59, 48, .14); border-color: var(--set-down); }
+.feel-btn.f-mod.on  { background: rgba(255, 159, 10, .16); border-color: var(--set-same); }
+.feel-btn.f-easy.on { background: rgba(0, 230, 118, .16); border-color: var(--set-up); }
+.ex-card.open .ex-feel { padding-top: 0; }
+@media (max-width: 340px) { .ex-feel { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ex-feel-l { grid-column: 1 / -1; } }
+@media (prefers-reduced-motion: reduce) { .feel-btn { transition: none; } }

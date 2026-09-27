@@ -50,6 +50,7 @@ App de suivi musculation & course à pied (PWA perso, en français).
 - Séance modifiable en cours (`sessionExos()` : remplacement / « faire plus tard », stocké dans le brouillon `override`) — toujours passer par `sessionExos()` / `curExos()`, jamais `WORKOUT_PLAN[mg][wt]` directement
 - Récupération musculaire (accueil, `recoveryCard()` / `muscleRecovery()`) : estimation par muscle à partir des séries validées (secondaires ×0,5 via `REC_SECONDARY`), récup 24 h + 3 h/série (+12 h gros muscles), séances cumulées ; heure exacte via `endTs` enregistré à la séance (sinon 18 h)
 - Séries par muscle cette semaine (accueil, `weekSetsCard()` / `weekMuscleSets()`) : séries validées + restant prévu des séances pas encore faites, zone 10-20 (`SETS_ZONE`), indirectes comptées ½, mini-onglets par famille (`SETS_FAMILIES`) ; une ligne ouvre l'Évolution du muscle
+- Ressenti par exercice (`FEELS` : échec / modéré / facile, `setFeel()`) : pastilles sous l'exercice terminé, gardé dans le brouillon (`feel`, clé = nom) et enregistré dans `exercise.feel` (jamais `undefined`, Firestore le refuse). `progressionHint()` l'utilise : facile → +charge dès le bas de la plage, échec → même charge ; 2 échecs de suite → « À surveiller » dans le Bilan
 - Records : comparés au 1RM estimé (Epley), en direct (`markRecords()`) et à l'enregistrement (`S.prs`)
 - Notifications via le service worker uniquement (`showLocalNotif()`, iOS 16.4+ app installée), permission demandée sur geste ; séance à 100 % non enregistrée → notif en quittant
 

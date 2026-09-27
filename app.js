@@ -602,15 +602,20 @@ function sessionIndex(g, v) { return WEEK_SLOTS.findIndex(([gg, n]) => gg === g 
 function sessionTitle(g, v) { return `${WORKOUT_PLAN[g]?.label || groupLabel(g)} ${/^[AB][12]$/.test(v) ? v.slice(1) : (v || '')}`.trim(); }
 
 // Dernière perf connue d'un exercice (par son nom, ancien nom compris), quelle que soit la séance
-function lastSetsFor(name) {
+function lastExFor(name) {
   const names = [name, ...(PREV_ALIASES[name] || [])];
   const sorted = [...S.workouts].sort((a, b) => b.date.localeCompare(a.date));
   for (const w of sorted) {
     const ex = (w.exercises || []).find(e => names.includes(e.name));
-    if (ex && ex.sets?.some(st => parseFloat(st.weight) > 0)) return ex.sets;
+    if (ex && ex.sets?.some(st => parseFloat(st.weight) > 0)) return ex;
   }
-  return [];
+  return null;
 }
+function lastSetsFor(name) { return lastExFor(name)?.sets || []; }
+
+// Ressenti d'un exercice terminé (un geste) : échec / modéré / facile
+const FEELS = [['fail', 'Échec'], ['mod', 'Modéré'], ['easy', 'Facile']];
+const FEEL_LBL = Object.fromEntries(FEELS);
 
 // Évolution du volume d'une séance vs la précédente du même groupe + semaine A/B.
 // Renvoie le % (positif = progression) ou null s'il n'y a pas de séance de référence.
@@ -956,6 +961,7 @@ function saveWkDraft() {
     notes: document.getElementById('wk-notes')?.value || '',
     inputs, done: Object.keys(wkState.doneSets || {}).filter(k => wkState.doneSets[k]),
     override: wkState.override?.key === mg + wt ? wkState.override.exos : null,
+    feel: wkState.feel || {},
     startTs: wkTimer.startTs || null, _ts: Date.now()
   }));
 }
@@ -1011,16 +1017,22 @@ function renderWorkout() {
 // Suggestion de charge (double progression) : si à la dernière séance toutes les
 // séries ont atteint le HAUT de la plage de reps, on suggère +2,5 kg (haut du corps)
 // ou +5 kg (jambes). Renvoie { inc, weight } ou null.
+// Le ressenti de la dernière fois affine la règle :
+//  · Facile → on monte dès que toutes les séries ont atteint le BAS de la plage
+//  · Échec  → on garde la même charge, même si le haut de la plage est atteint
 function progressionHint(mg, ex, prevExercise) {
-  const sets = prevExercise?.sets || [];
+  const sets = (prevExercise?.sets || []).filter(s => (parseFloat(s.weight)||0) > 0 && (parseInt(s.reps)||0) > 0);
   if (!sets.length) return null;
-  const top = parseInt(String(ex.reps).split('-').pop(), 10);
+  const range = String(ex.reps).split('-').map(n => parseInt(n, 10));
+  const top = range[range.length - 1], low = range[0];
   if (!top) return null;
-  const allTop = sets.every(s => (parseFloat(s.weight)||0) > 0 && (parseInt(s.reps)||0) >= top);
-  if (!allTop) return null;
-  const inc = mg === 'legs' ? 5 : 2.5;
+  const feel = prevExercise?.feel;
   const baseW = Math.max(...sets.map(s => parseFloat(s.weight)||0));
-  return { inc, weight: Math.round((baseW + inc) * 10) / 10 };
+  if (feel === 'fail') return { inc: 0, weight: baseW, feel };
+  const target = feel === 'easy' ? low : top;
+  if (!sets.every(s => (parseInt(s.reps)||0) >= target)) return null;
+  const inc = mg === 'legs' ? 5 : 2.5;
+  return { inc, weight: Math.round((baseW + inc) * 10) / 10, feel };
 }
 
 function renderWorkoutForm() {
@@ -1039,6 +1051,7 @@ function renderWorkoutForm() {
   wkState.prBest = exos.map(ex => bestE1rm(ex.name));
   // Séries validées du brouillon (anciens brouillons sans cette info : série remplie = faite)
   wkState.doneSets = {};
+  wkState.feel = { ...(draft?.feel || {}) };   // ressenti par exercice (clé = nom)
   if (Array.isArray(draft?.done)) draft.done.forEach(k => { wkState.doneSets[k] = true; });
   else exos.forEach((ex, ei) => {
     for (let si = 0; si < ex.sets; si++) {
@@ -1097,8 +1110,10 @@ function mountExMedia(ei) {
 function exCard(ex, ei, mg, last, draft) {
   const name = ex.name;
   const open = wkState.openEx === ei;
-  const prevSets = lastSetsFor(name);
-  const hint = progressionHint(mg, ex, { sets: prevSets });
+  const prevEx = lastExFor(name);
+  const prevSets = prevEx?.sets || [];
+  const hint = progressionHint(mg, ex, prevEx);
+  const feel = wkState.feel?.[name] || '';
   const safe = name.replace(/'/g, "\\'");
   // Séries réellement faites la dernière fois (les séries non validées sont enregistrées à 0)
   const prevDone = prevSets.filter(s => parseFloat(s.weight) > 0 && parseInt(s.reps) > 0);
@@ -1107,6 +1122,7 @@ function exCard(ex, ei, mg, last, draft) {
     ? (prevW.every(w => w === prevW[0])
         ? `Dernière fois : ${String(prevW[0]).replace('.', ',')} kg × ${prevDone.map(s => s.reps).join(', ')}`
         : `Dernière fois : ${prevDone.map(s => `${String(s.weight).replace('.', ',')}×${s.reps}`).join(' · ')}`)
+      + (prevEx?.feel ? ` · ${FEEL_LBL[prevEx.feel]}` : '')
     : '';
   const pr = (S.prs || {})[name]?.date === todayStr();
   return `
@@ -1124,7 +1140,9 @@ function exCard(ex, ei, mg, last, draft) {
       <div class="ex-tools">
         <span class="pill">${ex.sets} × ${ex.reps}</span>
         <span class="pill">Repos ${ex.rest}</span>
-        ${hint ? `<span class="pill pill-ink">+${String(hint.inc).replace('.', ',')} kg conseillé</span>` : ''}
+        ${hint ? (hint.inc
+          ? `<span class="pill pill-ink">+${String(hint.inc).replace('.', ',')} kg conseillé${hint.feel === 'easy' ? ' · facile' : ''}</span>`
+          : `<span class="pill">Même charge · échec la dernière fois</span>`) : ''}
         ${ex.replaced ? `<span class="pill" title="Remplace ${ex.replaced.replace(/"/g, '')}">Remplaçant</span>` : ''}
       </div>
       <div class="ex-last"><span>${lastTxt || 'Première fois sur cet exercice'}</span>
@@ -1147,6 +1165,10 @@ function exCard(ex, ei, mg, last, draft) {
         </div>`;
       }).join('')}
       <button class="ex-s1" onclick="copyFirstSet(${ei})">Recopier la série 1 sur les suivantes</button>
+    </div>
+    <div class="ex-feel" id="ex-feel-${ei}" role="group" aria-label="Ressenti sur ${name.replace(/"/g, '')}" hidden>
+      <span class="ex-feel-l">Ressenti</span>
+      ${FEELS.map(([k, l]) => `<button class="feel-btn f-${k}${feel === k ? ' on' : ''}" aria-pressed="${feel === k}" onclick="setFeel(${ei},'${k}')">${l}</button>`).join('')}
     </div>
   </article>`;
 }
@@ -1329,6 +1351,18 @@ function validateSet(ei, si) {
   if (exIsDone(ei, exos)) setTimeout(() => openEx(next, true), 350);
 }
 
+function setFeel(ei, k) {
+  const name = curExos()[ei]?.name; if (!name) return;
+  wkState.feel = wkState.feel || {};
+  wkState.feel[name] = wkState.feel[name] === k ? '' : k;   // 2e appui : on retire
+  if (!wkState.feel[name]) delete wkState.feel[name];
+  document.querySelectorAll(`#ex-feel-${ei} .feel-btn`).forEach(b => {
+    const on = b.classList.contains(`f-${wkState.feel[name]}`);
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+  });
+  haptic([6]); saveWkDraft();
+}
+
 function copyExName(btn, name) {
   const icon = btn?.innerHTML;
   const done = () => { showToast(`« ${name} » copié`); if (btn) { btn.textContent = '✓'; setTimeout(() => { btn.innerHTML = icon; }, 1200); } };
@@ -1357,6 +1391,8 @@ function updateVols() {
     total += ev;
     const bar = document.getElementById(`ex-prog-${ei}`);
     if (bar) bar.style.width = `${(done / ex.sets * 100).toFixed(1)}%`;
+    const fe = document.getElementById(`ex-feel-${ei}`);
+    if (fe) fe.hidden = done !== ex.sets;
     const sub = document.getElementById(`ex-sub-${ei}`);
     if (sub) sub.textContent = done === ex.sets ? `${ex.sets} séries · ${fmtVol(ev)} kg · fait`
       : done ? `${done} sur ${ex.sets} séries · ${fmtVol(ev)} kg`
@@ -1550,7 +1586,8 @@ function saveWorkout(validatedOnly = false) {
     name: ex.name, sets: Array.from({length:ex.sets},(_,si)=>{
       const keep = wkState.doneSets[`${ei}-${si}`] || keepUnvalidated;
       return keep ? { weight: val(`w-${ei}-${si}`, parseFloat), reps: val(`r-${ei}-${si}`, parseInt) } : { weight: 0, reps: 0 };
-    })
+    }),
+    ...(wkState.feel?.[ex.name] ? { feel: wkState.feel[ex.name] } : {})   // pas de champ undefined (Firestore le refuse)
   }));
   const totalVolume = calcSessionVol(exercises);
   const duration = wkTimer.startTs ? Math.floor((Date.now() - wkTimer.startTs) / 1000) : 0;
@@ -1580,7 +1617,7 @@ function saveWorkout(validatedOnly = false) {
   saveBackup('séance');
   clearWkDraft();
   haptic([40, 30, 80]);
-  wkState.muscleGroup = null; wkState.override = null;
+  wkState.muscleGroup = null; wkState.override = null; wkState.feel = {};
   navigate('dashboard');
   const doneSets = exercises.reduce((t, e) => t + e.sets.filter(x => x.weight > 0 && x.reps > 0).length, 0);
   showSessionSummary({ mg, wt, date, totalVolume, duration, doneSets, totalSets: exos.reduce((t, e) => t + e.sets, 0),
@@ -1726,7 +1763,7 @@ function askCancelSeance(info) {
 }
 function confirmCancelSeance() {
   clearWkDraft(); stopWkTimer(); stopTimer();
-  wkState.muscleGroup = null; wkState.openKey = null; wkState.doneSets = {}; wkState.override = null;
+  wkState.muscleGroup = null; wkState.openKey = null; wkState.doneSets = {}; wkState.override = null; wkState.feel = {};
   closeModal(); navigate('dashboard');
   haptic([20, 40, 20]);
   showToast('Séance annulée');
@@ -3252,7 +3289,14 @@ function bilanExercises(from, hist = exoHistory()) {
     }
   });
   records.sort((a, b) => b.date.localeCompare(a.date));
-  return { rows, records, stalled };
+  // Échec au ressenti les 2 dernières fois sur un exercice encore pratiqué
+  const feels = {};
+  [...S.workouts].sort((a, b) => a.date.localeCompare(b.date)).forEach(w => (w.exercises || []).forEach(e => {
+    if (!(e.sets || []).some(x => (x.reps || 0) > 0)) return;
+    (feels[canonExo(e.name)] = feels[canonExo(e.name)] || []).push({ feel: e.feel || '', weekKey: w.weekKey || getWeekKey(w.date) });
+  }));
+  const failing = Object.entries(feels).filter(([, f]) => f.length >= 2 && f.slice(-2).every(x => x.feel === 'fail') && f[f.length - 1].weekKey >= recent6w).map(([n]) => n);
+  return { rows, records, stalled, failing };
 }
 
 function hmFmt(sec) { const m = Math.round(sec / 60), h = Math.floor(m / 60); return h ? `${h} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; }
@@ -3306,7 +3350,8 @@ function renderStats() {
   const up = ex.rows.filter(r => r.gainKg > 0.4).sort((a, b) => b.pct - a.pct).slice(0, 5);
   const down = ex.rows.filter(r => r.pct <= -3).sort((a, b) => a.pct - b.pct);
   const watch = [...down.map(r => ({ n: r.n, why: `${kgFmt(r.first)} → ${kgFmt(r.last)} kg sur la période`, tag: 'En baisse' })),
-                 ...ex.stalled.filter(s => !down.some(d => d.n === s.n)).map(s => ({ n: s.n, why: `Pas de record depuis le ${formatDate(s.since)} · meilleur ≈ ${kgFmt(s.best)} kg`, tag: 'Stagne' }))].slice(0, 5);
+                 ...ex.failing.filter(n => !down.some(d => d.n === n)).map(n => ({ n, why: 'Échec les 2 dernières séances · baisse un peu la charge', tag: 'Échec ×2' })),
+                 ...ex.stalled.filter(s => !down.some(d => d.n === s.n) && !ex.failing.includes(s.n)).map(s => ({ n: s.n, why: `Pas de record depuis le ${formatDate(s.since)} · meilleur ≈ ${kgFmt(s.best)} kg`, tag: 'Stagne' }))].slice(0, 5);
   const perLbl = { 4: 'ce mois-ci', 13: 'en 3 mois', 26: 'en 6 mois' }[period];
   const goMuscle = n => { const m = exoMuscle(n); return m ? `evoMuscle='${m}';setProgressTab('evolution')` : ''; };
   const exRow = (r, right, sub) => `
@@ -3354,7 +3399,7 @@ function renderStats() {
     ${watch.length ? `
     <div class="sec-row"><h2>À surveiller</h2><span class="sec-note">change de plage de reps ou de variante</span></div>
     <div class="card evo-list">
-      ${watch.map(w => exRow(w, `<span class="dpill ${w.tag === 'En baisse' ? 'down' : ''}">${w.tag}</span>`, w.why)).join('')}
+      ${watch.map(w => exRow(w, `<span class="dpill ${w.tag !== 'Stagne' ? 'down' : ''}">${w.tag}</span>`, w.why)).join('')}
     </div>` : ''}
 
     ${ex.records.length ? `
