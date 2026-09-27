@@ -2110,3 +2110,71 @@ body.in-seance .bottom-nav { display: none; }
 .ex-card.open .ex-feel { padding-top: 0; }
 @media (max-width: 340px) { .ex-feel { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ex-feel-l { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { .feel-btn { transition: none; } }
+
+/* ============================================================
+   37. SOLIDITÉ : barre « liquid glass », barre de séance au-dessus, voiles haut/bas
+   ============================================================ */
+/* Barre d'onglets : verre noir (flou + saturation), liseré clair, reflet en haut */
+.bottom-nav {
+  background: rgba(14, 14, 14, .82);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8);
+  box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .14), inset 0 1px 0 rgba(255, 255, 255, .10), 0 16px 32px -14px rgba(10, 10, 10, .6);
+  overflow: visible;   /* la bulle peut déborder légèrement en s'étirant, comme sur iOS */
+}
+/* Bulle : verre clair avec reflet, déplacée uniquement par transform (compositeur) */
+.nav-lens {
+  width: 68px; height: 46px; margin-top: -23px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .10));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 0 0 .5px rgba(255, 255, 255, .22);
+  will-change: transform; backface-visibility: hidden;
+  transition: transform .46s cubic-bezier(.3, 1.45, .45, 1), background .2s, box-shadow .2s, opacity .2s;
+}
+.bottom-nav.dragging .nav-lens {
+  transition: background .2s, box-shadow .2s;   /* pendant le glissé : c'est requestAnimationFrame qui bouge la bulle */
+  background: linear-gradient(180deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .16));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 0 0 .5px rgba(255, 255, 255, .3), 0 8px 22px rgba(0, 0, 0, .35);
+}
+.nav-item { touch-action: none; }
+.nav-item svg { will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .nav-lens { transition: opacity .2s; } }
+
+/* Séance : la barre d'onglets reste visible, la barre de séance flotte juste au-dessus (comme un mini-lecteur) */
+body.in-seance .bottom-nav { display: flex; }
+.runbar {
+  bottom: calc(var(--nav-h) + 8px); height: 56px;
+  background: rgba(14, 14, 14, .86);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8);
+  box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .14), inset 0 1px 0 rgba(255, 255, 255, .10), 0 14px 28px -14px rgba(10, 10, 10, .55);
+}
+.rb-btn { height: 40px; }
+body.in-seance #app { padding-bottom: calc(var(--nav-h) + 56px + 36px); }
+body.in-seance #toast { bottom: calc(var(--nav-h) + 56px + 20px) !important; }
+
+/* Voiles : le contenu qui défile s'efface doucement sous la barre du bas et sous la barre d'état,
+   au lieu d'apparaître « coupé » derrière les éléments flottants */
+body::before, body::after { content: ""; position: fixed; left: 0; right: 0; pointer-events: none; z-index: calc(var(--z-nav) - 1); }
+body::before {
+  top: 0; height: env(safe-area-inset-top, 0px);
+  background: var(--bg);
+}
+body::after {
+  bottom: 0; height: calc(var(--nav-h) + 26px);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, .86) 55%, #fff);
+}
+body.in-seance::after { height: calc(var(--nav-h) + 56px + 30px); }
+
+/* Progrès · Évolution : famille (segmenté) + muscles soulignés, sans bulles sur plusieurs lignes */
+.evo-fam { margin-bottom: 2px; }
+.evo-mtabs { display: flex; gap: 2px; margin: 0 0 14px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.evo-mtabs::-webkit-scrollbar { display: none; }
+.evo-mtab { position: relative; flex: 1 0 auto; height: 42px; padding: 0 8px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 500; color: var(--t3); cursor: pointer; white-space: nowrap; }
+.evo-mtab::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2.5px; border-radius: 2px; background: var(--ink); transform: scaleX(0); transition: transform .2s cubic-bezier(0.16, 1, 0.3, 1); }
+.evo-mtab.on { color: var(--t1); font-weight: 700; }
+.evo-mtab.on::after { transform: scaleX(1); }
+@media (max-width: 360px) { .evo-mtab { padding: 0 5px; font-size: 13px; } .evo-mtab::after { left: 5px; right: 5px; } }
+/* Graphiques : jamais plus larges que leur carte, même pendant l'image avant l'initialisation de Chart.js */
+canvas { max-width: 100%; }
+.chart-wrap, .evo-chart, .bl-chart { position: relative; }
+/* Progrès · Tous les muscles : le nom garde sa place sur petit écran */
+.evo-row-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 360px) { .evo-row .evo-spark { width: 46px; } .evo-row { gap: 8px; } .evo-row-d .dpill { padding: 0 6px; } }

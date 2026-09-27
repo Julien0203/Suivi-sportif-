@@ -1497,7 +1497,7 @@ function updateSeanceProgress() {
   box.classList.toggle('full', p.pct === 100);
 }
 
-// ── Barre de séance : remplace la barre d'onglets pendant la muscu (chrono, repos, Terminer)
+// ── Barre de séance : posée au-dessus de la barre d'onglets pendant la muscu (chrono, repos, Terminer)
 function mountRunbar() {
   document.body.classList.add('in-seance');
   let bar = document.getElementById('runbar');
@@ -3855,9 +3855,7 @@ function renderEvolution() {
     .filter(o => o.sr.volume.some(v => v > 0));
 
   document.getElementById('app').innerHTML = progressHead() + `
-    <div class="evo-muscles" role="tablist" aria-label="Groupe musculaire">
-      ${MUSCLES.map(m => `<button class="chip ${evoMuscle === m ? 'active' : ''}" role="tab" aria-selected="${evoMuscle === m}" onclick="setEvoMuscle('${m}')">${m}</button>`).join('')}
-    </div>
+    ${evoTabs()}
 
     <section class="card evo-card">
       <div class="evo-head">
@@ -3961,6 +3959,17 @@ function buildEvoChart(sr, unit) {
   });
 }
 
+// Onglets de muscle : famille (Push / Pull / Legs) puis les muscles de la famille, soulignés
+function evoTabs() {
+  const fam = SETS_FAMILIES.find(f => f[2].includes(evoMuscle)) || SETS_FAMILIES[0];
+  return `
+    <div class="sets-tabs evo-fam" role="tablist" aria-label="Famille">
+      ${SETS_FAMILIES.map(([k, l, ms]) => `<button class="sets-tab${k === fam[0] ? ' on' : ''}" role="tab" aria-selected="${k === fam[0]}" onclick="setEvoMuscle('${k === fam[0] ? evoMuscle : ms[0]}')">${l}</button>`).join('')}
+    </div>
+    <div class="evo-mtabs" role="tablist" aria-label="Muscle">
+      ${fam[2].map(m => `<button class="evo-mtab${m === evoMuscle ? ' on' : ''}" role="tab" aria-selected="${m === evoMuscle}" onclick="setEvoMuscle('${m}')">${m}</button>`).join('')}
+    </div>`;
+}
 function setEvoMuscle(m) { evoMuscle = m; destroyCharts(); renderEvolution(); document.getElementById('app').scrollTop = 0; }
 function setEvoWeeks(n)  { evoWeeks = n;  destroyCharts(); renderEvolution(); }
 
@@ -4483,51 +4492,94 @@ function initPullToRefresh() {
 // Barre d'onglets glissable (comme Apple Music) : une bulle suit le doigt d'un onglet à l'autre,
 // l'onglet sous le doigt s'allume, et on y va en relâchant. Un simple tap marche toujours.
 let _navGestureAt = 0;
+// Bulle « liquid glass » : pendant le glissé, elle suit le doigt image par image (requestAnimationFrame,
+// positions des onglets mises en cache → aucune lecture de mise en page pendant le mouvement) et s'étire
+// selon la vitesse. Au relâché, la transition CSS (sur le compositeur) la pose sur l'onglet avec un léger
+// rebond, même pendant le rendu de la nouvelle vue.
 function initNavGesture() {
   const nav = document.getElementById('bottom-nav');
   if (!nav || nav.querySelector('.nav-lens')) return;
   const lens = document.createElement('span');
   lens.className = 'nav-lens'; lens.setAttribute('aria-hidden', 'true');
   nav.prepend(lens);
-  const items = () => [...nav.querySelectorAll('.nav-item')];
-  const lensW = () => lens.offsetWidth || 64;
-  const centerOf = el => { const r = el.getBoundingClientRect(), n = nav.getBoundingClientRect(); return r.left - n.left + r.width / 2; };
-  const setX = (cx, scale = 1) => { lens.style.transform = `translateX(${(cx - lensW() / 2).toFixed(1)}px) scale(${scale})`; };
-  window.moveNavLens = () => {
-    const a = nav.querySelector('.nav-item.active');
-    lens.style.opacity = a ? '1' : '0';
-    if (a) setX(centerOf(a));
+  const items = [...nav.querySelectorAll('.nav-item')];
+  let centers = [], lensW = 66;
+  const measure = () => {
+    const n = nav.getBoundingClientRect();
+    centers = items.map(el => { const r = el.getBoundingClientRect(); return r.left - n.left + r.width / 2; });
+    lensW = lens.offsetWidth || 66;
   };
-  let drag = null;
-  const follow = x => {
-    const n = nav.getBoundingClientRect(), list = items();
-    const min = centerOf(list[0]), max = centerOf(list[list.length - 1]);
-    const cx = Math.min(max, Math.max(min, x - n.left));
-    setX(cx, 1.14);
-    const hover = list.reduce((best, el) => Math.abs(centerOf(el) - cx) < Math.abs(centerOf(best) - cx) ? el : best, list[0]);
-    if (hover !== drag.hover) { list.forEach(el => el.classList.toggle('hover', el === hover)); drag.hover = hover; if (drag.started) haptic([6]); }
-    drag.started = true;
+  const paint = (cx, sx = 1, sy = 1) => {
+    lens.style.transform = `translate3d(${(cx - lensW / 2).toFixed(2)}px,0,0) scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
+  };
+  let x = 0;                       // position affichée (centre de la bulle)
+  window.moveNavLens = () => {
+    if (!centers.length || !centers[0]) measure();
+    const i = items.findIndex(el => el.classList.contains('active'));
+    lens.style.opacity = i < 0 ? '0' : '1';
+    if (i < 0) return;
+    x = centers[i]; paint(x);
+  };
+
+  let drag = null, raf = 0;
+  const nearest = cx => centers.reduce((bi, c, i) => Math.abs(c - cx) < Math.abs(centers[bi] - cx) ? i : bi, 0);
+  const frame = t => {
+    if (!drag) { raf = 0; return; }
+    const dt = Math.min(48, t - (drag.t || t)); drag.t = t;
+    const min = centers[0], max = centers[centers.length - 1];
+    // Au-delà du premier / dernier onglet : résistance élastique
+    let tx = drag.fx;
+    if (tx < min) tx = min - Math.sqrt(min - tx) * 3; else if (tx > max) tx = max + Math.sqrt(tx - max) * 3;
+    const k = 1 - Math.exp(-dt / 28);                    // suivi lissé, indépendant du taux d'images (60/120 Hz)
+    const prev = x; x += (tx - x) * k;
+    const v = dt ? (x - prev) / dt : 0;                  // px/ms
+    drag.v = drag.v * 0.7 + v * 0.3;
+    const st = Math.min(0.28, Math.abs(drag.v) * 0.22);  // étirement selon la vitesse
+    paint(x, 1.16 + st, 1.16 - st * 0.45);
+    setHover(nearest(drag.fx));                          // l'onglet visé suit le doigt, pas la bulle
+    raf = requestAnimationFrame(frame);
+  };
+  const setHover = h => {
+    if (h === drag.hover) return;
+    if (drag.hover !== null) haptic([5]);
+    items.forEach((el, i) => el.classList.toggle('hover', i === h)); drag.hover = h;
   };
   nav.addEventListener('pointerdown', e => {
     if (e.button > 0) return;
-    drag = { id: e.pointerId, hover: null, started: false };
+    measure();
+    const n = nav.getBoundingClientRect();
+    drag = { id: e.pointerId, fx: e.clientX - n.left, left: n.left, hover: null, v: 0, t: 0 };
     try { nav.setPointerCapture(e.pointerId); } catch {}
     nav.classList.add('dragging'); lens.style.opacity = '1';
-    follow(e.clientX);
+    setHover(nearest(drag.fx));                          // tap sans mouvement : l'onglet touché est déjà visé
+    if (!raf) raf = requestAnimationFrame(frame);
   });
-  nav.addEventListener('pointermove', e => { if (drag && e.pointerId === drag.id) follow(e.clientX); });
+  nav.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    // Événements regroupés par le navigateur : on garde le plus récent
+    const ev = e.getCoalescedEvents?.().at(-1) || e;
+    drag.fx = ev.clientX - drag.left;
+    setHover(nearest(drag.fx));
+  }, { passive: true });
   const end = cancel => {
     if (!drag) return;
-    const target = drag.hover; drag = null;
+    if (!cancel) setHover(nearest(drag.fx));
+    const target = drag.hover !== null ? items[drag.hover] : null; drag = null;
+    cancelAnimationFrame(raf); raf = 0;
     nav.classList.remove('dragging');
-    items().forEach(el => el.classList.remove('hover'));
-    if (!cancel && target) { _navGestureAt = Date.now(); if (target.dataset.view !== S.view) navigate(target.dataset.view); }
+    items.forEach(el => el.classList.remove('hover'));
+    if (cancel || !target) { window.moveNavLens(); return; }
+    _navGestureAt = Date.now();
+    // La bulle se pose d'abord (transition CSS), la vue se rend à l'image suivante
+    items.forEach(el => el.classList.toggle('active', el === target));
     window.moveNavLens();
+    if (target.dataset.view !== S.view) requestAnimationFrame(() => setTimeout(() => navigate(target.dataset.view), 0));
   };
   nav.addEventListener('pointerup', () => end(false));
   nav.addEventListener('pointercancel', () => end(true));
-  window.addEventListener('resize', () => window.moveNavLens());
-  requestAnimationFrame(window.moveNavLens);
+  nav.addEventListener('lostpointercapture', () => end(false));
+  window.addEventListener('resize', () => { measure(); window.moveNavLens(); });
+  requestAnimationFrame(() => { measure(); window.moveNavLens(); });
 }
 
 function initSwipe() {
@@ -4537,7 +4589,8 @@ function initSwipe() {
   el.addEventListener('touchstart', e => { sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now(); }, {passive:true});
   el.addEventListener('touchend', e => {
     if (document.body.classList.contains('menu-open')) return;
-    if (e.target.closest?.('.rec-pager')) return;   // carrousel de récupération : glisser change de muscle
+    // Zones qui ont leur propre geste horizontal : carrousel, onglets de muscle, graphiques (info-bulle)
+    if (e.target.closest?.('.rec-pager, .evo-mtabs, canvas, .sets-tabs, .bl-seg')) return;
     const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
     if (Date.now()-st>400 || Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*2) return;
     const idx=VIEWS.indexOf(S.view||'dashboard');
@@ -4553,12 +4606,12 @@ function navigate(view) {
   if (view === 'history') { progressTab = 'history'; view = 'progress'; }
   if (view === 'stats')   { progressTab = 'stats';   view = 'progress'; }
   if (!VIEW_RENDERERS[view]) view = 'dashboard';
+  if (S.view === 'workout' && view !== 'workout') saveWkDraft();   // les saisies vivent dans le DOM de la séance
   S.view = view;
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
   unmountRunbar();
   destroyCharts();
   destroyNutriCharts();
-  if(view!=='workout')    pauseWkTimer();
   VIEW_RENDERERS[view]();
   window.moveNavLens?.();
   const app = document.getElementById('app');
