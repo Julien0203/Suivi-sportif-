@@ -2195,3 +2195,29 @@ input[type="date"]::-webkit-calendar-picker-indicator { margin-left: 4px; }
 /* Poids + date : la date (affichée en toutes lettres par iOS) prend la plus grande colonne */
 .form-grid-date { grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr); }
 input[type="date"].form-inp { font-size: 16px; padding-left: 12px; padding-right: 12px; }  /* 16 px : pas de zoom iOS au toucher */
+
+/* ============================================================
+   38. BILAN HEBDOMADAIRE
+   ============================================================ */
+.recap-card { padding: 16px; margin-top: 4px; margin-bottom: 14px; }
+.recap-k { font-size: 12px; font-weight: 500; color: var(--t2); }
+.recap-h { font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin: 4px 0 12px; }
+.recap-btn { width: 100%; }
+.recap-link { margin: 0 0 4px; padding: 14px 16px; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.recap-chev { font-size: 22px; color: var(--t3); flex-shrink: 0; line-height: 1; }
+.recap-nav { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; align-items: center; gap: 8px; margin: -4px 0 12px; }
+.recap-nav span { text-align: center; font-size: 15px; font-weight: 700; line-height: 1.3; }
+.recap-arrow { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); font-size: 20px; line-height: 1; color: var(--t1); cursor: pointer; display: grid; place-items: center; padding: 0 0 2px; }
+.recap-arrow:disabled { opacity: .3; cursor: default; }
+.recap-sessions { display: flex; flex-wrap: wrap; gap: 6px; }
+.recap-note { font-weight: 500; font-size: 11.5px; color: var(--t3); margin-left: 4px; }
+.recap-muscles { display: flex; flex-wrap: wrap; gap: 6px; }
+.recap-m { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: var(--r-pill); background: var(--surface); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.recap-m i { width: 7px; height: 7px; border-radius: 50%; background: var(--t4); }
+.recap-m.ok i { background: var(--set-up); } .recap-m.low i { background: var(--set-same); }
+.recap-m b { font-variant-numeric: tabular-nums; color: var(--t2); font-weight: 600; }
+.recap-duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0 10px; }
+.recap-tips { gap: 6px; }
+.recap-tip { position: relative; padding-left: 16px; font-size: 13.5px; line-height: 1.4; }
+.recap-tip::before { content: ""; position: absolute; left: 3px; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+.recap-sessions .pill:not(.pill-ink) { background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); color: var(--t2); }
