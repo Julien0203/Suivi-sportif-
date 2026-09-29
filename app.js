@@ -613,8 +613,8 @@ function lastExFor(name) {
 }
 function lastSetsFor(name) { return lastExFor(name)?.sets || []; }
 
-// Ressenti d'un exercice terminé (un geste) : échec / modéré / facile
-const FEELS = [['fail', 'Échec'], ['mod', 'Modéré'], ['easy', 'Facile']];
+// Ressenti d'un exercice terminé (un geste) : dur / modéré / facile (clé interne 'fail' conservée pour l'historique)
+const FEELS = [['fail', 'Dur'], ['mod', 'Modéré'], ['easy', 'Facile']];
 const FEEL_LBL = Object.fromEntries(FEELS);
 
 // Évolution du volume d'une séance vs la précédente du même groupe + semaine A/B.
@@ -1021,7 +1021,7 @@ function renderWorkout() {
 // ou +5 kg (jambes). Renvoie { inc, weight } ou null.
 // Le ressenti de la dernière fois affine la règle :
 //  · Facile → on monte dès que toutes les séries ont atteint le BAS de la plage
-//  · Échec  → on garde la même charge, même si le haut de la plage est atteint
+//  · Dur    → on garde la même charge, même si le haut de la plage est atteint
 function progressionHint(mg, ex, prevExercise) {
   const sets = (prevExercise?.sets || []).filter(s => (parseFloat(s.weight)||0) > 0 && (parseInt(s.reps)||0) > 0);
   if (!sets.length) return null;
@@ -1144,7 +1144,7 @@ function exCard(ex, ei, mg, last, draft) {
         <span class="pill">Repos ${ex.rest}</span>
         ${hint ? (hint.inc
           ? `<span class="pill pill-ink">+${String(hint.inc).replace('.', ',')} kg conseillé${hint.feel === 'easy' ? ' · facile' : ''}</span>`
-          : `<span class="pill">Même charge · échec la dernière fois</span>`) : ''}
+          : `<span class="pill">Même charge · dur la dernière fois</span>`) : ''}
         ${ex.replaced ? `<span class="pill" title="Remplace ${ex.replaced.replace(/"/g, '')}">Remplaçant</span>` : ''}
       </div>
       <div class="ex-last"><span>${lastTxt || 'Première fois sur cet exercice'}</span>
@@ -3292,7 +3292,7 @@ function bilanExercises(from, hist = exoHistory()) {
     }
   });
   records.sort((a, b) => b.date.localeCompare(a.date));
-  // Échec au ressenti les 2 dernières fois sur un exercice encore pratiqué
+  // Ressenti « dur » les 2 dernières fois sur un exercice encore pratiqué
   const feels = {};
   [...S.workouts].sort((a, b) => a.date.localeCompare(b.date)).forEach(w => (w.exercises || []).forEach(e => {
     if (!(e.sets || []).some(x => (x.reps || 0) > 0)) return;
@@ -3354,7 +3354,7 @@ function renderStats() {
   const up = ex.rows.filter(r => r.gainKg > 0.4).sort((a, b) => b.pct - a.pct).slice(0, 5);
   const down = ex.rows.filter(r => r.pct <= -3).sort((a, b) => a.pct - b.pct);
   const watch = [...down.map(r => ({ n: r.n, why: `${kgFmt(r.first)} → ${kgFmt(r.last)} kg sur la période`, tag: 'En baisse' })),
-                 ...ex.failing.filter(n => !down.some(d => d.n === n)).map(n => ({ n, why: 'Échec les 2 dernières séances · baisse un peu la charge', tag: 'Échec ×2' })),
+                 ...ex.failing.filter(n => !down.some(d => d.n === n)).map(n => ({ n, why: 'Dur les 2 dernières séances · baisse un peu la charge', tag: 'Dur ×2' })),
                  ...ex.stalled.filter(s => !down.some(d => d.n === s.n) && !ex.failing.includes(s.n)).map(s => ({ n: s.n, why: `Pas de record depuis le ${formatDate(s.since)} · meilleur ≈ ${kgFmt(s.best)} kg`, tag: 'Stagne' }))].slice(0, 5);
   const perLbl = { 4: 'ce mois-ci', 13: 'en 3 mois', 26: 'en 6 mois' }[period];
   const goMuscle = n => { const m = exoMuscle(n); return m ? `evoMuscle='${m}';setProgressTab('evolution')` : ''; };
@@ -4463,7 +4463,7 @@ function renderWeekBilan() {
 
     ${fTot || r.weight !== null ? `
     <div class="bl-nums wb-duo">
-      ${fTot ? `<div><small>Ressenti</small><div class="sum-legend"><span><i class="down"></i>${r.feel.fail} échec</span><span><i class="same"></i>${r.feel.mod} modéré</span><span><i class="up"></i>${r.feel.easy} facile</span></div></div>` : ''}
+      ${fTot ? `<div><small>Ressenti</small><div class="sum-legend"><span><i class="down"></i>${r.feel.fail} dur</span><span><i class="same"></i>${r.feel.mod} modéré</span><span><i class="up"></i>${r.feel.easy} facile</span></div></div>` : ''}
       ${r.weight !== null ? `<div><small>Poids</small><b>${String(r.weight).replace('.', ',')} <em>kg</em></b>${r.weightDelta !== null ? `<span class="wb-sub">${r.weightDelta > 0 ? '+' : r.weightDelta < 0 ? '−' : ''}${String(Math.abs(r.weightDelta)).replace('.', ',')} kg vs avant</span>` : ''}</div>` : ''}
     </div>` : ''}
     ` : `<div class="empty"><h3>Aucune séance cette semaine</h3><p>Le bilan se remplit au fil de tes séances enregistrées.</p></div>`}
