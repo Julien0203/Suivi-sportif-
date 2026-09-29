@@ -3256,7 +3256,8 @@ function deleteRun(id)     { if(!confirm('Supprimer ?')) return; S.runs=S.runs.f
 // ============================================================
 
 let charts = {};
-let period = 13;   // Bilan : 4 (1 mois), 13 (3 mois) ou 26 (6 mois) semaines
+let period = 'week';   // Bilan : 'week' (bilan hebdo), 4 (1 mois), 13 (3 mois) ou 26 (6 mois) semaines
+let recapWk = null;    // semaine affichée dans le bilan hebdo (null = dernière semaine bouclée, ou celle-ci le dimanche)
 
 // Séances possibles sur la période : 6 par semaine pleine ; semaine en cours = jours écoulés hors dimanche
 function plannedSessions(weeks) {
@@ -3317,6 +3318,7 @@ function bilanVerdict(forcePct, reg, n) {
 }
 
 function renderStats() {
+  if (period === 'week') { renderWeekBilan(); return; }
   const weeks = lastWeekKeys(period), from = weeks[0];
   const prevFrom = lastWeekKeys(period * 2)[0];
   const ws = S.workouts.filter(w => MUSCLE_KEYS.includes(w.muscleGroup));
@@ -3365,7 +3367,7 @@ function renderStats() {
 
   document.getElementById('app').innerHTML = progressHead() + `
     <div class="bl-seg" role="group" aria-label="Période">
-      ${[[4, '1 mois'], [13, '3 mois'], [26, '6 mois']].map(([n, l]) => `<button class="${period === n ? 'active' : ''}" aria-pressed="${period === n}" onclick="setPeriod(${n})">${l}</button>`).join('')}
+      ${bilanSegButtons()}
     </div>
 
     <section class="card card-dark bl-hero">
@@ -3378,11 +3380,6 @@ function renderStats() {
         <div><small>Records</small><b>${ex.records.length}</b><span>sur ${new Set(ex.records.map(r => r.n)).size} exercice${new Set(ex.records.map(r => r.n)).size > 1 ? 's' : ''}</span></div>
       </div>
     </section>
-
-    <button class="lcard recap-link" onclick="showWeekRecap('${new Date().getDay() === 0 ? thisWeekKey() : shiftWeek(thisWeekKey(), -1)}')">
-      <span class="lcard-b"><span class="lcard-t">Bilans de la semaine</span><span class="lcard-s">Séances, progression, records et conseils, semaine par semaine</span></span>
-      <span class="recap-chev" aria-hidden="true">›</span>
-    </button>
 
     <div class="sec-row"><h2>Régularité</h2><span class="sec-note">séances par semaine</span></div>
     <div class="card bl-reg">
@@ -3479,6 +3476,10 @@ function buildBilanChart(weeks, ws) {
 }
 
 function setPeriod(n) { period = n; destroyCharts(); renderStats(); }
+function bilanSegButtons() {
+  return [['week', 'Semaine'], [4, '1 mois'], [13, '3 mois'], [26, '6 mois']]
+    .map(([n, l]) => `<button class="${period === n ? 'active' : ''}" aria-pressed="${period === n}" onclick="setPeriod(${typeof n === 'number' ? n : `'${n}'`})">${l}</button>`).join('');
+}
 
 // ============================================================
 // 8b. PROFIL & PARAMÈTRES
@@ -4382,64 +4383,92 @@ function weekRecapCard() {
       <div class="recap-k">Bilan de la semaine · ${weekRangeLbl(r.wk)}</div>
       <h2 class="recap-h">${recapVerdict(r)}</h2>
       ${recapTiles(r)}
-      <button class="btn btn-primary recap-btn" onclick="showWeekRecap('${r.wk}')">Voir le bilan complet</button>
+      <button class="btn btn-primary recap-btn" onclick="openWeekBilan('${r.wk}')">Voir le bilan complet</button>
     </section>`;
 }
 
-function showWeekRecap(wk) {
-  const r = weekRecap(wk);
+function defaultRecapWk() { return new Date().getDay() === 0 ? thisWeekKey() : shiftWeek(thisWeekKey(), -1); }
+function openWeekBilan(wk) { recapWk = wk; period = 'week'; progressTab = 'stats'; navigate('progress'); }
+function setRecapWk(wk) { recapWk = wk; renderWeekBilan(); document.getElementById('app').scrollTop = 0; }
+
+// Progrès · Bilan · Semaine : le bilan hebdo en entier dans la page
+function renderWeekBilan() {
   const cur = thisWeekKey();
   const first = S.workouts.length ? getWeekKey([...S.workouts].sort((a, b) => a.date.localeCompare(b.date))[0].date) : cur;
+  let wk = recapWk || defaultRecapWk();
+  if (wk > cur) wk = cur;
+  if (wk < first) wk = first;
+  const r = weekRecap(wk);
   const pTot = r.prog.up.length + r.prog.same.length + r.prog.down.length;
   const seg = (n, c) => n ? `<i class="sum-seg ${c}" style="flex:${n}"></i>` : '';
-  const muscles = MUSCLES.map(m => ({ m, n: r.sets[m] })).filter(x => x.n > 0);
   const tips = recapTips(r);
   const fTot = r.feel.fail + r.feel.mod + r.feel.easy;
-  showModal(`
-    <div class="modal-head">
-      <div><div class="modal-title">Bilan de la semaine</div><div class="modal-sub">Semaine ${r.letter} · ${weekRangeLbl(r.wk)}${wk === cur && new Date().getDay() !== 0 ? ' · en cours' : ''}</div></div>
-      <button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button>
-    </div>
-    <div class="recap-nav">
-      <button class="recap-arrow" onclick="showWeekRecap('${shiftWeek(wk, -1)}')" ${wk <= first ? 'disabled' : ''} aria-label="Semaine précédente">‹</button>
-      <span>${recapVerdict(r)}</span>
-      <button class="recap-arrow" onclick="showWeekRecap('${shiftWeek(wk, 1)}')" ${wk >= cur ? 'disabled' : ''} aria-label="Semaine suivante">›</button>
-    </div>
+  const vd = pctDelta(r.vol, r.prevVol);
+  const live = wk === cur && new Date().getDay() !== 0;
+  const muscleRow = fam => fam[2].map(m => { const n = r.sets[m], st = setsState(n); return `<span class="recap-m ${n ? st[0] : ''}"><i></i>${m}<b>${setsFmt(n)}</b></span>`; }).join('');
+  const exRow = (n, right, sub) => {
+    const m = exoMuscle(n);
+    return `<button class="evo-ex bl-ex" onclick="${m ? `evoMuscle='${m}';setProgressTab('evolution')` : ''}">${exoThumbHTML(n)}<span class="evo-ex-b"><span class="evo-ex-n">${n}</span><span class="evo-ex-s">${sub}</span></span>${right}</button>`;
+  };
+  const upList = [...r.prog.up].sort((a, b) => b.d - a.d).slice(0, 3);
+  const downList = [...r.prog.down].sort((a, b) => a.d - b.d).slice(0, 3);
+
+  document.getElementById('app').innerHTML = progressHead() + `
+    <div class="bl-seg" role="group" aria-label="Période">${bilanSegButtons()}</div>
+
+    <section class="card card-dark bl-hero">
+      <div class="wb-nav">
+        <button class="wb-arrow" onclick="setRecapWk('${shiftWeek(wk, -1)}')" ${wk <= first ? 'disabled' : ''} aria-label="Semaine précédente">‹</button>
+        <div class="bl-hero-k">Semaine ${r.letter} · ${weekRangeLbl(wk)}${live ? ' · en cours' : ''}</div>
+        <button class="wb-arrow" onclick="setRecapWk('${shiftWeek(wk, 1)}')" ${wk >= cur ? 'disabled' : ''} aria-label="Semaine suivante">›</button>
+      </div>
+      <h2 class="bl-hero-h">${recapVerdict(r)}</h2>
+      ${r.n ? `<p class="bl-hero-s">${hmFmt(r.dur)} d'entraînement · ${r.totalSets} séries validées</p>` : ''}
+      <div class="bl-hero-tiles">
+        <div><small>Séances</small><b>${r.n}<em>/6</em></b><span>${r.prevN ? `${r.n - r.prevN >= 0 ? '+' : '−'}${Math.abs(r.n - r.prevN)} vs avant` : '&nbsp;'}</span></div>
+        <div><small>Volume</small><b>${(r.vol / 1000).toFixed(1).replace('.', ',')}<em>t</em></b><span>${vd === null ? '&nbsp;' : `${vd > 0 ? '+' : vd < 0 ? '−' : ''}${Math.abs(vd)} % vs avant`}</span></div>
+        <div><small>Records</small><b>${r.records.length}</b><span>${r.records.length ? (r.records.length > 1 ? 'battus' : 'battu') : '&nbsp;'}</span></div>
+      </div>
+    </section>
+
     ${r.n ? `
-    ${recapTiles(r)}
-    <div class="sum-block">
-      <div class="sum-title">Séances</div>
-      <div class="recap-sessions">${r.done.map(s => `<span class="pill${s.done ? ' pill-ink' : ''}">${s.done ? '✓ ' : ''}${sessionTitle(s.g, s.v)}</span>`).join('')}</div>
-      <div class="sum-next">${hmFmt(r.dur)} d'entraînement · ${r.totalSets} séries validées</div>
-    </div>
-    ${pTot ? `
-    <div class="sum-block">
-      <div class="sum-title">Progression · vs la fois d'avant</div>
-      <div class="sum-bar">${seg(r.prog.up.length, 'up')}${seg(r.prog.same.length, 'same')}${seg(r.prog.down.length, 'down')}</div>
-      <div class="sum-legend"><span><i class="up"></i>${r.prog.up.length} en hausse</span><span><i class="same"></i>${r.prog.same.length} stables</span><span><i class="down"></i>${r.prog.down.length} en baisse</span></div>
-    </div>` : ''}
-    ${r.records.length ? `
-    <div class="sum-block">
-      <div class="sum-title">🏆 Records</div>
-      ${r.records.sort((a, b) => b.gain - a.gain).slice(0, 4).map(x => `<div class="sum-rec"><span>${x.n}</span><b>${kgFmt(x.e1rm)} kg</b><small>1RM estimé · +${kgFmt(x.gain)} kg</small></div>`).join('')}
-    </div>` : ''}
-    <div class="sum-block">
-      <div class="sum-title">Séries par muscle <span class="recap-note">objectif ${SETS_ZONE[0]}-${SETS_ZONE[1]}</span></div>
-      <div class="recap-muscles">${muscles.map(x => { const st = setsState(x.n); return `<span class="recap-m ${st[0]}"><i></i>${x.m}<b>${setsFmt(x.n)}</b></span>`; }).join('')}</div>
-    </div>
-    ${fTot || r.weight !== null ? `
-    <div class="recap-duo">
-      ${fTot ? `<div class="sum-block"><div class="sum-title">Ressenti</div><div class="sum-legend"><span><i class="down"></i>${r.feel.fail} échec</span><span><i class="same"></i>${r.feel.mod} modéré</span><span><i class="up"></i>${r.feel.easy} facile</span></div></div>` : ''}
-      ${r.weight !== null ? `<div class="sum-block"><div class="sum-title">Poids</div><div class="sum-week"><b>${String(r.weight).replace('.', ',')} <em>kg</em></b>${r.weightDelta !== null ? `<span class="sum-next">${r.weightDelta > 0 ? '+' : r.weightDelta < 0 ? '−' : ''}${String(Math.abs(r.weightDelta)).replace('.', ',')} kg</span>` : ''}</div></div>` : ''}
-    </div>` : ''}
     ${tips.length ? `
-    <div class="sum-block recap-tips">
-      <div class="sum-title">Pour la semaine prochaine</div>
-      ${tips.map(t => `<div class="recap-tip">${t}</div>`).join('')}
+    <div class="sec-row"><h2>Pour la semaine prochaine</h2></div>
+    <div class="card wb-card recap-tips">${tips.map(t => `<div class="recap-tip">${t}</div>`).join('')}</div>` : ''}
+
+    <div class="sec-row"><h2>Séances</h2><span class="sec-note">${r.n} sur 6</span></div>
+    <div class="card wb-card"><div class="recap-sessions">${r.done.map(x => `<span class="pill${x.done ? ' pill-ink' : ''}">${x.done ? '✓ ' : ''}${sessionTitle(x.g, x.v)}</span>`).join('')}</div></div>
+
+    ${pTot ? `
+    <div class="sec-row"><h2>Progression</h2><span class="sec-note">vs la fois d'avant</span></div>
+    <div class="card wb-card">
+      <div class="sum-bar">${seg(r.prog.up.length, 'up')}${seg(r.prog.same.length, 'same')}${seg(r.prog.down.length, 'down')}</div>
+      <div class="sum-legend wb-legend"><span><i class="up"></i>${r.prog.up.length} en hausse</span><span><i class="same"></i>${r.prog.same.length} stables</span><span><i class="down"></i>${r.prog.down.length} en baisse</span></div>
+      ${upList.length || downList.length ? `<div class="wb-ex">
+        ${upList.map(x => exRow(x.n, deltaPill(Math.round(x.d)), '1RM estimé en hausse')).join('')}
+        ${downList.map(x => exRow(x.n, deltaPill(Math.round(x.d)), '1RM estimé en baisse')).join('')}
+      </div>` : ''}
     </div>` : ''}
-    ` : `<p class="bl-empty">Aucune séance enregistrée cette semaine.</p>`}
-    <button class="btn btn-primary" onclick="closeModal()">Fermer</button>
-  `);
+
+    ${r.records.length ? `
+    <div class="sec-row"><h2>Records</h2><span class="sec-note">${r.records.length} cette semaine</span></div>
+    <div class="card evo-list">
+      ${[...r.records].sort((a, b) => b.gain - a.gain).slice(0, 5).map(x => exRow(x.n, `<span class="bl-rec"><b>${kgFmt(x.e1rm)} kg</b><small>+${kgFmt(x.gain)} kg</small></span>`, '🏆 1RM estimé')).join('')}
+    </div>` : ''}
+
+    <div class="sec-row"><h2>Séries par muscle</h2><span class="sec-note">objectif ${SETS_ZONE[0]}-${SETS_ZONE[1]}</span></div>
+    <div class="card wb-card wb-muscles">
+      ${SETS_FAMILIES.map(f => `<div class="wb-fam"><span class="wb-fam-l">${f[1]}</span><div class="recap-muscles">${muscleRow(f)}</div></div>`).join('')}
+    </div>
+
+    ${fTot || r.weight !== null ? `
+    <div class="bl-nums wb-duo">
+      ${fTot ? `<div><small>Ressenti</small><div class="sum-legend"><span><i class="down"></i>${r.feel.fail} échec</span><span><i class="same"></i>${r.feel.mod} modéré</span><span><i class="up"></i>${r.feel.easy} facile</span></div></div>` : ''}
+      ${r.weight !== null ? `<div><small>Poids</small><b>${String(r.weight).replace('.', ',')} <em>kg</em></b>${r.weightDelta !== null ? `<span class="wb-sub">${r.weightDelta > 0 ? '+' : r.weightDelta < 0 ? '−' : ''}${String(Math.abs(r.weightDelta)).replace('.', ',')} kg vs avant</span>` : ''}</div>` : ''}
+    </div>` : ''}
+    ` : `<div class="empty"><h3>Aucune séance cette semaine</h3><p>Le bilan se remplit au fil de tes séances enregistrées.</p></div>`}
+    <div class="spacer"></div>
+  `;
 }
 
 // ============================================================
