@@ -2236,3 +2236,6 @@ input[type="date"].form-inp { font-size: 16px; padding-left: 12px; padding-right
 .wb-duo .sum-legend { margin-top: 4px; }
 .wb-sub { font-size: 12px; color: var(--t2); }
 @media (max-width: 360px) { .bl-seg button { font-size: 12px; } .wb-fam { grid-template-columns: minmax(0, 1fr); gap: 6px; } .wb-fam-l { line-height: 1.2; } }
+
+/* Séance : la progression se remplit en vert néon (séance et exercices), comme les séries validées */
+.wk-prog i, .ex-row .prog i { background: var(--set-up); }
