@@ -2239,3 +2239,5 @@ input[type="date"].form-inp { font-size: 16px; padding-left: 12px; padding-right
 
 /* Séance : la progression se remplit en vert néon (séance et exercices), comme les séries validées */
 .wk-prog i, .ex-row .prog i { background: var(--set-up); }
+/* Titre de section + note : toujours un espace entre les deux, la note passe à la ligne si elle est longue */
+.sec-row { gap: 12px; } .sec-row h2 { flex-shrink: 0; } .sec-note { min-width: 0; text-align: right; }

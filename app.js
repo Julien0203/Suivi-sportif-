@@ -3271,24 +3271,27 @@ function bilanExercises(from, hist = exoHistory()) {
   const recent6w = lastWeekKeys(6)[0];
   const rows = [], records = [], stalled = [];
   Object.entries(hist).forEach(([n, h]) => {
-    const pts = h.filter(x => x.e1rm > 0);
+    const pts = h.filter(x => x.load > 0);
     if (!pts.length) return;
     // Records : séance qui bat tout ce qui précède (pas la toute première fois)
     let best = 0;
     pts.forEach((x, i) => {
-      if (i > 0 && x.e1rm > best + 0.01 && x.weekKey >= from) records.push({ n, date: x.date, e1rm: x.e1rm, gain: x.e1rm - best });
-      best = Math.max(best, x.e1rm);
+      if (i > 0 && x.load > best + 0.01 && x.weekKey >= from) records.push({ n, date: x.date, load: x.load, gain: x.load - best, top: x.top });
+      best = Math.max(best, x.load);
     });
     const inP = pts.filter(x => x.weekKey >= from);
     if (inP.length >= 2) {
-      const first = inP[0].e1rm, last = inP[inP.length - 1].e1rm;
-      rows.push({ n, first, last, gainKg: last - first, pct: (last - first) / first * 100, series: inP.map(x => x.e1rm), date: inP[inP.length - 1].date });
+      const first = inP[0].load, last = inP[inP.length - 1].load;
+      rows.push({ n, first, last, gainKg: last - first, pct: (last - first) / first * 100, series: inP.map(x => x.load), date: inP[inP.length - 1].date,
+                  firstTop: inP[0].top, lastTop: inP[inP.length - 1].top });
     }
-    // Stagnation : exercice toujours pratiqué, 3 dernières séances sans battre le meilleur d'avant
-    if (pts.length >= 4 && pts[pts.length - 1].weekKey >= recent6w) {
-      const before = Math.max(...pts.slice(0, -3).map(x => x.e1rm));
-      const last3 = pts.slice(-3);
-      if (Math.max(...last3.map(x => x.e1rm)) <= before + 0.01) stalled.push({ n, best: before, last: last3[2].e1rm, since: last3[0].date });
+    // Stagnation : exercice toujours pratiqué, 4 dernières séances sans dépasser la charge d'avant
+    // (rester 2-3 séances à la même charge est normal : on gagne d'abord des reps)
+    if (pts.length >= 5 && pts[pts.length - 1].weekKey >= recent6w) {
+      const prior = pts.slice(0, -4), bestPt = prior.reduce((a, x) => x.load > a.load ? x : a, prior[0]);
+      const before = bestPt.load;
+      const last3 = pts.slice(-4);
+      if (Math.max(...last3.map(x => x.load)) <= before + 0.01) stalled.push({ n, best: before, bestTop: bestPt.top, last: last3[3].load, since: last3[0].date });
     }
   });
   records.sort((a, b) => b.date.localeCompare(a.date));
@@ -3303,18 +3306,17 @@ function bilanExercises(from, hist = exoHistory()) {
 }
 
 function hmFmt(sec) { const m = Math.round(sec / 60), h = Math.floor(m / 60); return h ? `${h} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; }
-function kgFmt(v) { return (Math.round(v * 2) / 2).toLocaleString('fr-FR'); }
 function bilanVerdict(forcePct, reg, n) {
   if (!n) return { h: 'Pas encore de séance', s: 'Ton bilan se remplira dès ta première séance enregistrée.' };
   const force = forcePct === null ? null : forcePct >= 2 ? 'up' : forcePct <= -2 ? 'down' : 'flat';
-  const h = force === 'up'   ? `Tu progresses : +${Math.round(forcePct)} % de force.`
-          : force === 'down' ? `Ta force recule de ${Math.abs(Math.round(forcePct))} %.`
-          : force === 'flat' ? 'Ta force est stable.'
+  const h = force === 'up'   ? `Tu progresses : +${Math.round(forcePct)} % de charge.`
+          : force === 'down' ? `Tes charges reculent de ${Math.abs(Math.round(forcePct))} %.`
+          : force === 'flat' ? 'Tes charges sont stables.'
           : 'Continue, ta progression arrive.';
   const s = reg >= 85 ? 'Régularité excellente, continue comme ça.'
           : reg >= 65 ? 'Bonne régularité, quelques séances manquées.'
           : 'Plusieurs séances manquées : la régularité fait la progression.';
-  return { h, s: force === null ? 'Il faut au moins deux séances par exercice pour mesurer la force. ' + s : s };
+  return { h, s: force === null ? 'Il faut au moins deux séances par exercice pour mesurer la progression. ' + s : s };
 }
 
 function renderStats() {
@@ -3352,10 +3354,10 @@ function renderStats() {
   const totalH = durs.reduce((t, d) => t + d, 0) / 3600;
 
   const up = ex.rows.filter(r => r.gainKg > 0.4).sort((a, b) => b.pct - a.pct).slice(0, 5);
-  const down = ex.rows.filter(r => r.pct <= -3).sort((a, b) => a.pct - b.pct);
-  const watch = [...down.map(r => ({ n: r.n, why: `${kgFmt(r.first)} → ${kgFmt(r.last)} kg sur la période`, tag: 'En baisse' })),
+  const down = ex.rows.filter(r => r.gainKg < -0.4).sort((a, b) => a.pct - b.pct);
+  const watch = [...down.map(r => ({ n: r.n, why: `${topFmt(r.firstTop)} → ${topFmt(r.lastTop)}`, tag: 'En baisse' })),
                  ...ex.failing.filter(n => !down.some(d => d.n === n)).map(n => ({ n, why: 'Dur les 2 dernières séances · baisse un peu la charge', tag: 'Dur ×2' })),
-                 ...ex.stalled.filter(s => !down.some(d => d.n === s.n) && !ex.failing.includes(s.n)).map(s => ({ n: s.n, why: `Pas de record depuis le ${formatDate(s.since)} · meilleur ≈ ${kgFmt(s.best)} kg`, tag: 'Stagne' }))].slice(0, 5);
+                 ...ex.stalled.filter(s => !down.some(d => d.n === s.n) && !ex.failing.includes(s.n)).map(s => ({ n: s.n, why: `Même charge depuis le ${formatDate(s.since)} · max ${topFmt(s.bestTop)}`, tag: 'Stagne' }))].slice(0, 5);
   const perLbl = { 4: 'ce mois-ci', 13: 'en 3 mois', 26: 'en 6 mois' }[period];
   const goMuscle = n => { const m = exoMuscle(n); return m ? `evoMuscle='${m}';setProgressTab('evolution')` : ''; };
   const exRow = (r, right, sub) => `
@@ -3376,7 +3378,7 @@ function renderStats() {
       <p class="bl-hero-s">${v.s}</p>
       <div class="bl-hero-tiles">
         <div><small>Séances</small><b>${inP.length}<em>/${planned}</em></b><span>${reg} % de régularité</span></div>
-        <div><small>Force</small><b>${forcePct === null ? '—' : `${forcePct > 0 ? '+' : forcePct < 0 ? '−' : ''}${Math.abs(Math.round(forcePct))}<em>%</em>`}</b><span>1RM estimé, médiane</span></div>
+        <div><small>Charge</small><b>${forcePct === null ? '—' : `${forcePct > 0 ? '+' : forcePct < 0 ? '−' : ''}${Math.abs(Math.round(forcePct))}<em>%</em>`}</b><span>médiane de tes exercices</span></div>
         <div><small>Records</small><b>${ex.records.length}</b><span>sur ${new Set(ex.records.map(r => r.n)).size} exercice${new Set(ex.records.map(r => r.n)).size > 1 ? 's' : ''}</span></div>
       </div>
     </section>
@@ -3394,9 +3396,9 @@ function renderStats() {
       </div>
     </div>
 
-    <div class="sec-row"><h2>Ce qui progresse</h2><span class="sec-note">1RM estimé</span></div>
+    <div class="sec-row"><h2>Ce qui progresse</h2><span class="sec-note">charge max · début → fin</span></div>
     <div class="card evo-list">
-      ${up.length ? up.map(r => exRow(r, `<span class="bl-ex-r">${sparkline(r.series, 56, 22)}${deltaPill(Math.round(r.gainKg * 2) / 2, 'kg')}</span>`, `${kgFmt(r.first)} → ${kgFmt(r.last)} kg`)).join('')
+      ${up.length ? up.map(r => exRow(r, `<span class="bl-ex-r">${sparkline(r.series, 56, 22)}${deltaPill(kgDelta(r.gainKg), 'kg')}</span>`, `${topFmt(r.firstTop)} → ${topFmt(r.lastTop)}`)).join('')
         : `<p class="bl-empty">Rien encore : il faut au moins deux séances d'un même exercice sur la période.</p>`}
     </div>
 
@@ -3409,7 +3411,7 @@ function renderStats() {
     ${ex.records.length ? `
     <div class="sec-row"><h2>Derniers records</h2><span class="sec-note">${ex.records.length} ${perLbl}</span></div>
     <div class="card evo-list">
-      ${ex.records.slice(0, 5).map(r => exRow(r, `<span class="bl-rec"><b>${kgFmt(r.e1rm)} kg</b><small>+${kgFmt(r.gain)} kg</small></span>`, `🏆 ${formatDate(r.date)} · 1RM estimé`)).join('')}
+      ${ex.records.slice(0, 5).map(r => exRow(r, `<span class="bl-rec"><b>${topFmt(r.top)}</b><small>+${String(kgDelta(r.gain)).replace('.', ',')} kg</small></span>`, `🏆 ${formatDate(r.date)}`)).join('')}
     </div>` : ''}
 
     <div class="sec-row"><h2>Volume soulevé</h2><span class="sec-note">tonnes par semaine</span></div>
@@ -3733,7 +3735,7 @@ function saveProfile() {
 // 8a. ÉVOLUTION PAR MUSCLE (Progrès · Évolution)
 // ============================================================
 // Volume = tonnage de la semaine (poids × reps) des exercices du muscle.
-// Charge = indice de force : 1RM estimé (Epley) de chaque exercice comparé à ta 1re fois
+// Charge = indice : charge la plus lourde de chaque exercice comparée à ta 1re fois
 // sur cet exercice, moyenné par semaine. Comparable même quand les exercices changent (semaines A/B).
 
 const MUSCLES = ['Pecs', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos'];
@@ -3771,7 +3773,9 @@ function lastWeekKeys(n) {
   return Array.from({ length: n }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (n - 1 - i) * 7); return getWeekKey(d); });
 }
 
-// Historique par exercice : [{ date, weekKey, e1rm, vol, reps }] trié par date
+// Historique par exercice : [{ date, weekKey, load, vol, reps, top }] trié par date.
+// load = charge la plus lourde de la séance (poids de corps compris pour tractions/dips) : Julien veut
+// que la progression se lise en poids uniquement, sans les reps ni 1RM estimé.
 function exoHistory() {
   const map = {};
   const bw = bodyWeight();
@@ -3779,12 +3783,13 @@ function exoHistory() {
     (w.exercises || []).forEach(ex => {
       const name = canonExo(ex.name);
       const extra = BODYWEIGHT_SLUGS.includes(EXO_MEDIA[name]) ? bw : 0;
-      const sets = (ex.sets || []).map(st => ({ w: (parseFloat(st.weight) || 0) + extra, r: parseInt(st.reps) || 0 }));
-      const best = Math.max(0, ...sets.map(st => e1rm(st.w, st.r)));
+      const sets = (ex.sets || []).map(st => ({ w: (parseFloat(st.weight) || 0) + extra, r: parseInt(st.reps) || 0, raw: parseFloat(st.weight) || 0 }));
+      let best = 0, top = null;   // charge la plus lourde réellement soulevée dans la séance
+      sets.forEach(st => { if (st.r > 0 && st.w > best) { best = st.w; top = { w: st.raw, bw: !!extra }; } });
       const vol = sets.reduce((t, st) => t + st.w * st.r, 0);
       const reps = sets.reduce((t, st) => t + st.r, 0);
       if (!reps) return;
-      (map[name] = map[name] || []).push({ date: w.date, weekKey: w.weekKey || getWeekKey(w.date), e1rm: best, vol, reps });
+      (map[name] = map[name] || []).push({ date: w.date, weekKey: w.weekKey || getWeekKey(w.date), load: best, vol, reps, top });
     });
   });
   return map;
@@ -3797,12 +3802,12 @@ function muscleSeries(muscle, weeks, hist = exoHistory()) {
   const byWeek = keys.map(k => ({ key: k, vol: 0, reps: 0, idx: [] }));
   exos.forEach(n => {
     const h = hist[n];
-    const base = h.find(x => x.e1rm > 0)?.e1rm || 0;
+    const base = h.find(x => x.load > 0)?.load || 0;
     h.forEach(x => {
       const wk = byWeek.find(b => b.key === x.weekKey);
       if (!wk) return;
       wk.vol += x.vol; wk.reps += x.reps;
-      if (base && x.e1rm) wk.idx.push(x.e1rm / base * 100 - 100);
+      if (base && x.load) wk.idx.push(x.load / base * 100 - 100);
     });
   });
   const useReps = REPS_MUSCLES.includes(muscle) || (byWeek.every(b => !b.vol) && byWeek.some(b => b.reps));
@@ -3813,6 +3818,14 @@ function muscleSeries(muscle, weeks, hist = exoHistory()) {
   };
 }
 
+// La charge telle qu'elle a été soulevée : « 60 kg » (poids du corps : « +15 kg » de lest, ou « poids du corps »)
+function topFmt(t) {
+  if (!t) return '—';
+  const w = String(t.w).replace('.', ',');
+  if (t.bw) return t.w > 0 ? `+${w}\u00A0kg` : 'poids du corps';
+  return `${w}\u00A0kg`;
+}
+function kgDelta(v) { return Math.round(v * 10) / 10; }
 function pctDelta(a, b) { return b > 0 ? Math.round((a - b) / b * 100) : null; }
 function deltaPill(v, suffix = '%') {
   if (v === null || v === undefined || isNaN(v)) return '<span class="dpill">—</span>';
@@ -3850,14 +3863,15 @@ function renderEvolution() {
   const unit = sr.useReps ? 'reps' : 't';
   const hasData = sr.volume.some(v => v > 0);
 
-  // Exercices du muscle sur la période : 1RM estimé de la 1re à la dernière séance
+  // Exercices du muscle sur la période : charge max de la 1re à la dernière séance
   const from = sr.keys[0];
   const exRows = sr.exos.map(n => {
-    const h = hist[n].filter(x => x.weekKey >= from && x.e1rm > 0);
+    const h = hist[n].filter(x => x.weekKey >= from && x.load > 0);
     if (!h.length) return null;
-    return { n, first: h[0].e1rm, last: h[h.length - 1].e1rm, date: h[h.length - 1].date };
+    return { n, first: h[0].load, last: h[h.length - 1].load, date: h[h.length - 1].date, firstTop: h[0].top, lastTop: h[h.length - 1].top };
   }).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
 
+  const h1 = r => r.first === r.last ? `${topFmt(r.lastTop)} · ${r.date.slice(8, 10)}/${r.date.slice(5, 7)}` : `${topFmt(r.firstTop)} → ${topFmt(r.lastTop)}`;
   const allRows = MUSCLES.map(m => ({ m, sr: muscleSeries(m, evoWeeks, hist) }))
     .map(o => ({ ...o, sum: seriesSummary(o.sr) }))
     .filter(o => o.sr.volume.some(v => v > 0));
@@ -3879,7 +3893,7 @@ function renderEvolution() {
           ${deltaPill(sum.volDelta)}<span class="evo-kpi-s">vs 4 sem. avant</span>
         </div>
         <div class="evo-kpi">
-          <span class="evo-kpi-l">Force</span>
+          <span class="evo-kpi-l">Charge</span>
           <b>${sum.chargeNow === null ? '—' : `${sum.chargeNow > 0 ? '+' : ''}${String(sum.chargeNow).replace('.', ',')} <small>%</small>`}</b>
           ${deltaPill(sum.chargeDelta, 'pts')}<span class="evo-kpi-s">en 4 semaines</span>
         </div>
@@ -3891,13 +3905,13 @@ function renderEvolution() {
     </section>
 
     ${exRows.length ? `
-    <div class="sec-row"><h2>Exercices · 1RM estimé</h2></div>
+    <div class="sec-row"><h2>Exercices</h2><span class="sec-note">charge max · début → fin</span></div>
     <div class="card evo-list">
       ${exRows.map(r => `
         <div class="evo-ex">
           ${exoThumbHTML(r.n)}
-          <div class="evo-ex-b"><span class="evo-ex-n">${r.n}</span><span class="evo-ex-s">${Math.round(r.first)} → ${Math.round(r.last)} kg · ${r.date.slice(8, 10)}/${r.date.slice(5, 7)}</span></div>
-          ${deltaPill(pctDelta(r.last, r.first))}
+          <div class="evo-ex-b"><span class="evo-ex-n">${r.n}</span><span class="evo-ex-s">${h1(r)}</span></div>
+          ${deltaPill(kgDelta(r.last - r.first), 'kg')}
         </div>`).join('')}
     </div>` : ''}
 
@@ -4307,17 +4321,17 @@ function weekRecap(wk) {
   const letter = weekLetter(new Date(wk + 'T12:00:00'));
   const done = weekSessions(letter).map(([g, v]) => ({ g, v, done: ws.some(w => w.muscleGroup === g && w.weekType === v) }));
 
-  // Progression : chaque exercice de la semaine comparé à sa fois précédente (1RM estimé, ±1 %)
+  // Progression : chaque exercice de la semaine comparé à sa fois précédente (charge max, ±1 %)
   const hist = exoHistory();
   const prog = { up: [], same: [], down: [] }, records = [];
   Object.entries(hist).forEach(([n, h]) => {
-    const pts = h.filter(x => x.e1rm > 0);
+    const pts = h.filter(x => x.load > 0);
     pts.forEach((x, i) => {
       if (x.weekKey !== wk || i === 0) return;
-      const prev = pts[i - 1].e1rm, best = Math.max(...pts.slice(0, i).map(p => p.e1rm));
-      const d = (x.e1rm - prev) / prev * 100;
-      (d > 1 ? prog.up : d < -1 ? prog.down : prog.same).push({ n, d });
-      if (x.e1rm > best + 0.01) records.push({ n, e1rm: x.e1rm, gain: x.e1rm - best });
+      const prev = pts[i - 1].load, best = Math.max(...pts.slice(0, i).map(p => p.load));
+      const d = (x.load - prev) / prev * 100;
+      (d > 1 ? prog.up : d < -1 ? prog.down : prog.same).push({ n, d, kg: x.load - prev, top: x.top, prevTop: pts[i - 1].top });
+      if (x.load > best + 0.01) records.push({ n, load: x.load, gain: x.load - best, top: x.top });
     });
   });
 
@@ -4346,7 +4360,7 @@ function recapVerdict(r) {
   if (!r.n) return 'Semaine sans séance.';
   const p = r.prog.up.length, d = r.prog.down.length;
   if (r.n >= 6 && p >= d) return 'Semaine complète, tu progresses.';
-  if (r.n >= 6) return 'Semaine complète, force un peu en retrait.';
+  if (r.n >= 6) return 'Semaine complète, charges un peu en retrait.';
   if (p > d) return `${r.n} séances sur 6, mais tu progresses.`;
   return `${r.n} séances sur 6 cette semaine.`;
 }
@@ -4445,15 +4459,14 @@ function renderWeekBilan() {
       <div class="sum-bar">${seg(r.prog.up.length, 'up')}${seg(r.prog.same.length, 'same')}${seg(r.prog.down.length, 'down')}</div>
       <div class="sum-legend wb-legend"><span><i class="up"></i>${r.prog.up.length} en hausse</span><span><i class="same"></i>${r.prog.same.length} stables</span><span><i class="down"></i>${r.prog.down.length} en baisse</span></div>
       ${upList.length || downList.length ? `<div class="wb-ex">
-        ${upList.map(x => exRow(x.n, deltaPill(Math.round(x.d)), '1RM estimé en hausse')).join('')}
-        ${downList.map(x => exRow(x.n, deltaPill(Math.round(x.d)), '1RM estimé en baisse')).join('')}
+        ${[...upList, ...downList].map(x => exRow(x.n, deltaPill(kgDelta(x.kg), 'kg'), `${topFmt(x.prevTop)} → ${topFmt(x.top)}`)).join('')}
       </div>` : ''}
     </div>` : ''}
 
     ${r.records.length ? `
     <div class="sec-row"><h2>Records</h2><span class="sec-note">${r.records.length} cette semaine</span></div>
     <div class="card evo-list">
-      ${[...r.records].sort((a, b) => b.gain - a.gain).slice(0, 5).map(x => exRow(x.n, `<span class="bl-rec"><b>${kgFmt(x.e1rm)} kg</b><small>+${kgFmt(x.gain)} kg</small></span>`, '🏆 1RM estimé')).join('')}
+      ${[...r.records].sort((a, b) => b.gain - a.gain).slice(0, 5).map(x => exRow(x.n, `<span class="bl-rec"><b>${topFmt(x.top)}</b><small>+${String(kgDelta(x.gain)).replace('.', ',')} kg</small></span>`, '🏆 Charge la plus lourde à ce jour')).join('')}
     </div>` : ''}
 
     <div class="sec-row"><h2>Séries par muscle</h2><span class="sec-note">objectif ${SETS_ZONE[0]}-${SETS_ZONE[1]}</span></div>
