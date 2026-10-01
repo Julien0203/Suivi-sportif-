@@ -58,8 +58,7 @@ const WORKOUT_PLAN = {
       { name: 'Tirage horizontal poulie', img: 'tirage-horizontal', sets: 3, reps: '10-12', rest: '90 s' },
       { name: 'Oiseau à la poulie', img: 'oiseau-poulie', sets: 3, reps: '12-15', rest: '60-90 s' },
       { name: 'Curl barre', img: 'curl-barre', sets: 3, reps: '8-12', rest: '60-90 s' },
-      { name: 'Curl marteau haltères', img: 'curl-marteau', sets: 3, reps: '10-12', rest: '60-90 s' },
-      { name: 'Relevé de genoux suspendu', img: 'releve-genoux', sets: 3, reps: '10-15', rest: '60 s' }
+      { name: 'Curl marteau haltères', img: 'curl-marteau', sets: 3, reps: '10-12', rest: '60-90 s' }
     ],
     A2: [
       { name: 'Tirage vertical prise serrée', img: 'tv-serre', sets: 4, reps: '8-12', rest: '2 min' },
@@ -75,8 +74,7 @@ const WORKOUT_PLAN = {
       { name: 'Rowing machine prise pronation', img: 'rowing-pronation', sets: 3, reps: '10-12', rest: '90 s' },
       { name: 'Élévation en Y à la poulie', img: 'y-raise', sets: 3, reps: '12-15', rest: '60 s' },
       { name: 'Curl haltères alterné', img: 'curl-alterne', sets: 3, reps: '8-12', rest: '60-90 s' },
-      { name: 'Curl poulie basse', img: 'curl-poulie', sets: 2, reps: '12-15', rest: '60 s' },
-      { name: 'Sit-up décliné', img: 'situp-decline', sets: 3, reps: '10-15', rest: '60 s' }
+      { name: 'Curl poulie basse', img: 'curl-poulie', sets: 2, reps: '12-15', rest: '60 s' }
     ],
     B2: [
       { name: 'Tirage vertical prise inversée', img: 'tv-inverse', sets: 4, reps: '6-10', rest: '2 min' },
@@ -96,8 +94,7 @@ const WORKOUT_PLAN = {
       { name: 'Leg extension', img: 'leg-extension', sets: 3, reps: '12-15', rest: '60-90 s' },
       { name: 'Leg curl assis', img: 'leg-curl-assis', sets: 4, reps: '10-15', rest: '60-90 s' },
       { name: 'Hip thrust machine', img: 'hip-thrust', sets: 3, reps: '8-12', rest: '90 s' },
-      { name: 'Mollets debout barre', img: 'mollets-debout', sets: 4, reps: '10-15', rest: '60 s' },
-      { name: 'Crunch machine', img: 'crunch-machine', sets: 3, reps: '10-15', rest: '60 s' }
+      { name: 'Mollets debout barre', img: 'mollets-debout', sets: 4, reps: '10-15', rest: '60 s' }
     ],
     A2: [
       { name: 'Hack squat', img: 'hack-squat', sets: 4, reps: '6-10', rest: '2-3 min' },
@@ -105,17 +102,15 @@ const WORKOUT_PLAN = {
       { name: 'Leg curl allongé', img: 'leg-curl-allonge', sets: 3, reps: '10-12', rest: '60-90 s' },
       { name: 'Leg extension', img: 'leg-extension', sets: 3, reps: '12-15', rest: '60-90 s' },
       { name: 'Extension de hanche machine', img: 'ext-hanche', sets: 3, reps: '12-15', rest: '60-90 s' },
-      { name: 'Mollets presse assis', img: 'mollets-assis-presse', sets: 4, reps: '12-20', rest: '60 s' },
-      { name: 'Relevé de jambes chaise romaine', img: 'releve-chaise', sets: 3, reps: '10-15', rest: '60 s' }
+      { name: 'Mollets presse assis', img: 'mollets-assis-presse', sets: 4, reps: '12-20', rest: '60 s' }
     ],
     B1: [
       { name: 'Squat Smith machine', img: 'squat-smith', sets: 4, reps: '6-10', rest: '2-3 min' },
       { name: 'Presse à cuisses 45°', img: 'presse-45', sets: 3, reps: '10-12', rest: '2 min' },
       { name: 'Leg extension', img: 'leg-extension', sets: 3, reps: '12-15', rest: '60-90 s' },
-      { name: 'Leg curl assis', img: 'leg-curl-assis', sets: 4, reps: '10-15', rest: '60-90 s' },
+      { name: 'Leg curl assis', img: 'leg-curl-assis', sets: 3, reps: '10-15', rest: '60-90 s' },
       { name: 'Hip thrust machine', img: 'hip-thrust', sets: 4, reps: '8-12', rest: '90 s' },
-      { name: 'Mollets presse 45°', img: 'mollets-presse', sets: 4, reps: '10-15', rest: '60 s' },
-      { name: 'Crunch au sol', img: 'crunch-sol', sets: 3, reps: '15-20', rest: '60 s' }
+      { name: 'Mollets presse 45°', img: 'mollets-presse', sets: 4, reps: '10-15', rest: '60 s' }
     ],
     B2: [
       { name: 'Soulevé de terre', img: 'sdt', sets: 3, reps: '4-6', rest: '3 min' },
@@ -123,8 +118,7 @@ const WORKOUT_PLAN = {
       { name: 'Leg curl allongé', img: 'leg-curl-allonge', sets: 4, reps: '8-12', rest: '60-90 s' },
       { name: 'Leg extension', img: 'leg-extension', sets: 3, reps: '12-15', rest: '60-90 s' },
       { name: 'Extension de hanche machine', img: 'ext-hanche', sets: 3, reps: '12-15', rest: '60-90 s' },
-      { name: 'Mollets assis barre', img: 'mollets-assis-barre', sets: 4, reps: '12-20', rest: '60 s' },
-      { name: 'Relevé de genoux suspendu', img: 'releve-genoux', sets: 3, reps: '10-15', rest: '60 s' }
+      { name: 'Mollets assis barre', img: 'mollets-assis-barre', sets: 4, reps: '12-20', rest: '60 s' }
     ]
   }
 };
@@ -155,7 +149,10 @@ const EXO_MEDIA = {
   'Curl incliné haltères': 'curl-incline', 'SDT roumain/rack pulls': 'sdt-roumain', 'Rowing haltère unilatéral': 'rowing-banc-incline',
   'Curl pupitre machine': 'curl-pupitre', 'Curl marteau haltères assis': 'curl-marteau', 'Squat barre ou pendulum/hack': 'squat-barre',
   'Presse à cuisses': 'presse-45', 'Mollets debout': 'mollets-debout', 'Crunch poulie haute': 'crunch-machine',
-  'Hack squat/squat bulgare': 'hack-squat', 'SDT roumain haltères': 'sdt-roumain', 'Mollets assis': 'mollets-assis-presse'
+  'Hack squat/squat bulgare': 'hack-squat', 'SDT roumain haltères': 'sdt-roumain', 'Mollets assis': 'mollets-assis-presse',
+  // Abdos retirés du programme (à la demande de Julien) : gardés ici pour l'historique et ses illustrations
+  'Relevé de genoux suspendu': 'releve-genoux', 'Sit-up décliné': 'situp-decline', 'Crunch machine': 'crunch-machine',
+  'Relevé de jambes chaise romaine': 'releve-chaise', 'Crunch au sol': 'crunch-sol'
 };
 MUSCLE_KEYS.forEach(g => SESSION_KEYS.forEach(v => WORKOUT_PLAN[g][v].forEach(ex => { EXO_MEDIA[ex.name] = ex.img; })));
 function exoImg(name)   { const s = EXO_MEDIA[name]; return s ? `img/exos/${s}.jpg` : null; }
@@ -205,7 +202,7 @@ const FEEL_LABELS  = ['Nul','Dur','OK','Bien','Top'];
 // ============================================================
 
 let S = {};
-const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], rides: [], nutrition: [], weights: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 2400, prot: 175, carbs: 250, fat: 80, water: 2500 }, runGoal: 15, journal: {}, prs: {}, hydration: {}, shopping: { checked: {}, weekStart: null } };
+const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], rides: [], nutrition: [], weights: [], measures: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 2400, prot: 175, carbs: 250, fat: 80, water: 2500 }, runGoal: 15, journal: {}, prs: {}, hydration: {}, shopping: { checked: {}, weekStart: null } };
 
 function loadState() {
   try { S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('sport-crm-v2') || '{}') }; }
@@ -2669,14 +2666,14 @@ function _nutriWeight() {
     ${weights.length > 0 ? `
     <div class="stats-grid">
       <div class="stat-box">
-        <div class="stat-lbl">Dernier pesée</div>
-        <div class="stat-num">${latest.weight}<span class="stat-unit"> kg</span></div>
+        <div class="stat-lbl">Dernière pesée</div>
+        <div class="stat-num">${String(latest.weight).replace('.', ',')}<span class="stat-unit"> kg</span></div>
         <div class="stat-sub">${formatDate(latest.date)}</div>
       </div>
       <div class="stat-box">
         <div class="stat-lbl">Évolution</div>
         <div class="stat-num" style="color:var(--t1)">
-          ${diff!==null?(diff>0?'+':'')+diff:'—'}<span class="stat-unit"> kg</span>
+          ${diff!==null?(diff>0?'+':'')+String(diff).replace('.', ','):'—'}<span class="stat-unit"> kg</span>
         </div>
         <div class="stat-sub">${weights.length>1?weights.length+' mesures':'Première mesure'}</div>
       </div>
@@ -2687,12 +2684,14 @@ function _nutriWeight() {
       <div class="chart-wrap"><canvas id="chart-weight"></canvas></div>
     </div>
 
+    <!--MESURES-->
+
+    <div class="sec-row"><h2>Historique des pesées</h2></div>
     <div class="card">
-      <div class="sect-lbl" style="margin-bottom:14px">Historique</div>
       ${[...weights].reverse().slice(0,10).map(w=>`
         <div class="nutri-entry">
           <div class="nutri-entry-info">
-            <div style="font-size:13px;color:var(--t1)">${w.weight} kg</div>
+            <div style="font-size:13px;color:var(--t1)">${String(w.weight).replace('.', ',')} kg</div>
             <div style="font-size:11px;color:var(--t3);margin-top:2px">${formatDate(w.date)}</div>
           </div>
           <button class="copy-pill" onclick="deleteWeight('${w.id}')" style="color:var(--red)">×</button>
@@ -2930,7 +2929,7 @@ function buildNutriCharts() {
           fill:true, tension:.3, pointRadius:3, pointBackgroundColor:'#0A0A0A', spanGaps:true }]},
         options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
           scales:{ x:{grid:{display:false},ticks:{maxRotation:0}},
-            y:{grid:{color:grid}, min:wmin, max:wmax, ticks:{callback:v=>(Math.round(v*10)/10)+' kg'}} }
+            y:{grid:{color:grid}, min:Math.floor(wmin), max:Math.ceil(wmax), ticks:{maxTicksLimit:4, callback:v=>String(Math.round(v*10)/10).replace('.', ',')+' kg'}} }
         }
       });
     }
@@ -3986,7 +3985,7 @@ function renderEvolution() {
   }).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
 
   const h1 = r => r.first === r.last ? `${topFmt(r.lastTop)} · ${r.date.slice(8, 10)}/${r.date.slice(5, 7)}` : `${topFmt(r.firstTop)} → ${topFmt(r.lastTop)}`;
-  const allRows = MUSCLES.map(m => ({ m, sr: muscleSeries(m, evoWeeks, hist) }))
+  const allRows = TRACKED_MUSCLES.map(m => ({ m, sr: muscleSeries(m, evoWeeks, hist) }))
     .map(o => ({ ...o, sum: seriesSummary(o.sr) }))
     .filter(o => o.sr.volume.some(v => v > 0));
 
@@ -4306,7 +4305,7 @@ function recGauge(pct, cls) {
 function recoveryCard(g, v, rest) {
   const rec  = muscleRecovery();
   const next = sessionMuscles(g, v);
-  const order = [...next, ...MUSCLES.filter(m => !next.includes(m)).sort((a, b) => rec[a].pct - rec[b].pct)];
+  const order = [...next, ...TRACKED_MUSCLES.filter(m => !next.includes(m)).sort((a, b) => rec[a].pct - rec[b].pct)];
   const tired = next.filter(m => rec[m].pct < REC_READY);
   const title = sessionTitle(g, v);
   const note = !next.length ? ''
@@ -4352,12 +4351,14 @@ function weekMuscleSets() {
   return MUSCLES.map(m => ({ m, done: done[m], plan: plan[m], total: done[m] + plan[m] }));
 }
 function setsFmt(n) { return String(Math.round(n * 2) / 2).replace('.', ','); }
-// Mini-onglets par famille (abdos rangés avec Legs) : pas besoin de défiler
+// Mini-onglets par famille : pas besoin de défiler. Les abdos ne sont plus au programme (retirés à la demande de Julien)
 const SETS_FAMILIES = [
   ['push', 'Push', ['Pecs', 'Épaules', 'Triceps']],
   ['pull', 'Pull', ['Dos', 'Biceps']],
-  ['legs', 'Legs', ['Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos']]
+  ['legs', 'Legs', ['Quadriceps', 'Ischios', 'Fessiers', 'Mollets']]
 ];
+// Muscles suivis dans l'interface = ceux du programme (familles ci-dessus)
+const TRACKED_MUSCLES = SETS_FAMILIES.flatMap(f => f[2]);
 let setsFam = null;   // null = famille de la prochaine séance
 function setsState(total) { return total < SETS_ZONE[0] ? ['low', 'Trop peu'] : total > SETS_ZONE[1] ? ['high', 'Beaucoup'] : ['ok', 'Dans la zone']; }
 function weekSetsCard(nextGroup) {
@@ -4484,7 +4485,7 @@ function recapTips(r) {
   const tips = [];
   const miss = r.done.filter(s => !s.done).map(s => sessionTitle(s.g, s.v));
   if (r.n && miss.length) tips.push(`Vise les 6 séances : il a manqué ${miss.join(', ')}.`);
-  const low = MUSCLES.filter(m => r.sets[m] > 0 && r.sets[m] < SETS_ZONE[0]).map(m => `${m} (${setsFmt(r.sets[m])})`);
+  const low = TRACKED_MUSCLES.filter(m => r.sets[m] > 0 && r.sets[m] < SETS_ZONE[0]).map(m => `${m} (${setsFmt(r.sets[m])})`);
   if (low.length) tips.push(`Plus de séries pour ${low.slice(0, 3).join(', ')} : objectif 10 par semaine.`);
   if (r.easyEx.length) tips.push(`Monte la charge sur ${r.easyEx.slice(0, 2).join(' et ')} : c'était facile.`);
   if (r.prog.down.length >= 3) tips.push('Plusieurs exercices en baisse : dors bien et mange assez avant de pousser.');
@@ -4596,6 +4597,142 @@ function renderWeekBilan() {
     ` : `<div class="empty"><h3>Aucune séance cette semaine</h3><p>Le bilan se remplit au fil de tes séances enregistrées.</p></div>`}
     <div class="spacer"></div>
   `;
+}
+
+// ============================================================
+// 8f. MENSURATIONS (Corps)
+// ============================================================
+// S.measures = [{ id, date, bras, poitrine, ... }] en cm ; seules les mesures prises ce jour-là sont présentes.
+
+const MEASURES = [
+  ['bras',     'Bras',     'Biceps contracté, au plus large'],
+  ['poitrine', 'Poitrine', 'Bras le long du corps, au niveau des pectoraux'],
+  ['epaules',  'Épaules',  'Tour complet, au plus large des épaules'],
+  ['taille',   'Taille',   'Au nombril, ventre relâché, après avoir expiré'],
+  ['cuisse',   'Cuisse',   'Au plus large, juste sous la fesse'],
+  ['mollet',   'Mollet',   'Debout, au plus large']
+];
+const MEASURE_LBL = Object.fromEntries(MEASURES.map(([k, l]) => [k, l]));
+const cmFmt = v => `${String(Math.round(v * 10) / 10).replace('.', ',')} cm`;
+
+// Historique d'une mesure, du plus ancien au plus récent
+function measureSeries(k) {
+  return [...(S.measures || [])].filter(m => m[k] > 0).sort((a, b) => a.date.localeCompare(b.date)).map(m => ({ id: m.id, date: m.date, v: m[k] }));
+}
+// Écart coloré : prendre des cm est un progrès, sauf pour la taille
+function cmPill(d, k) {
+  if (d === null) return '<span class="dpill">1re mesure</span>';
+  const r = Math.round(d * 10) / 10;
+  if (!r) return '<span class="dpill">=</span>';
+  const good = k === 'taille' ? r < 0 : r > 0;
+  return `<span class="dpill ${good ? 'up' : 'down'}">${r > 0 ? '+' : '−'}${String(Math.abs(r)).replace('.', ',')} cm</span>`;
+}
+
+function measuresSection() {
+  const rows = MEASURES.map(([k, l]) => ({ k, l, s: measureSeries(k) })).filter(r => r.s.length);
+  const last = [...(S.measures || [])].sort((a, b) => b.date.localeCompare(a.date))[0];
+  return `
+    <div class="sec-row"><h2>Mensurations</h2>${rows.length ? `<span class="sec-note">depuis ta 1re mesure</span>` : ''}</div>
+    ${rows.length ? `
+    <div class="card evo-list meas-list">
+      ${rows.map(r => {
+        const first = r.s[0].v, cur = r.s[r.s.length - 1].v;
+        return `<button class="evo-row meas-row" onclick="showMeasure('${r.k}')">
+          <span class="evo-row-n">${r.l}</span>
+          ${sparkline(r.s.map(x => x.v))}
+          <span class="meas-v">${cmFmt(cur)}</span>
+          ${cmPill(r.s.length > 1 ? cur - first : null, r.k)}
+        </button>`;
+      }).join('')}
+      <div class="meas-foot">Dernière prise : ${formatDate(last.date)}</div>
+    </div>` : `
+    <div class="card meas-empty">
+      <p>Bras, poitrine, taille… Au fil des semaines, tu vois où tu prends du muscle, même quand la balance ne bouge pas.</p>
+    </div>`}
+    <button class="btn btn-primary meas-btn" onclick="openMeasureForm()">${rows.length ? 'Prendre mes mesures' : 'Prendre mes premières mesures'}</button>`;
+}
+
+function openMeasureForm() {
+  const today = todayStr();
+  const lastOf = k => { const s = measureSeries(k); return s.length ? s[s.length - 1].v : null; };
+  const cur = (S.measures || []).find(m => m.date === today) || {};
+  showModal(`
+    <div class="modal-head"><div><div class="modal-title">Mes mesures</div><div class="modal-sub">Le matin, à jeun, toujours du même côté</div></div><button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button></div>
+    <label class="ed-date"><span>Date</span><input type="date" class="form-inp" id="ms-date" value="${today}" max="${today}"></label>
+    <div class="meas-form">
+      ${MEASURES.map(([k, l, tip]) => { const lv = lastOf(k); return `
+      <div class="meas-f">
+        <div class="meas-f-t"><b>${l}</b><small>${tip}</small></div>
+        <label class="fld"><input type="number" class="set-input" inputmode="decimal" step="0.1" id="ms-${k}" value="${cur[k] || ''}" placeholder="${lv ? String(lv).replace('.', ',') : '—'}" aria-label="${l} en centimètres"><small>cm</small></label>
+      </div>`; }).join('')}
+    </div>
+    <p class="meas-hint">Laisse vide ce que tu ne mesures pas. En gris : ta dernière mesure.</p>
+    <button class="btn btn-primary" onclick="saveMeasures()">Enregistrer</button>
+  `);
+}
+
+function saveMeasures() {
+  const date = document.getElementById('ms-date')?.value || todayStr();
+  if (date > todayStr()) { showToast('La date ne peut pas être dans le futur'); return; }
+  const vals = {};
+  MEASURES.forEach(([k]) => {
+    const v = parseFloat(String(document.getElementById(`ms-${k}`)?.value || '').replace(',', '.'));
+    if (v > 0 && v < 300) vals[k] = Math.round(v * 10) / 10;
+  });
+  if (!Object.keys(vals).length) { showToast('Entre au moins une mesure'); return; }
+  if (!S.measures) S.measures = [];
+  const ex = S.measures.find(m => m.date === date);
+  if (ex) Object.assign(ex, vals); else S.measures.push({ id: uid(), date, ...vals });
+  save(); flushPush();
+  closeModal(); haptic([10, 20, 10]);
+  showToast(`${Object.keys(vals).length} mesure${Object.keys(vals).length > 1 ? 's' : ''} enregistrée${Object.keys(vals).length > 1 ? 's' : ''} ✓`);
+  if (S.view === 'body') renderBody();
+}
+
+// Détail d'une mesure : courbe + historique (avec suppression)
+function showMeasure(k) {
+  const s = measureSeries(k); if (!s.length) { closeModal(); return; }
+  const first = s[0].v, cur = s[s.length - 1].v;
+  showModal(`
+    <div class="modal-head"><div><div class="modal-title">${MEASURE_LBL[k]}</div><div class="modal-sub">${cmFmt(cur)} · ${s.length} mesure${s.length > 1 ? 's' : ''}</div></div><button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button></div>
+    ${s.length > 1 ? `<div class="meas-sum">${cmPill(cur - first, k)}<span>depuis le ${formatDate(s[0].date)}</span></div>
+    <div class="meas-chart"><canvas id="chart-measure" aria-label="Évolution — ${MEASURE_LBL[k]}"></canvas></div>` : ''}
+    <div class="meas-hist">
+      ${[...s].reverse().map((x, i, arr) => { const prev = arr[i + 1]; return `
+      <div class="meas-h">
+        <span><b>${cmFmt(x.v)}</b><small>${formatDate(x.date)}</small></span>
+        ${prev ? cmPill(x.v - prev.v, k) : '<span></span>'}
+        <button class="meas-del" onclick="deleteMeasure('${x.id}','${k}')" aria-label="Supprimer la mesure du ${formatDate(x.date)}">×</button>
+      </div>`; }).join('')}
+    </div>
+  `);
+  if (s.length > 1) requestAnimationFrame(() => buildMeasureChart(s));
+}
+function buildMeasureChart(s) {
+  const el = document.getElementById('chart-measure');
+  if (!el || typeof Chart === 'undefined') return;
+  if (charts.measure) { try { charts.measure.destroy(); } catch {} }
+  const font = { family: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif", size: 11 };
+  charts.measure = new Chart(el.getContext('2d'), {
+    type: 'line',
+    data: { labels: s.map(x => { const d = new Date(x.date + 'T12:00:00'); return `${d.getDate()}/${d.getMonth() + 1}`; }),
+      datasets: [{ data: s.map(x => x.v), borderColor: '#0A0A0A', borderWidth: 2.2, tension: 0.3, fill: false,
+        pointRadius: 3.5, pointBackgroundColor: '#fff', pointBorderColor: '#0A0A0A', pointBorderWidth: 2 }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0A0A0A', displayColors: false, padding: 10, cornerRadius: 10, bodyFont: font, titleFont: { ...font, weight: '600' },
+        callbacks: { label: c => cmFmt(c.parsed.y) } } },
+      scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#737373', font, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } },
+                y: { grid: { color: '#F0F0F0' }, border: { display: false }, grace: '10%', ticks: { color: '#737373', font, maxTicksLimit: 4, callback: v => `${String(v).replace('.', ',')}` } } } }
+  });
+}
+function deleteMeasure(id, k) {
+  if (!confirm(`Supprimer cette mesure (${MEASURE_LBL[k]}) ?`)) return;
+  const m = (S.measures || []).find(x => x.id === id); if (!m) return;
+  delete m[k];
+  if (!MEASURES.some(([kk]) => m[kk] > 0)) S.measures = S.measures.filter(x => x.id !== id);
+  save();
+  if (S.view === 'body') renderBody();
+  showMeasure(k);
 }
 
 // ============================================================
@@ -4731,7 +4868,10 @@ function setProgressTab(tab) {
 
 // Corps : pour l'instant le suivi du poids (déplacé depuis Nutrition). Mesures et photos arrivent à l'étape 3.
 function renderBody() {
-  document.getElementById('app').innerHTML = viewHead('Corps') + _nutriWeight() + '<div class="spacer"></div>';
+  // Mensurations : avant l'historique des pesées s'il existe, sinon à la suite
+  let html = _nutriWeight();
+  html = html.includes('<!--MESURES-->') ? html.replace('<!--MESURES-->', measuresSection()) : html + measuresSection();
+  document.getElementById('app').innerHTML = viewHead('Corps') + html + '<div class="spacer"></div>';
   requestAnimationFrame(buildNutriCharts);
 }
 
