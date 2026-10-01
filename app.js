@@ -92,7 +92,7 @@ const WORKOUT_PLAN = {
       { name: 'Squat barre', img: 'squat-barre', sets: 4, reps: '5-8', rest: '2-3 min' },
       { name: 'Presse à cuisses 45°', img: 'presse-45', sets: 3, reps: '8-12', rest: '2 min' },
       { name: 'Leg extension', img: 'leg-extension', sets: 3, reps: '12-15', rest: '60-90 s' },
-      { name: 'Leg curl assis', img: 'leg-curl-assis', sets: 4, reps: '10-15', rest: '60-90 s' },
+      { name: 'Leg curl assis', img: 'leg-curl-assis', sets: 3, reps: '10-15', rest: '60-90 s' },
       { name: 'Hip thrust machine', img: 'hip-thrust', sets: 3, reps: '8-12', rest: '90 s' },
       { name: 'Mollets debout barre', img: 'mollets-debout', sets: 4, reps: '10-15', rest: '60 s' }
     ],
@@ -202,7 +202,7 @@ const FEEL_LABELS  = ['Nul','Dur','OK','Bien','Top'];
 // ============================================================
 
 let S = {};
-const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], rides: [], nutrition: [], weights: [], measures: [], weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 2400, prot: 175, carbs: 250, fat: 80, water: 2500 }, runGoal: 15, journal: {}, prs: {}, hydration: {}, shopping: { checked: {}, weekStart: null } };
+const DEFAULTS = { view: 'dashboard', theme: 'light', weekType: 'A', workouts: [], runs: [], rides: [], nutrition: [], weights: [], measures: [], goals: [], exoNotes: {}, weightGoal: { kg: 70, date: null }, profile: {}, nutGoal: { cal: 2400, prot: 175, carbs: 250, fat: 80, water: 2500 }, runGoal: 15, journal: {}, prs: {}, hydration: {}, shopping: { checked: {}, weekStart: null } };
 
 function loadState() {
   try { S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('sport-crm-v2') || '{}') }; }
@@ -834,6 +834,8 @@ function renderDashboard() {
     ${recoveryCard(rest ? tg : g, rest ? tv : v, rest)}
     ${weekSetsCard(rest ? tg : g)}
 
+    ${goalsCard()}
+
     <div class="sec-row"><h2>Corps</h2><button class="sec-link" onclick="navigate('body')">Voir</button></div>
     <div class="stack">
       <button class="lcard" onclick="navigate('body')">
@@ -1187,6 +1189,7 @@ function exCard(ex, ei, mg, last, draft) {
           <button class="tool-chip" onclick="openExChange(${ei})" aria-label="Remplacer ou décaler l'exercice">${ICON_SWAP}Changer</button>
           <button class="tool-btn" onclick="copyExName(this,'${safe}')" aria-label="Copier le nom de l'exercice">${ICON_COPY}</button>
         </span></div>
+      <label class="ex-note"><span aria-hidden="true">✎</span><input type="text" maxlength="120" value="${exoNote(name).replace(/"/g, '&quot;')}" placeholder="Réglages : siège, poulie, prise…" aria-label="Réglages pour ${name.replace(/"/g, '')}" oninput="setExoNote('${safe}', this.value)"></label>
       ${Array.from({ length: ex.sets }, (_, si) => {
         const pv = prevSets[si] || prevSets[prevSets.length - 1] || {};
         const dv = draft?.inputs?.[`${ei}-${si}`];
@@ -3740,6 +3743,14 @@ function renderProfile() {
         <div class="prof-row-left"><span class="prof-row-label">Sauvegardes de secours</span></div>
         <div class="prof-row-right"><button class="btn btn-ghost btn-sm" onclick="showBackupsModal()">Voir</button></div>
       </div>
+      <div class="prof-row">
+        <div class="prof-row-left"><span class="prof-row-label">Exporter dans un fichier</span></div>
+        <div class="prof-row-right"><button class="btn btn-ghost btn-sm" onclick="exportData()">Exporter</button></div>
+      </div>
+      <div class="prof-row">
+        <div class="prof-row-left"><span class="prof-row-label">Importer une sauvegarde</span></div>
+        <div class="prof-row-right"><label class="btn btn-ghost btn-sm prof-file">Importer<input type="file" accept="application/json,.json" onchange="importData(this)" hidden></label></div>
+      </div>
     </div>
 
     <button class="btn btn-primary" onclick="saveProfile()"
@@ -4764,6 +4775,183 @@ function deleteMeasure(id, k) {
   if (S.view === 'body') renderBody();
   showMeasure(k);
 }
+
+// ============================================================
+// 8g. OBJECTIFS DE CHARGE (Accueil)
+// ============================================================
+// S.goals = [{ id, exo, target, deadline|null, start, created }] ; exo = nom canonique de l'exercice.
+// Charge actuelle = charge la plus lourde jamais soulevée sur l'exercice (même mesure que le Bilan).
+
+// Exercices proposés : ceux du programme (sans tractions/dips, mesurés au poids du corps)
+function goalExoOptions() {
+  return SETS_FAMILIES.map(([g, l]) => {
+    const names = [...new Set(SESSION_KEYS.flatMap(v => WORKOUT_PLAN[g][v]).filter(e => !BODYWEIGHT_SLUGS.includes(e.img)).map(e => e.name))];
+    return { l, names };
+  });
+}
+function goalLoads(exo, hist = exoHistory()) { return (hist[canonExo(exo)] || []).filter(x => x.load > 0); }
+function goalBest(exo, hist) { const p = goalLoads(exo, hist); return p.length ? Math.max(...p.map(x => x.load)) : 0; }
+
+// Où en est l'objectif + projection au rythme des 10 dernières semaines (régression linéaire charge / jours)
+function goalStatus(g, hist = exoHistory()) {
+  const pts = goalLoads(g.exo, hist);
+  const best = pts.length ? Math.max(...pts.map(x => x.load)) : 0;
+  const span = g.target - (g.start || 0);
+  const pct = best >= g.target ? 100 : span > 0 ? Math.max(0, Math.min(100, (best - (g.start || 0)) / span * 100)) : 0;
+  if (best >= g.target) {
+    const hit = pts.find(x => x.load >= g.target && x.date >= g.created) || pts.find(x => x.load >= g.target);
+    return { best, pct: 100, state: 'done', msg: `Atteint${hit ? ` le ${formatDate(hit.date)}` : ''} 🎉` };
+  }
+  const t0 = Date.now() - 70 * 864e5;
+  const recent = pts.filter(x => new Date(x.date + 'T12:00:00').getTime() >= t0);
+  if (recent.length < 3) return { best, pct, state: 'wait', msg: 'Encore quelques séances pour estimer ta date' };
+  const xs = recent.map(x => new Date(x.date + 'T12:00:00').getTime() / 864e5), ys = recent.map(x => x.load);
+  const mx = xs.reduce((a, b) => a + b) / xs.length, my = ys.reduce((a, b) => a + b) / ys.length;
+  const den = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+  const slope = den ? xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / den : 0;   // kg par jour
+  if (slope <= 0.005) return { best, pct, state: 'stall', msg: 'Charge stable ces dernières semaines : pas de date estimée' };
+  const eta = localDateStr(new Date(Date.now() + (g.target - best) / slope * 864e5));
+  const etaLbl = formatDate(eta).replace(/^\S+ /, '');
+  if (!g.deadline) return { best, pct, state: 'eta', msg: `Au rythme actuel : vers le ${etaLbl}` };
+  return eta <= g.deadline
+    ? { best, pct, state: 'ok', msg: `Dans les temps · vers le ${etaLbl}` }
+    : { best, pct, state: 'late', msg: `En retard · au rythme actuel, vers le ${etaLbl}` };
+}
+
+function goalsCard() {
+  const goals = S.goals || [];
+  const hist = exoHistory();
+  return `
+    <div class="sec-row"><h2>Objectifs</h2><button class="sec-link" onclick="openGoalForm()">Ajouter</button></div>
+    ${goals.length ? `
+    <div class="card evo-list goal-list">
+      ${goals.map(g => { const st = goalStatus(g, hist); return `
+      <button class="evo-ex goal-row" onclick="showGoal('${g.id}')">
+        ${exoThumbHTML(g.exo)}
+        <span class="evo-ex-b">
+          <span class="goal-top"><span class="evo-ex-n">${g.exo}</span>${st.state === 'done' ? `<b>✓ ${String(g.target).replace('.', ',')}<small> kg</small></b>` : `<b>${String(st.best).replace('.', ',')}<small> / ${String(g.target).replace('.', ',')} kg</small></b>`}</span>
+          <span class="prog goal-prog"><i style="width:${st.pct.toFixed(1)}%"></i></span>
+          <span class="goal-st ${st.state}">${st.msg}</span>
+        </span>
+      </button>`; }).join('')}
+    </div>` : `
+    <button class="card goal-empty" onclick="openGoalForm()">
+      <b>Fixe-toi un objectif de charge</b>
+      <span>Par exemple 100 kg au développé couché d'ici décembre : l'app suit ta progression et te dit si tu es dans les temps.</span>
+    </button>`}`;
+}
+
+function openGoalForm() {
+  const opts = goalExoOptions();
+  const first = opts[0].names[0];
+  showModal(`
+    <div class="modal-head"><div><div class="modal-title">Nouvel objectif</div><div class="modal-sub">Une charge à atteindre sur un exercice</div></div><button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button></div>
+    <label class="ed-date"><span>Exercice</span>
+      <select class="form-inp" id="gl-exo" onchange="goalFormHint()">
+        ${opts.map(o => `<optgroup label="${o.l}">${o.names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('')}</optgroup>`).join('')}
+      </select>
+    </label>
+    <p class="goal-hint" id="gl-hint"></p>
+    <label class="ed-date"><span>Charge visée</span>
+      <span class="fld goal-fld"><input type="number" class="set-input" inputmode="decimal" step="0.5" id="gl-target" placeholder="—" aria-label="Charge visée en kg"><small>kg</small></span>
+    </label>
+    <label class="ed-date"><span>Pour quand ? (facultatif)</span><input type="date" class="form-inp" id="gl-date" min="${todayStr()}"></label>
+    <button class="btn btn-primary" onclick="saveGoal()">Créer l'objectif</button>
+  `);
+  goalFormHint();
+}
+function goalFormHint() {
+  const exo = document.getElementById('gl-exo')?.value; const el = document.getElementById('gl-hint');
+  if (!exo || !el) return;
+  const best = goalBest(exo);
+  el.textContent = best ? `Ta charge max actuelle : ${String(best).replace('.', ',')} kg` : 'Pas encore fait : ta progression partira de ta première séance.';
+  const t = document.getElementById('gl-target');
+  if (t && best) t.placeholder = String(Math.ceil((best * 1.1) / 2.5) * 2.5).replace('.', ',');
+}
+function saveGoal() {
+  const exo = document.getElementById('gl-exo')?.value;
+  const target = parseFloat(String(document.getElementById('gl-target')?.value || '').replace(',', '.'));
+  const deadline = document.getElementById('gl-date')?.value || null;
+  if (!exo) return;
+  if (!(target > 0)) { showToast('Entre la charge visée'); return; }
+  const best = goalBest(exo);
+  if (best && target <= best) { showToast(`Vise plus que ta charge actuelle (${String(best).replace('.', ',')} kg)`); return; }
+  if (!S.goals) S.goals = [];
+  S.goals.push({ id: uid(), exo: canonExo(exo), target: Math.round(target * 10) / 10, deadline, start: best, created: todayStr() });
+  save(); closeModal(); haptic([10, 20, 10]);
+  showToast('Objectif créé ✓');
+  if (S.view === 'dashboard') renderDashboard();
+}
+function showGoal(id) {
+  const g = (S.goals || []).find(x => x.id === id); if (!g) return;
+  const st = goalStatus(g);
+  showModal(`
+    <div class="modal-head"><div><div class="modal-title">${g.exo}</div><div class="modal-sub">Objectif : ${String(g.target).replace('.', ',')} kg${g.deadline ? ` d'ici le ${formatDate(g.deadline)}` : ''}</div></div><button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button></div>
+    <div class="goal-detail">
+      <div><small>Au départ</small><b>${g.start ? String(g.start).replace('.', ',') + ' kg' : '—'}</b></div>
+      <div><small>Aujourd'hui</small><b>${st.best ? String(st.best).replace('.', ',') + ' kg' : '—'}</b></div>
+      <div><small>Reste</small><b>${st.state === 'done' ? '0 kg' : String(Math.round((g.target - st.best) * 10) / 10).replace('.', ',') + ' kg'}</b></div>
+    </div>
+    <span class="prog goal-prog"><i style="width:${st.pct.toFixed(1)}%"></i></span>
+    <p class="goal-st ${st.state}" style="margin:8px 0 16px">${st.msg}</p>
+    <button class="btn btn-danger" onclick="deleteGoal('${id}')">Supprimer l'objectif</button>
+  `);
+}
+function deleteGoal(id) {
+  if (!confirm('Supprimer cet objectif ?')) return;
+  S.goals = (S.goals || []).filter(g => g.id !== id);
+  save(); closeModal();
+  if (S.view === 'dashboard') renderDashboard();
+}
+
+// ── Export / import d'un fichier de sauvegarde (Fichiers, iCloud Drive, AirDrop…)
+function exportData() {
+  const data = { ...S }; delete data.view;
+  const payload = JSON.stringify({ app: 'Tempo', version: 1, exportedAt: new Date().toISOString(), data });
+  const file = new File([payload], `tempo-sauvegarde-${todayStr()}.json`, { type: 'application/json' });
+  // iPhone : feuille de partage (« Enregistrer dans Fichiers ») ; sinon téléchargement classique
+  if (navigator.canShare?.({ files: [file] })) {
+    navigator.share({ files: [file], title: 'Sauvegarde Tempo' })
+      .then(() => showToast('Sauvegarde exportée ✓'))
+      .catch(e => { if (e?.name !== 'AbortError') downloadFile(file); });
+  } else downloadFile(file);
+}
+function downloadFile(file) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a'); a.href = url; a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  showToast('Fichier de sauvegarde téléchargé ✓');
+}
+function importData(input) {
+  const f = input.files?.[0]; input.value = '';
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    let parsed;
+    try { parsed = JSON.parse(reader.result); } catch { showToast('Fichier illisible'); return; }
+    const data = parsed?.data || parsed;
+    if (!Array.isArray(data?.workouts)) { showToast('Ce fichier n’est pas une sauvegarde Tempo'); return; }
+    const n = data.workouts.length, cur = (S.workouts || []).length;
+    const when = parsed.exportedAt ? ` du ${formatDate(parsed.exportedAt.slice(0, 10))}` : '';
+    if (!confirm(`Remplacer tes données actuelles (${cur} séance${cur > 1 ? 's' : ''}) par cette sauvegarde${when} (${n} séance${n > 1 ? 's' : ''}) ?\n\nUne copie de secours de tes données actuelles est faite avant.`)) return;
+    await saveBackup('avant import');
+    restoreData(data);
+    flushPush();
+    showToast(`Sauvegarde importée · ${n} séance${n > 1 ? 's' : ''} ✓`);
+  };
+  reader.readAsText(f);
+}
+
+// ── Réglages / notes par exercice (siège, poulie, prise…), gardés de séance en séance
+let _noteTimer = null;
+function setExoNote(name, v) {
+  if (!S.exoNotes) S.exoNotes = {};
+  const k = canonExo(name), t = v.trim().slice(0, 120);
+  if (t) S.exoNotes[k] = t; else delete S.exoNotes[k];
+  clearTimeout(_noteTimer); _noteTimer = setTimeout(save, 600);
+}
+function exoNote(name) { return (S.exoNotes || {})[canonExo(name)] || ''; }
 
 // ============================================================
 // 9. MODAL & TOAST

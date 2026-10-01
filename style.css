@@ -2294,3 +2294,36 @@ input[type="date"].form-inp { font-size: 16px; padding-left: 12px; padding-right
 /* Historique : en-tête de semaine avec sa couleur */
 .week-lbl { display: flex; align-items: center; gap: 8px; }
 .week-lbl i { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+/* ============================================================
+   41. OBJECTIFS, NOTES D'EXERCICE, EXPORT
+   ============================================================ */
+.goal-row { width: 100%; background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; align-items: flex-start; }
+.goal-row + .goal-row { border-top: 1px solid var(--border); }
+.goal-row .evo-ex-b { gap: 6px; }
+.goal-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.goal-top b { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
+.goal-top b small { font-size: 12px; font-weight: 500; color: var(--t2); }
+.goal-prog { display: block; height: 8px; border-radius: 8px; }
+.goal-prog i { background: var(--set-up); border-radius: 8px; }
+.goal-st { font-size: 12px; color: var(--t2); line-height: 1.35; }
+.goal-st.done, .goal-st.ok { color: #00703F; font-weight: 600; }
+.goal-st.late { color: #B25E00; font-weight: 600; }
+.goal-empty { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 16px; border: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.goal-empty b { font-size: 15px; font-weight: 600; }
+.goal-empty span { font-size: 13px; color: var(--t2); line-height: 1.4; }
+.goal-hint { font-size: 13px; color: var(--t2); margin: -6px 0 14px; }
+.goal-fld { max-width: 180px; }
+.goal-detail { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; }
+.goal-detail > div { background: var(--surface2); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.goal-detail small { font-size: 11px; color: var(--t2); font-weight: 500; }
+.goal-detail b { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+select.form-inp { width: 100%; max-width: 100%; min-width: 0; }
+
+.ex-note { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: var(--surface2); cursor: text; }
+.ex-note span { font-size: 14px; color: var(--t3); flex-shrink: 0; }
+.ex-note input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: 16px; color: var(--t1); }
+.ex-note input::placeholder { color: var(--t3); }
+.ex-note:focus-within { background: var(--surface); box-shadow: 0 0 0 1.5px var(--ink); }
+
+.prof-file { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
