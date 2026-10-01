@@ -3125,15 +3125,29 @@ function saveRide() {
 
 let histTab = 'workout';
 
+// Historique en couleur (demande de Julien) : une couleur par semaine, une teinte par séance
+// (de la plus foncée, Push 1, à la plus claire, Legs 2). Les couleurs tournent d'une semaine à l'autre.
+const WEEK_HUES = [215, 268, 162, 24, 338, 46];   // bleu, violet, vert d'eau, orange, rose, ambre
+function sessionSlot(w) {
+  const n = /^[AB][12]$/.test(w.weekType) ? +w.weekType[1] : 1;
+  const i = WEEK_SLOTS.findIndex(([g, k]) => g === w.muscleGroup && k === n);
+  return i < 0 ? 0 : i;
+}
+function weekShade(wk, slot) {
+  const h = WEEK_HUES[((weekIndex(wk) % WEEK_HUES.length) + WEEK_HUES.length) % WEEK_HUES.length];
+  const l = 30 + slot * 8;                          // 30 % → 70 % de luminosité
+  return { bg: `hsl(${h} 62% ${l}%)`, fg: l >= 54 ? '#0A0A0A' : '#fff' };
+}
+
 function renderHistory() {
   histTab = 'workout';   // historique musculation uniquement (course/vélo retirés de l'interface)
   const items = [...S.workouts].sort((a,b)=>b.date.localeCompare(a.date));
 
+  // Regroupement par semaine (lundi → dimanche)
   const groups = {};
   items.forEach(item=>{
-    const d=new Date(item.date+'T12:00:00');
-    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    if(!groups[k]) groups[k]={lbl:`${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`,items:[]};
+    const k = item.weekKey || getWeekKey(item.date);
+    if(!groups[k]) groups[k]={lbl:`Semaine ${weekLetter(new Date(k+'T12:00:00'))} · ${weekRangeLbl(k)}`, dot: weekShade(k, 1).bg, items:[]};
     groups[k].items.push(item);
   });
 
@@ -3142,20 +3156,20 @@ function renderHistory() {
     ${Object.keys(groups).length===0
       ? `<div class="empty"><div class="empty-icon">—</div><h3>Aucune session</h3><p>Commence à logger tes entraînements.</p></div>`
       : Object.keys(groups).sort().reverse().map(gk=>`
-        <div class="month-lbl">${groups[gk].lbl}</div>
+        <div class="month-lbl week-lbl"><i style="background:${groups[gk].dot}"></i>${groups[gk].lbl}</div>
         ${groups[gk].items.map(item => histTab==='workout' ? (() => {
           const dlt = sessionVolDelta(item);
           return `
           <div class="hist-item" onclick="openSessionDetail('${item.id}')">
-            <div class="hist-icon" style="background:${groupColor(item.muscleGroup)}">${groupShort(item.muscleGroup)}</div>
+            ${(() => { const c = weekShade(gk, sessionSlot(item)); return `<div class="hist-icon" style="background:${c.bg};color:${c.fg}">${groupShort(item.muscleGroup)}</div>`; })()}
             <div class="hist-info">
               <div class="hist-title">${sessionTitle(item.muscleGroup, item.weekType)}</div>
-              <div class="hist-sub">${/^[AB][12]$/.test(item.weekType) ? `Sem. ${item.weekType[0]} · ` : ''}${formatDate(item.date)} · ${item.exercises.length} exos</div>
+              <div class="hist-sub">${formatDate(item.date)} · ${item.exercises.length} exos</div>
             </div>
             <div class="hist-right">
               <div class="hist-vol">${fmtVol(item.totalVolume)} kg</div>
               ${dlt!==null
-                ? `<div class="hist-delta ${dlt>=0?'delta-up':'delta-down'}">${dlt>=0?'↑':'↓'} ${Math.abs(dlt).toFixed(1)}%</div>`
+                ? `<div class="hist-delta ${dlt>=0?'delta-up':'delta-down'}">${dlt>=0?'↑':'↓'} ${Math.abs(dlt).toFixed(1).replace('.', ',')} %</div>`
                 : `<div class="hist-delta delta-neu">1re séance</div>`}
             </div>
             <span class="hist-chev">›</span>

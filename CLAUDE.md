@@ -39,7 +39,7 @@ App de suivi musculation & course à pied (PWA perso, en français).
 - Abdos retirés du programme à la demande de Julien (octobre 2026) : plus aucun exercice d'abdos dans `WORKOUT_PLAN`, leurs noms restent dans `EXO_MEDIA` pour l'historique. L'interface ne suit que les muscles du programme (`TRACKED_MUSCLES`, tiré de `SETS_FAMILIES`) ; Legs 1 semaine B : leg curl assis à 3 séries
 - Nutrition et course/vélo retirés de l'interface à la demande de Julien (il ne s'en sert pas) : le code et les données (`S.nutrition`, `S.runs`, `S.rides`) restent, les vues `nutrition`/`run` redirigent vers Accueil/Séance
 - Chaque vue commence par `viewHead()` ; sous-navigation par `chipRow()`
-- Pas de couleur par groupe dans l'UI : les couleurs de `WORKOUT_PLAN` sont des gris réservés aux graphiques
+- Pas de couleur par groupe dans l'UI : les couleurs de `WORKOUT_PLAN` sont des gris réservés aux graphiques ; exception : l'Historique colore les séances par semaine (`WEEK_HUES`, `weekShade(wk, slot)`, teinte selon `sessionSlot()`)
 
 ## Protection des données
 - Sauvegarde locale immédiate (`save()` horodaté) + synchro Firestore qui n'écrase jamais un local plus récent (`pullFromCloud`)

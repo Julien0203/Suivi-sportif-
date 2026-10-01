@@ -2290,3 +2290,7 @@ input[type="date"].form-inp { font-size: 16px; padding-left: 12px; padding-right
   .meas-f { grid-template-columns: minmax(0, 1fr) 104px; gap: 8px; }
   .meas-row .evo-spark { display: none; }
 }
+
+/* Historique : en-tête de semaine avec sa couleur */
+.week-lbl { display: flex; align-items: center; gap: 8px; }
+.week-lbl i { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }

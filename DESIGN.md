@@ -25,6 +25,8 @@ Clair uniquement pour l'instant (un thème sombre dérivé est prévu en étape 
 
 Seule exception au noir et blanc, voulue par Julien : le retour de progression sur les séries, et les barres de progression de la séance (vert néon). Pendant la saisie, le contour du champ poids prend la couleur ; à la validation, la carte de série se teinte et le ✓ se remplit.
 
+Autre exception, voulue par Julien : l'**Historique** est en couleur — une couleur par semaine (bleu, violet, vert d'eau, orange, rose, ambre, en rotation), et une teinte par séance, de la plus foncée (Push 1) à la plus claire (Legs 2). Les séances sont regroupées par semaine, avec un repère de couleur dans l'en-tête.
+
 Pas de couleur par groupe musculaire dans l'interface. Pour les graphiques à plusieurs séries, les groupes utilisent des gris : Push `#0A0A0A`, Pull `#6E6E6E`, Legs `#ABABAB`.
 
 ## Typographie
