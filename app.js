@@ -3127,16 +3127,32 @@ let histTab = 'workout';
 
 // Historique en couleur (demande de Julien) : une couleur par semaine, une teinte par séance
 // (de la plus foncée, Push 1, à la plus claire, Legs 2). Les couleurs tournent d'une semaine à l'autre.
-const WEEK_HUES = [215, 268, 162, 24, 338, 46];   // bleu, violet, vert d'eau, orange, rose, ambre
+// Couleurs vives (orange, jaune, bleu, magenta, vert pomme, rose) ; l0 = luminosité de la teinte la plus foncée
+const WEEK_HUES = [
+  { h: 28,  s: 96, l0: 40 },   // orange
+  { h: 48,  s: 98, l0: 42 },   // jaune
+  { h: 212, s: 92, l0: 36 },   // bleu
+  { h: 305, s: 84, l0: 34 },   // magenta
+  { h: 92,  s: 78, l0: 32 },   // vert pomme
+  { h: 336, s: 92, l0: 44 }    // rose
+];
 function sessionSlot(w) {
   const n = /^[AB][12]$/.test(w.weekType) ? +w.weekType[1] : 1;
   const i = WEEK_SLOTS.findIndex(([g, k]) => g === w.muscleGroup && k === n);
   return i < 0 ? 0 : i;
 }
+// Texte noir ou blanc selon la luminance réelle de la couleur (le jaune clair et le blanc ne vont pas ensemble)
+function hslLuma(h, sat, l) {
+  sat /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12, a = sat * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  const lin = c => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  return 0.2126 * lin(f(0)) + 0.7152 * lin(f(8)) + 0.0722 * lin(f(4));
+}
 function weekShade(wk, slot) {
-  const h = WEEK_HUES[((weekIndex(wk) % WEEK_HUES.length) + WEEK_HUES.length) % WEEK_HUES.length];
-  const l = 30 + slot * 8;                          // 30 % → 70 % de luminosité
-  return { bg: `hsl(${h} 62% ${l}%)`, fg: l >= 54 ? '#0A0A0A' : '#fff' };
+  const c = WEEK_HUES[((weekIndex(wk) % WEEK_HUES.length) + WEEK_HUES.length) % WEEK_HUES.length];
+  const l = c.l0 + slot * 7;                        // 6 teintes, de la plus foncée (Push 1) à la plus claire (Legs 2)
+  return { bg: `hsl(${c.h} ${c.s}% ${l}%)`, fg: hslLuma(c.h, c.s, l) > 0.28 ? '#0A0A0A' : '#fff' };
 }
 
 function renderHistory() {
