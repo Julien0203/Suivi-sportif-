@@ -2241,3 +2241,22 @@ input[type="date"].form-inp { font-size: 16px; padding-left: 12px; padding-right
 .wk-prog i, .ex-row .prog i { background: var(--set-up); }
 /* Titre de section + note : toujours un espace entre les deux, la note passe à la ligne si elle est longue */
 .sec-row { gap: 12px; } .sec-row h2 { flex-shrink: 0; } .sec-note { min-width: 0; text-align: right; }
+
+/* ============================================================
+   39. MODIFIER UNE SÉANCE ENREGISTRÉE
+   ============================================================ */
+.sum-edit { margin-top: 8px; }
+.ed-date, .ed-notes { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.ed-date span, .ed-notes span { font-size: 12px; font-weight: 500; color: var(--t2); }
+.ed-ex { padding: 12px 0; border-top: 1px solid var(--border); }
+.ed-ex:last-child { border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+.ed-ex-h { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ed-ex-h .th { width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; }
+.ed-ex-h b { font-size: 14px; font-weight: 600; line-height: 1.25; min-width: 0; }
+.ed-sets { display: flex; flex-direction: column; gap: 6px; }
+.ed-set { display: grid; grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr); gap: 6px; align-items: center; }
+.ed-n { font-size: 12px; font-weight: 600; color: var(--t3); }
+.ed-set .fld { min-width: 0; }
+.ed-add { margin-top: 8px; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 13px; font-weight: 600; color: var(--t1); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ed-notes textarea { min-height: 60px; }
+.backup-draft { background: var(--surface2); border-radius: 14px; padding: 12px; margin-bottom: 14px; }

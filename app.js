@@ -279,6 +279,9 @@ async function showBackupsModal() {
   const all = await listBackups();
   showModal(`
     <div class="modal-head"><div><div class="modal-title">Sauvegardes de secours</div></div><button class="modal-close" onclick="closeModal()" aria-label="Fermer">×</button></div>
+    ${(() => { const d = prevDraft(); if (!d) return ''; const n = (d.done || []).length;
+      return `<div class="backup-row backup-draft"><div><b>Séance mise de côté · ${sessionTitle(d.mg, d.wt)}</b><span>${formatDate(d.date || todayStr())} · ${n} série${n > 1 ? 's' : ''} validée${n > 1 ? 's' : ''}</span></div>
+        <button class="btn btn-primary btn-sm btn-inline" onclick="restorePrevDraft()">Reprendre</button></div>`; })()}
     <p class="t2" style="font-size:14px;line-height:1.5;margin-bottom:14px">Copies de tes données gardées sur ce téléphone, après chaque séance et une fois par jour.</p>
     ${all.length ? `<div class="backup-list">${all.map(b => `
       <div class="backup-row">
@@ -944,6 +947,10 @@ function stopWkTimer()  { pauseWkTimer(); wkTimer.startTs = null; }
 const WK_DRAFT_KEY = 'wk-draft';
 const WK_DRAFT_TTL = 72 * 60 * 60 * 1000; // 72 h : un brouillon oublié n'est plus effacé en silence (on propose de l'enregistrer)
 
+// Un brouillon contient-il une vraie saisie (valeur tapée ou série validée) ?
+function draftHasData(d) {
+  return !!d && (Object.values(d.inputs || {}).some(v => v.w || v.r) || (d.done || []).length > 0);
+}
 function saveWkDraft() {
   if (!wkState.muscleGroup) return;
   // Formulaire absent (ex. onglet Course affiché) : on n'écrase pas le brouillon avec des champs vides
@@ -958,6 +965,17 @@ function saveWkDraft() {
       inputs[`${ei}-${si}`] = { w, r };
     }
   });
+  // Protection : une autre séance commencée (autre groupe ou semaine) n'est jamais écrasée par une séance
+  // simplement affichée. Si on commence vraiment à remplir l'autre séance, l'ancienne est mise de côté
+  // dans « wk-draft-prev » (récupérable) au lieu d'être perdue.
+  try {
+    const prev = JSON.parse(localStorage.getItem(WK_DRAFT_KEY) || 'null');
+    if (prev && (prev.mg !== mg || prev.wt !== wt) && draftHasData(prev)) {
+      const hasData = Object.values(inputs).some(v => v.w || v.r) || Object.values(wkState.doneSets || {}).some(Boolean);
+      if (!hasData) return;
+      localStorage.setItem('wk-draft-prev', JSON.stringify(prev));
+    }
+  } catch {}
   localStorage.setItem(WK_DRAFT_KEY, JSON.stringify({
     mg, wt, date: wkState.date,
     notes: document.getElementById('wk-notes')?.value || '',
@@ -979,6 +997,26 @@ function loadWkDraft(mg, wt) {
 }
 
 function clearWkDraft() { localStorage.removeItem(WK_DRAFT_KEY); }
+// Met la séance en cours de côté (« wk-draft-prev ») au lieu de l'effacer : récupérable depuis Profil › Sauvegardes
+function stashDraft() {
+  const r = localStorage.getItem(WK_DRAFT_KEY);
+  if (r) localStorage.setItem('wk-draft-prev', r);
+  clearWkDraft();
+}
+function prevDraft() {
+  try { const d = JSON.parse(localStorage.getItem('wk-draft-prev') || 'null'); return d && Date.now() - (d._ts || 0) < WK_DRAFT_TTL && draftHasData(d) && WORKOUT_PLAN[d.mg]?.[d.wt] ? d : null; } catch { return null; }
+}
+function restorePrevDraft() {
+  const d = prevDraft(); if (!d) return;
+  const cur = startedDraft();
+  if (cur && !confirm(`Ta séance ${sessionTitle(cur.mg, cur.wt)} est commencée. La remplacer par ${sessionTitle(d.mg, d.wt)} ?`)) return;
+  if (cur) localStorage.setItem('wk-draft-prev', localStorage.getItem(WK_DRAFT_KEY));   // échange : rien n'est perdu
+  else localStorage.removeItem('wk-draft-prev');
+  localStorage.setItem(WK_DRAFT_KEY, JSON.stringify({ ...d, _ts: Date.now() }));
+  wkState.muscleGroup = null; wkState.openKey = null;
+  closeModal(); seanceMode = 'muscu'; navigate('workout');
+  showToast(`${sessionTitle(d.mg, d.wt)} reprise ✓`);
+}
 
 // Séance en cours récente (< 4h) avec au moins une valeur saisie :
 // sert à rouvrir automatiquement l'onglet Séance après un rechargement iOS.
@@ -1293,17 +1331,22 @@ function openEx(ei, force = false) {
 }
 
 // Changer de groupe ou de variante efface la saisie d'une séance commencée : on demande d'abord.
+// Tout brouillon encore valable (72 h) avec une vraie saisie compte, pas seulement ceux de moins de 4 h :
+// sinon une séance commencée plus tôt pouvait être écrasée sans question.
+function startedDraft() {
+  try { const d = JSON.parse(localStorage.getItem(WK_DRAFT_KEY) || 'null'); return d && Date.now() - (d._ts || 0) < WK_DRAFT_TTL && draftHasData(d) ? d : null; } catch { return null; }
+}
 function confirmLeaveDraft(mg, wt) {
-  const d = activeWkDraft();
+  const d = startedDraft();
   if (!d || (d.mg === mg && d.wt === wt)) return true;
-  return confirm(`Ta séance ${sessionTitle(d.mg, d.wt)} est en cours. La quitter efface ce que tu as saisi. Continuer ?`);
+  return confirm(`Ta séance ${sessionTitle(d.mg, d.wt)} est commencée. La quitter efface ce que tu as saisi. Continuer ?`);
 }
 
 function setWorkoutMuscle(k) {
   if (k === wkState.muscleGroup) return;
   const wt = k === nextPPLSession()[0] ? nextPPLSession()[1] : variantForGroup(k);
   if (!confirmLeaveDraft(k, wt)) return;
-  if (activeWkDraft()) clearWkDraft();
+  if (startedDraft()) stashDraft();   // confirmé : on repart de zéro, l'ancienne séance reste récupérable
   wkState.muscleGroup = k; wkState.weekType = wt;
   renderWorkoutForm();
 }
@@ -1597,7 +1640,8 @@ function saveWorkout(validatedOnly = false) {
   stopTimer();
   wkState.openKey = null;
   S.weekType = wt;
-  S.workouts.push({ id:uid(), date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes, duration, endTs: date === todayStr() ? Date.now() : null });
+  const newId = uid();
+  S.workouts.push({ id:newId, date, weekKey:getWeekKey(date), weekType:wt, muscleGroup:mg, exercises, totalVolume, notes, duration, endTs: date === todayStr() ? Date.now() : null });
 
   // Détection PRs
   if (!S.prs) S.prs = {};
@@ -1622,7 +1666,7 @@ function saveWorkout(validatedOnly = false) {
   wkState.muscleGroup = null; wkState.override = null; wkState.feel = {};
   navigate('dashboard');
   const doneSets = exercises.reduce((t, e) => t + e.sets.filter(x => x.weight > 0 && x.reps > 0).length, 0);
-  showSessionSummary({ mg, wt, date, totalVolume, duration, doneSets, totalSets: exos.reduce((t, e) => t + e.sets, 0),
+  showSessionSummary({ id: newId, mg, wt, date, totalVolume, duration, doneSets, totalSets: exos.reduce((t, e) => t + e.sets, 0),
     lastVolume: lastSame?.totalVolume || 0, ...summary });
 }
 
@@ -1663,6 +1707,7 @@ function showSessionSummary(r) {
       <div class="sum-next">${weekN >= 6 ? 'Semaine bouclée, bravo !' : `Prochaine séance : <b>${sessionTitle(ng, nv)}</b>`}</div>
     </div>
     <button class="btn btn-primary" onclick="closeModal()">Fermer</button>
+    ${r.id ? `<button class="btn btn-ghost sum-edit" onclick="editWorkout('${r.id}')">${r.doneSets < r.totalSets ? 'Compléter la séance' : 'Modifier la séance'}</button>` : ''}
   `);
 }
 
@@ -3222,8 +3267,77 @@ function openSessionDetail(id) {
       </div>`;
     }).join('')}
     ${s.notes?`<div class="t3 mt-12" style="font-size:12px;padding:10px;background:var(--surface2);border-radius:var(--r-xs);border:1px solid var(--border)">${s.notes}</div>`:''}
+    <button class="btn btn-primary mt-12" onclick="editWorkout('${id}')">Modifier la séance</button>
     <button class="btn btn-danger btn-sm mt-12" onclick="deleteWorkout('${id}')">Supprimer cette séance</button>
   `);
+}
+
+// ── Modifier une séance enregistrée (séries oubliées, mauvaise charge, date)
+function editWorkout(id) {
+  const s = S.workouts.find(w => w.id === id); if (!s) return;
+  const v = x => (parseFloat(x) > 0 ? String(x) : '');
+  showModal(`
+    <div class="modal-head">
+      <div><div class="modal-title">Modifier la séance</div><div class="modal-sub">${sessionTitle(s.muscleGroup, s.weekType)}</div></div>
+      <button class="modal-close" onclick="openSessionDetail('${id}')" aria-label="Fermer">×</button>
+    </div>
+    <label class="ed-date"><span>Date</span><input type="date" class="form-inp" id="ed-date" value="${s.date}" max="${todayStr()}"></label>
+    <div id="ed-list">
+      ${s.exercises.map((ex, ei) => `
+      <section class="ed-ex" data-ei="${ei}">
+        <div class="ed-ex-h">${exoThumbHTML(ex.name)}<b>${ex.name}</b></div>
+        <div class="ed-sets" id="ed-sets-${ei}">
+          ${ex.sets.map((st, si) => edSetRow(ei, si, v(st.weight), v(st.reps))).join('')}
+        </div>
+        <button class="ed-add" onclick="edAddSet(${ei})">+ Ajouter une série</button>
+      </section>`).join('')}
+    </div>
+    <label class="ed-notes"><span>Notes</span><textarea class="form-inp" id="ed-notes" rows="2" placeholder="Ressenti, réglages…">${(s.notes || '').replace(/</g, '&lt;')}</textarea></label>
+    <button class="btn btn-primary" onclick="saveWorkoutEdit('${id}')">Enregistrer les modifications</button>
+    <button class="btn btn-ghost mt-8" onclick="openSessionDetail('${id}')">Annuler</button>
+  `);
+}
+function edSetRow(ei, si, w, r) {
+  return `<div class="ed-set">
+    <span class="ed-n">S${si + 1}</span>
+    <label class="fld"><input type="number" class="set-input" inputmode="decimal" step="0.5" id="ed-w-${ei}-${si}" value="${w}" placeholder="—" aria-label="Poids série ${si + 1}"><small>kg</small></label>
+    <label class="fld"><input type="number" class="set-input" inputmode="numeric" step="1" id="ed-r-${ei}-${si}" value="${r}" placeholder="—" aria-label="Reps série ${si + 1}"><small>reps</small></label>
+  </div>`;
+}
+function edAddSet(ei) {
+  const box = document.getElementById(`ed-sets-${ei}`); if (!box) return;
+  const si = box.children.length;
+  // La nouvelle série reprend la dernière remplie, pour aller vite
+  const lw = document.getElementById(`ed-w-${ei}-${si - 1}`)?.value || '', lr = document.getElementById(`ed-r-${ei}-${si - 1}`)?.value || '';
+  box.insertAdjacentHTML('beforeend', edSetRow(ei, si, lw, lr));
+  document.getElementById(`ed-w-${ei}-${si}`)?.focus();
+}
+function saveWorkoutEdit(id) {
+  const s = S.workouts.find(w => w.id === id); if (!s) return;
+  const num = (el, f) => { const n = f(el?.value); return n > 0 ? n : 0; };
+  s.exercises = s.exercises.map((ex, ei) => {
+    const n = document.getElementById(`ed-sets-${ei}`)?.children.length || ex.sets.length;
+    const sets = Array.from({ length: n }, (_, si) => {
+      const w = num(document.getElementById(`ed-w-${ei}-${si}`), parseFloat), r = num(document.getElementById(`ed-r-${ei}-${si}`), parseInt);
+      return (w > 0 && r > 0) ? { weight: w, reps: r } : { weight: 0, reps: 0 };   // série incomplète = non faite
+    });
+    return { ...ex, sets };
+  });
+  const d = document.getElementById('ed-date')?.value;
+  if (d && d <= todayStr()) { s.date = d; s.weekKey = getWeekKey(d); }
+  s.notes = document.getElementById('ed-notes')?.value || '';
+  s.totalVolume = calcSessionVol(s.exercises);
+  // Records : une charge corrigée peut en devenir un
+  if (!S.prs) S.prs = {};
+  s.exercises.forEach(ex => ex.sets.forEach(st => {
+    const prev = S.prs[ex.name];
+    if (st.weight > 0 && st.reps > 0 && (!prev || e1rm(st.weight, st.reps) > e1rm(prev.weight, prev.reps))) S.prs[ex.name] = { weight: st.weight, reps: st.reps, date: s.date };
+  }));
+  save(); flushPush(); saveBackup('modification');
+  haptic([10, 20, 10]);
+  showToast('Séance modifiée ✓');
+  navigate(S.view);
+  openSessionDetail(id);
 }
 
 function openRunDetail(id) {
@@ -4489,7 +4603,9 @@ function renderWeekBilan() {
 // ============================================================
 
 function showModal(html) {
-  document.getElementById('modal-box').innerHTML = html;
+  const box = document.getElementById('modal-box');
+  box.innerHTML = html;
+  box.scrollTop = 0;   // une nouvelle feuille s'ouvre toujours en haut (pas à la position de la précédente)
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
@@ -4576,7 +4692,7 @@ function setSeanceGroup(k) {
   if (seanceMode !== 'muscu') {
     if (!confirmLeaveDraft(k, k === wkState.muscleGroup ? wkState.weekType : variantForGroup(k))) return;
     seanceMode = 'muscu';
-    if (k !== wkState.muscleGroup) { if (activeWkDraft()) clearWkDraft(); wkState.muscleGroup = k; }
+    if (k !== wkState.muscleGroup) { if (startedDraft()) stashDraft(); wkState.muscleGroup = k; }
     renderSeance();
     return;
   }
